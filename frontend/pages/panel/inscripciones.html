@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscripciones — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    .costo-card {
+      background:var(--gris-50);border-radius:var(--radio-lg);
+      padding:var(--gap-md);margin-top:var(--gap-md);
+      border:1.5px dashed var(--gris-200);
+    }
+    .costo-fila { display:flex;justify-content:space-between;
+      padding:.35rem 0;font-size:var(--text-sm);font-weight:600; }
+    .costo-final { border-top:2px solid var(--turquesa);margin-top:6px;padding-top:6px;
+      font-family:var(--font-display);font-size:var(--text-xl);color:var(--turquesa-d); }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">📝 Inscripciones</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-primary" onclick="abrirNuevo()">➕ Nueva inscripción</button>
+      </div>
+    </header>
+    <div class="pagina">
+
+      <!-- Filtros -->
+      <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;margin-bottom:var(--gap-lg);
+        background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+        box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
+        <div class="form-grupo" style="margin:0;flex:1;min-width:200px">
+          <label class="form-label">Buscar niño</label>
+          <input type="text" id="f-buscar" class="form-input" placeholder="Nombre del niño/a...">
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:160px">
+          <label class="form-label">Sucursal</label>
+          <select id="f-sucursal" class="form-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:160px">
+          <label class="form-label">Sala</label>
+          <select id="f-sala" class="form-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:140px">
+          <label class="form-label">Modalidad</label>
+          <select id="f-modalidad" class="form-select">
+            <option value="">Todas</option>
+            <option value="mensual">Mensual</option>
+            <option value="diaria">Por día</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:130px">
+          <label class="form-label">Estado</label>
+          <select id="f-activa" class="form-select">
+            <option value="true">Activas</option>
+            <option value="false">Inactivas</option>
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:6px">
+          <button class="btn btn-primary" onclick="cargar()">Buscar</button>
+          <button class="btn btn-outline" onclick="limpiarFiltros()">✕</button>
+        </div>
+      </div>
+
+      <!-- Stats rápidas -->
+      <div class="grid-stats mb-lg">
+        <div class="stat-card">
+          <div class="stat-icon turquesa">📝</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-total">—</div>
+            <div class="etiqueta">Inscripciones activas</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon verde">💵</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-mensual">—</div>
+            <div class="etiqueta">Modalidad mensual</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amarillo">📅</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-diaria">—</div>
+            <div class="etiqueta">Modalidad diaria</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon violeta">🎓</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-beca">—</div>
+            <div class="etiqueta">Con beca</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-titulo">Lista de inscripciones</h3>
+          <span id="total-insc" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th>Niño/a</th><th>Sucursal</th><th>Sala / Turno</th>
+              <th>Modalidad</th><th>Costo mensual</th><th>Ajuste</th>
+              <th>Inicio</th><th>Estado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-insc"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal inscripción -->
+<div class="modal-overlay" id="modal-insc">
+  <div class="modal" style="max-width:660px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-insc">Nueva inscripción</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="i-id">
+
+    <!-- Niño -->
+    <div class="form-grupo">
+      <label class="form-label">Niño/a *</label>
+      <select id="i-nino" class="form-select" onchange="verificarEdad()">
+        <option value="">Seleccionar niño/a...</option>
+      </select>
+      <span class="form-error" data-error="i-nino"></span>
+      <div id="aviso-edad" style="display:none;margin-top:6px;font-size:var(--text-xs);
+        background:var(--turquesa-l);padding:.5rem .75rem;border-radius:var(--radio-md);
+        color:var(--turquesa-d);font-weight:600"></div>
+    </div>
+
+    <!-- Sucursal → Sala → Turno en cascada -->
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Sucursal *</label>
+        <select id="i-sucursal" class="form-select" onchange="cargarSalasInsc()">
+          <option value="">Seleccionar...</option>
+        </select>
+        <span class="form-error" data-error="i-sucursal"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Sala *</label>
+        <select id="i-sala" class="form-select" onchange="cargarTurnosInsc()">
+          <option value="">Primero elige sucursal</option>
+        </select>
+        <span class="form-error" data-error="i-sala"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Turno *</label>
+        <select id="i-turno" class="form-select" onchange="cargarCostosBase()">
+          <option value="">Primero elige sala</option>
+        </select>
+        <span class="form-error" data-error="i-turno"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Modalidad de pago *</label>
+        <select id="i-modalidad" class="form-select" onchange="actualizarVistaCostos()">
+          <option value="mensual">Mensualidad fija</option>
+          <option value="diaria">Pago por día</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Fecha de inicio *</label>
+        <input type="date" id="i-inicio" class="form-input">
+        <span class="form-error" data-error="i-inicio"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Fecha de fin (vacío = indefinida)</label>
+        <input type="date" id="i-fin" class="form-input">
+      </div>
+    </div>
+
+    <!-- Costos -->
+    <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
+    <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">
+      Costos y ajuste
+    </p>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Costo mensual (Bs.) *</label>
+        <input type="number" id="i-costo-mensual" class="form-input"
+          placeholder="Se carga del turno" step="0.01" oninput="calcularCostoFinal()">
+        <span class="form-error" data-error="i-costo-mensual"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Costo diario (Bs.) *</label>
+        <input type="number" id="i-costo-diario" class="form-input"
+          placeholder="Se carga del turno" step="0.01" oninput="calcularCostoFinal()">
+        <span class="form-error" data-error="i-costo-diario"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Tipo de ajuste</label>
+        <select id="i-tipo-ajuste" class="form-select" onchange="mostrarCamposAjuste()">
+          <option value="ninguno">Sin ajuste (precio completo)</option>
+          <option value="descuento_porcentaje">Descuento en %</option>
+          <option value="descuento_monto">Descuento monto fijo</option>
+          <option value="beca">Beca (sin costo)</option>
+        </select>
+      </div>
+      <div class="form-grupo" id="campo-ajuste-pct" style="display:none">
+        <label class="form-label">Porcentaje de descuento (%)</label>
+        <input type="number" id="i-pct-ajuste" class="form-input"
+          placeholder="Ej: 20 = 20%" min="0" max="100" oninput="calcularCostoFinal()">
+      </div>
+      <div class="form-grupo" id="campo-ajuste-monto" style="display:none">
+        <label class="form-label">Monto a descontar (Bs.)</label>
+        <input type="number" id="i-monto-ajuste" class="form-input"
+          placeholder="0.00" step="0.01" oninput="calcularCostoFinal()">
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1" id="campo-motivo-ajuste" style="display:none">
+        <label class="form-label">Motivo del ajuste / beca</label>
+        <textarea id="i-motivo-ajuste" class="form-textarea" style="min-height:60px"
+          placeholder="Ej: Hermano de Juan Pérez, convenio institucional, caso social..."></textarea>
+      </div>
+    </div>
+
+    <!-- Preview de costos -->
+    <div class="costo-card" id="preview-costos" style="display:none">
+      <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
+        text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--gap-sm)">
+        Resumen de costos
+      </p>
+      <div class="costo-fila">
+        <span>Costo base mensual:</span>
+        <span id="prev-base-mensual">—</span>
+      </div>
+      <div class="costo-fila" id="prev-fila-descuento" style="display:none;color:var(--coral-d)">
+        <span id="prev-descuento-label">Descuento:</span>
+        <span id="prev-descuento-val">—</span>
+      </div>
+      <div class="costo-fila costo-final">
+        <span>Costo final mensual:</span>
+        <span id="prev-final-mensual">—</span>
+      </div>
+      <div class="costo-fila" style="color:var(--texto-suave)">
+        <span>Costo diario:</span>
+        <span id="prev-final-diario">—</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-insc')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarInscripcion()">Guardar inscripción</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('inscripciones');
+const hoy = new Date().toISOString().split('T')[0];
+document.getElementById('i-inicio').value = hoy;
+let editandoId = null;
+let ninosData  = [];
+
+async function inicializar() {
+  await Promise.all([cargar(), cargarSelectoresInsc()]);
+  cargarStats();
+}
+
+async function cargarSelectoresInsc() {
+  try {
+    const [ninos, sucursales] = await Promise.all([
+      API.get('/ninos/ninos/?activo=true&page_size=500'),
+      API.get('/core/sucursales/?activa=true'),
+    ]);
+    ninosData = ninos.results||ninos;
+    UI.llenarSelect(document.getElementById('i-nino'), ninosData, 'id',
+      n => n.nombre_completo + ' (' + n.edad_en_meses + ' meses)');
+    const suc = sucursales.results||sucursales;
+    UI.llenarSelect(document.getElementById('i-sucursal'), suc, 'id', 'nombre');
+    UI.llenarSelect(document.getElementById('f-sucursal'), suc, 'id', 'nombre');
+  } catch {}
+}
+
+async function cargarStats() {
+  try {
+    const [total, mensual, diaria, beca] = await Promise.all([
+      API.get('/inscripciones/inscripciones/?activa=true&page_size=1'),
+      API.get('/inscripciones/inscripciones/?activa=true&modalidad_pago=mensual&page_size=1'),
+      API.get('/inscripciones/inscripciones/?activa=true&modalidad_pago=diaria&page_size=1'),
+      API.get('/inscripciones/inscripciones/?activa=true&tipo_ajuste=beca&page_size=1'),
+    ]);
+    document.getElementById('stat-total').textContent   = total.count||0;
+    document.getElementById('stat-mensual').textContent = mensual.count||0;
+    document.getElementById('stat-diaria').textContent  = diaria.count||0;
+    document.getElementById('stat-beca').textContent    = beca.count||0;
+  } catch {}
+}
+
+async function cargar() {
+  const tbody    = document.getElementById('tbody-insc');
+  const buscar   = document.getElementById('f-buscar').value.trim();
+  const sucursal = document.getElementById('f-sucursal').value;
+  const sala     = document.getElementById('f-sala').value;
+  const modalidad= document.getElementById('f-modalidad').value;
+  const activa   = document.getElementById('f-activa').value;
+  let url = '/inscripciones/inscripciones/?page_size=100';
+  if (buscar)   url += '&search='+encodeURIComponent(buscar);
+  if (sucursal) url += '&sucursal='+sucursal;
+  if (sala)     url += '&sala='+sala;
+  if (modalidad)url += '&modalidad_pago='+modalidad;
+  if (activa)   url += '&activa='+activa;
+  tbody.innerHTML = '<tr><td colspan="9"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  try {
+    const data  = await API.get(url);
+    const lista = data.results||data;
+    document.getElementById('total-insc').textContent = (data.count||lista.length)+' inscripción(es)';
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin inscripciones</td></tr>';
+      return;
+    }
+    const ajusteLabel = { ninguno:'—', descuento_porcentaje:'% Desc.', descuento_monto:'$ Desc.', beca:'🎓 Beca' };
+    tbody.innerHTML = lista.map(i => `
+      <tr>
+        <td style="font-weight:700">${i.nino_nombre}</td>
+        <td style="font-size:var(--text-xs)">${i.sucursal_nombre}</td>
+        <td>
+          <div style="font-weight:700;font-size:var(--text-sm)">${i.sala_nombre}</div>
+          <div style="font-size:var(--text-xs);color:var(--texto-suave)">${i.turno_nombre}</div>
+        </td>
+        <td><span class="chip ${i.modalidad_pago==='mensual'?'chip-turquesa':'chip-amarillo'}">${i.modalidad_display}</span></td>
+        <td>
+          <div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_mensual_final)}</div>
+          ${i.tipo_ajuste!=='ninguno'?'<div style="font-size:var(--text-xs);text-decoration:line-through;color:var(--texto-suave)">'+UI.moneda(i.costo_mensual)+'</div>':''}
+        </td>
+        <td>${i.tipo_ajuste!=='ninguno'?'<span class="chip chip-violeta">'+ajusteLabel[i.tipo_ajuste]+'</span>':'—'}</td>
+        <td>${UI.fecha(i.fecha_inicio)}</td>
+        <td>${i.activa?'<span class="chip chip-verde">Activa</span>':'<span class="chip chip-coral">Inactiva</span>'}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-outline btn-sm" onclick="editar('${i.id}')">Editar</button>
+            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminar('${i.id}','${i.nino_nombre}')">Eliminar</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+  }
+}
+
+function limpiarFiltros() {
+  ['f-buscar','f-sucursal','f-sala','f-modalidad'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-activa').value='true'; cargar();
+}
+
+function abrirNuevo() {
+  editandoId = null;
+  document.getElementById('titulo-modal-insc').textContent = 'Nueva inscripción';
+  ['i-id','i-fin','i-motivo-ajuste'].forEach(id=>document.getElementById(id).value='');
+  ['i-nino','i-sucursal','i-turno'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('i-sala').innerHTML = '<option value="">Primero elige sucursal</option>';
+  document.getElementById('i-turno').innerHTML = '<option value="">Primero elige sala</option>';
+  document.getElementById('i-modalidad').value = 'mensual';
+  document.getElementById('i-tipo-ajuste').value = 'ninguno';
+  document.getElementById('i-inicio').value = hoy;
+  ['i-costo-mensual','i-costo-diario','i-pct-ajuste','i-monto-ajuste'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('aviso-edad').style.display = 'none';
+  document.getElementById('preview-costos').style.display = 'none';
+  mostrarCamposAjuste();
+  document.querySelectorAll('#modal-insc .form-error').forEach(el=>el.textContent='');
+  document.querySelectorAll('#modal-insc .input-error').forEach(el=>el.classList.remove('input-error'));
+  UI.abrirModal('modal-insc');
+}
+
+async function editar(id) {
+  editandoId = id;
+  document.getElementById('titulo-modal-insc').textContent = 'Editar inscripción';
+  try {
+    const i = await API.get('/inscripciones/inscripciones/'+id+'/');
+    document.getElementById('i-id').value             = id;
+    document.getElementById('i-nino').value           = i.nino;
+    document.getElementById('i-sucursal').value       = i.sucursal;
+    await cargarSalasInsc();
+    document.getElementById('i-sala').value           = i.sala;
+    await cargarTurnosInsc();
+    document.getElementById('i-turno').value          = i.turno;
+    document.getElementById('i-modalidad').value      = i.modalidad_pago;
+    document.getElementById('i-inicio').value         = i.fecha_inicio;
+    document.getElementById('i-fin').value            = i.fecha_fin||'';
+    document.getElementById('i-costo-mensual').value  = i.costo_mensual;
+    document.getElementById('i-costo-diario').value   = i.costo_diario;
+    document.getElementById('i-tipo-ajuste').value    = i.tipo_ajuste;
+    document.getElementById('i-pct-ajuste').value     = i.porcentaje_ajuste||'';
+    document.getElementById('i-monto-ajuste').value   = i.monto_ajuste||'';
+    document.getElementById('i-motivo-ajuste').value  = i.motivo_ajuste||'';
+    mostrarCamposAjuste();
+    calcularCostoFinal();
+    UI.abrirModal('modal-insc');
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function verificarEdad() {
+  const ninoId = document.getElementById('i-nino').value;
+  const aviso  = document.getElementById('aviso-edad');
+  if (!ninoId) { aviso.style.display='none'; return; }
+  const nino = ninosData.find(n => n.id === ninoId);
+  if (nino) {
+    aviso.style.display = '';
+    aviso.textContent = '🎂 Edad: '+nino.edad_en_meses+' meses — La sala debe coincidir con este rango.';
+  }
+}
+
+async function cargarSalasInsc() {
+  const sucId = document.getElementById('i-sucursal').value;
+  const sel   = document.getElementById('i-sala');
+  sel.innerHTML = '<option value="">Seleccionar sala...</option>';
+  document.getElementById('i-turno').innerHTML = '<option value="">Primero elige sala</option>';
+  ['i-costo-mensual','i-costo-diario'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('preview-costos').style.display='none';
+  if (!sucId) return;
+  try {
+    const data = await API.get('/core/salas/?sucursal='+sucId+'&activa=true');
+    UI.llenarSelect(sel, data.results||data, 'id', s=>s.nombre+' ('+s.rango_edad+') — Cap: '+s.capacidad_maxima);
+  } catch {}
+}
+
+async function cargarTurnosInsc() {
+  const salaId = document.getElementById('i-sala').value;
+  const sel    = document.getElementById('i-turno');
+  sel.innerHTML = '<option value="">Seleccionar turno...</option>';
+  if (!salaId) return;
+  try {
+    const data = await API.get('/core/turnos/?sala='+salaId+'&activo=true');
+    UI.llenarSelect(sel, data.results||data, 'id', t=>t.nombre+' ('+t.hora_inicio?.slice(0,5)+'-'+t.hora_fin?.slice(0,5)+')');
+  } catch {}
+}
+
+async function cargarCostosBase() {
+  const turnoId = document.getElementById('i-turno').value;
+  if (!turnoId) return;
+  try {
+    const turno = await API.get('/core/turnos/'+turnoId+'/');
+    document.getElementById('i-costo-mensual').value = turno.costo_mensual;
+    document.getElementById('i-costo-diario').value  = turno.costo_diario;
+    calcularCostoFinal();
+  } catch {}
+}
+
+function mostrarCamposAjuste() {
+  const tipo = document.getElementById('i-tipo-ajuste').value;
+  document.getElementById('campo-ajuste-pct').style.display    = tipo==='descuento_porcentaje'?'':'none';
+  document.getElementById('campo-ajuste-monto').style.display  = tipo==='descuento_monto'?'':'none';
+  document.getElementById('campo-motivo-ajuste').style.display = tipo!=='ninguno'?'':'none';
+  calcularCostoFinal();
+}
+
+function calcularCostoFinal() {
+  const base    = parseFloat(document.getElementById('i-costo-mensual').value)||0;
+  const baseDia = parseFloat(document.getElementById('i-costo-diario').value)||0;
+  const tipo    = document.getElementById('i-tipo-ajuste').value;
+  const pct     = parseFloat(document.getElementById('i-pct-ajuste').value)||0;
+  const monto   = parseFloat(document.getElementById('i-monto-ajuste').value)||0;
+  if (!base) { document.getElementById('preview-costos').style.display='none'; return; }
+
+  let final = base, finalDia = baseDia;
+  let descuento = 0;
+  if (tipo==='beca')               { final=0; finalDia=0; descuento=base; }
+  else if (tipo==='descuento_porcentaje') { descuento=base*(pct/100); final=base-descuento; finalDia=baseDia*(1-pct/100); }
+  else if (tipo==='descuento_monto') { descuento=monto; final=Math.max(0,base-monto); finalDia=Math.max(0,baseDia-monto); }
+
+  document.getElementById('preview-costos').style.display = '';
+  document.getElementById('prev-base-mensual').textContent = UI.moneda(base);
+  document.getElementById('prev-final-mensual').textContent= UI.moneda(final);
+  document.getElementById('prev-final-diario').textContent = UI.moneda(finalDia);
+  const filaDesc = document.getElementById('prev-fila-descuento');
+  if (descuento > 0) {
+    filaDesc.style.display='';
+    document.getElementById('prev-descuento-label').textContent = tipo==='beca'?'Beca (100% off):':'Descuento:';
+    document.getElementById('prev-descuento-val').textContent   = '- '+UI.moneda(descuento);
+  } else { filaDesc.style.display='none'; }
+}
+
+async function guardarInscripcion() {
+  const errores = Validar.formulario({
+    'i-nino':         [()=>Validar.requerido(document.getElementById('i-nino').value,'Niño/a')],
+    'i-sucursal':     [()=>Validar.requerido(document.getElementById('i-sucursal').value,'Sucursal')],
+    'i-sala':         [()=>Validar.requerido(document.getElementById('i-sala').value,'Sala')],
+    'i-turno':        [()=>Validar.requerido(document.getElementById('i-turno').value,'Turno')],
+    'i-inicio':       [()=>Validar.fecha(document.getElementById('i-inicio').value,'Fecha de inicio')],
+    'i-costo-mensual':[()=>Validar.numero(document.getElementById('i-costo-mensual').value,'Costo mensual')],
+    'i-costo-diario': [()=>Validar.numero(document.getElementById('i-costo-diario').value,'Costo diario')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-insc ')) return;
+
+  const tipo = document.getElementById('i-tipo-ajuste').value;
+  const datos = {
+    nino:             document.getElementById('i-nino').value,
+    sucursal:         document.getElementById('i-sucursal').value,
+    sala:             document.getElementById('i-sala').value,
+    turno:            document.getElementById('i-turno').value,
+    modalidad_pago:   document.getElementById('i-modalidad').value,
+    fecha_inicio:     document.getElementById('i-inicio').value,
+    fecha_fin:        document.getElementById('i-fin').value||null,
+    costo_mensual:    document.getElementById('i-costo-mensual').value,
+    costo_diario:     document.getElementById('i-costo-diario').value,
+    tipo_ajuste:      tipo,
+    porcentaje_ajuste:tipo==='descuento_porcentaje'?document.getElementById('i-pct-ajuste').value:0,
+    monto_ajuste:     tipo==='descuento_monto'?document.getElementById('i-monto-ajuste').value:0,
+    motivo_ajuste:    document.getElementById('i-motivo-ajuste').value,
+    activa:           true,
+  };
+  try {
+    if (editandoId) await API.patch('/inscripciones/inscripciones/'+editandoId+'/',datos);
+    else await API.post('/inscripciones/inscripciones/',datos);
+    UI.toast('Inscripción guardada correctamente','exito');
+    UI.cerrarModal('modal-insc');
+    cargar(); cargarStats();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminar(id, nombre) {
+  if (!confirm('Eliminar inscripción de "'+nombre+'"?\nSus cobros también serán afectados.')) return;
+  try {
+    await API.patch('/inscripciones/inscripciones/'+id+'/',{activa:false});
+    UI.toast('Inscripción desactivada','exito');
+    cargar(); cargarStats();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+inicializar();
+</script>
+</body>
+</html>

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    .cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:4px; }
+    .cal-header { text-align:center;font-size:var(--text-xs);font-weight:700;
+      color:var(--gris-400);text-transform:uppercase;padding:.4rem; }
+    .cal-dia {
+      background:var(--blanco);border:1.5px solid var(--gris-100);
+      border-radius:var(--radio-md);padding:.5rem;min-height:72px;
+      cursor:pointer;transition:all var(--trans-fast);position:relative;
+    }
+    .cal-dia:hover { border-color:var(--turquesa);background:var(--turquesa-l); }
+    .cal-dia.hoy   { border-color:var(--turquesa);border-width:2px; }
+    .cal-dia.seleccionado { border-color:var(--turquesa);border-width:2px;background:var(--turquesa-l); }
+    .cal-dia.tiene-planif { background:var(--verde-l);border-color:var(--verde); }
+    .cal-dia.otro-mes { opacity:.35; }
+    .cal-num { font-weight:800;font-size:var(--text-sm);color:var(--texto); }
+    .cal-dia.hoy .cal-num { color:var(--turquesa-d); }
+    .cal-punto { width:7px;height:7px;border-radius:50%;background:var(--verde);margin-top:4px; }
+    .plan-card {
+      background:var(--blanco);border:1.5px solid var(--gris-100);
+      border-radius:var(--radio-xl);padding:var(--gap-lg);
+      box-shadow:var(--sombra-sm);margin-bottom:var(--gap-md);
+    }
+    .plan-card.individual { border-left:4px solid var(--violeta); }
+    .plan-card.misael     { border-left:4px solid var(--coral); }
+    .objetivo-row {
+      display:flex;align-items:center;gap:var(--gap-sm);
+      padding:.5rem 0;border-bottom:1px dashed var(--gris-100);
+    }
+    .objetivo-row:last-child { border-bottom:none; }
+    .obj-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+    .reg-row {
+      display:flex;align-items:center;gap:var(--gap-sm);
+      padding:.5rem 0;border-bottom:1px dashed var(--gris-100);font-size:var(--text-sm);
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">📔 Agenda pedagógica</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-primary" onclick="abrirNuevaPlanif()">➕ Nueva planificación</button>
+        <button class="btn btn-outline" onclick="abrirNuevoPlanInd()">🧠 Plan individual</button>
+      </div>
+    </header>
+    <div class="pagina">
+
+      <!-- Filtros -->
+      <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;margin-bottom:var(--gap-lg);
+        background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+        box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100);align-items:flex-end">
+        <div class="form-grupo" style="margin:0;min-width:180px">
+          <label class="form-label">Sala</label>
+          <select id="f-sala" class="form-select" onchange="recargar()">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:160px">
+          <label class="form-label">Turno</label>
+          <select id="f-turno" class="form-select" onchange="recargar()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--gap-sm)">
+          <button class="btn btn-outline" onclick="cambiarMes(-1)">←</button>
+          <span id="mes-label" style="font-family:var(--font-display);font-size:var(--text-xl);
+            color:var(--texto);padding:0 var(--gap-sm);min-width:200px;text-align:center"></span>
+          <button class="btn btn-outline" onclick="cambiarMes(1)">→</button>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="irHoy()">Hoy</button>
+      </div>
+
+      <div class="grid-2" style="align-items:start">
+
+        <!-- Calendario -->
+        <div class="card">
+          <div class="cal-grid" id="cal-headers"></div>
+          <div style="height:8px"></div>
+          <div class="cal-grid" id="cal-dias"></div>
+        </div>
+
+        <!-- Panel derecho -->
+        <div>
+          <!-- Día seleccionado -->
+          <div class="card mb-md" id="panel-dia">
+            <div class="card-header">
+              <h3 class="card-titulo">📅 <span id="dia-label">Selecciona un día</span></h3>
+              <button class="btn btn-primary btn-sm" id="btn-add-planif" style="display:none"
+                onclick="abrirNuevaPlanif()">➕ Agregar</button>
+            </div>
+            <div id="planif-del-dia">
+              <div style="text-align:center;padding:var(--gap-lg);color:var(--texto-suave);font-weight:600">
+                Haz clic en un día del calendario
+              </div>
+            </div>
+          </div>
+
+          <!-- Planes individuales activos -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-titulo">🧠 Planes individuales activos</h3>
+              <button class="btn btn-outline btn-sm" onclick="abrirNuevoPlanInd()">➕ Nuevo</button>
+            </div>
+            <div id="lista-planes-ind">
+              <div class="loader"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Nueva/Editar planificación grupal -->
+<div class="modal-overlay" id="modal-planif">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-planif">Nueva planificación</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="pl-id">
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Fecha *</label>
+        <input type="date" id="pl-fecha" class="form-input">
+        <span class="form-error" data-error="pl-fecha"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Sala *</label>
+        <select id="pl-sala" class="form-select" onchange="cargarTurnosPlanif()">
+          <option value="">Seleccionar...</option>
+        </select>
+        <span class="form-error" data-error="pl-sala"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Turno *</label>
+        <select id="pl-turno" class="form-select">
+          <option value="">Primero elige sala</option>
+        </select>
+        <span class="form-error" data-error="pl-turno"></span>
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Actividades del día *</label>
+      <textarea id="pl-actividades" class="form-textarea" rows="4"
+        placeholder="Describe las actividades: juego libre, cuentos, música, motricidad, arte..."></textarea>
+      <span class="form-error" data-error="pl-actividades"></span>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Áreas de desarrollo trabajadas</label>
+      <input type="text" id="pl-areas" class="form-input"
+        placeholder="Ej: Motricidad fina, Lenguaje, Social (separar con comas)">
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Observaciones del día</label>
+      <textarea id="pl-observaciones" class="form-textarea" rows="2"
+        placeholder="Algo especial que ocurrió hoy en el grupo..."></textarea>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+      <input type="checkbox" id="pl-visible" checked style="width:16px;height:16px">
+      👁 Visible para padres en el portal
+    </label>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-planif')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPlanif()">💾 Guardar planificación</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Plan individual -->
+<div class="modal-overlay" id="modal-plan-ind">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-pi">Nuevo plan individual</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="pi-id">
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Niño/a *</label>
+        <select id="pi-nino" class="form-select">
+          <option value="">Seleccionar...</option>
+        </select>
+        <span class="form-error" data-error="pi-nino"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Origen del plan</label>
+        <select id="pi-origen" class="form-select">
+          <option value="educadora">👩‍🏫 Creado por educadora</option>
+          <option value="centro_misael">🧠 Plan del Centro Misael</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Fecha inicio *</label>
+        <input type="date" id="pi-inicio" class="form-input">
+        <span class="form-error" data-error="pi-inicio"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Fecha fin (vacío = vigente)</label>
+        <input type="date" id="pi-fin" class="form-input">
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Descripción del plan *</label>
+        <textarea id="pi-descripcion" class="form-textarea"
+          placeholder="Describe los objetivos generales del plan de trabajo..."></textarea>
+        <span class="form-error" data-error="pi-descripcion"></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-plan-ind')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPlanInd()">🧠 Guardar plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalle plan individual con objetivos -->
+<div class="modal-overlay" id="modal-detalle-plan">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-dp">Plan individual</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <div id="contenido-detalle-plan"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:var(--gap-md)">
+      <button class="btn btn-outline btn-sm" onclick="UI.cerrarModal('modal-detalle-plan')">Cerrar</button>
+      <button class="btn btn-primary btn-sm" id="btn-agregar-objetivo">➕ Agregar objetivo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo objetivo -->
+<div class="modal-overlay" id="modal-objetivo">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo">Nuevo objetivo</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="obj-plan-id">
+    <input type="hidden" id="obj-id">
+    <div class="form-grupo">
+      <label class="form-label">Descripción del objetivo *</label>
+      <textarea id="obj-descripcion" class="form-textarea"
+        placeholder="Ej: El niño logrará sostener el lápiz con pinza fina..."></textarea>
+      <span class="form-error" data-error="obj-descripcion"></span>
+    </div>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Área de desarrollo *</label>
+        <select id="obj-area" class="form-select">
+          <option value="">Seleccionar...</option>
+          <option value="motricidad_fina">Motricidad fina</option>
+          <option value="motricidad_gruesa">Motricidad gruesa</option>
+          <option value="lenguaje">Lenguaje y comunicación</option>
+          <option value="social">Desarrollo social</option>
+          <option value="cognitivo">Desarrollo cognitivo</option>
+          <option value="autonomia">Autonomía</option>
+        </select>
+        <span class="form-error" data-error="obj-area"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Estado inicial</label>
+        <select id="obj-estado" class="form-select">
+          <option value="pendiente">Pendiente</option>
+          <option value="en_proceso">En proceso</option>
+          <option value="logrado">Logrado</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-objetivo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarObjetivo()">Guardar objetivo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Registrar avance de objetivo -->
+<div class="modal-overlay" id="modal-registro-obj">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo">📝 Registrar avance</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="reg-obj-id">
+    <div id="info-objetivo-reg" style="background:var(--gris-50);border-radius:var(--radio-lg);
+      padding:var(--gap-md);margin-bottom:var(--gap-md)"></div>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Fecha *</label>
+        <input type="date" id="reg-fecha" class="form-input">
+        <span class="form-error" data-error="reg-fecha"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Resultado *</label>
+        <select id="reg-resultado" class="form-select">
+          <option value="">Seleccionar...</option>
+          <option value="trabajado">Trabajado</option>
+          <option value="logrado">Logrado hoy</option>
+          <option value="no_trabajado">No trabajado</option>
+        </select>
+        <span class="form-error" data-error="reg-resultado"></span>
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Observación</label>
+      <textarea id="reg-observacion" class="form-textarea" style="min-height:70px"
+        placeholder="Descripción del avance o dificultad observada..."></textarea>
+    </div>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-registro-obj')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarRegistroObj()">💾 Guardar avance</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('agenda');
+const hoy = new Date();
+let fechaActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+let diaSeleccionado = hoy.toISOString().split('T')[0];
+let planificaciones = [];
+let editandoPlanifId = null;
+let editandoPlanIndId = null;
+let planDetalleId = null;
+
+const MESES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS_SM = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+async function inicializar() {
+  document.getElementById('pl-fecha').value  = hoy.toISOString().split('T')[0];
+  document.getElementById('pi-inicio').value = hoy.toISOString().split('T')[0];
+  document.getElementById('reg-fecha').value = hoy.toISOString().split('T')[0];
+  await cargarSalas();
+  await cargarNinosSelect();
+  await Promise.all([cargarPlanificacionesMes(), cargarPlanesInd()]);
+  renderCalendario();
+}
+
+async function cargarSalas() {
+  try {
+    const data = await API.get('/core/salas/?activa=true&page_size=100');
+    const lista = data.results||data;
+    [document.getElementById('f-sala'), document.getElementById('pl-sala')].forEach(sel =>
+      UI.llenarSelect(sel, lista, 'id', s => s.nombre+' ('+s.rango_edad+')'));
+  } catch {}
+}
+
+async function cargarNinosSelect() {
+  try {
+    const data = await API.get('/ninos/ninos/?activo=true&page_size=500');
+    UI.llenarSelect(document.getElementById('pi-nino'),
+      data.results||data, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)');
+  } catch {}
+}
+
+async function cargarTurnosPlanif() {
+  const salaId = document.getElementById('pl-sala').value;
+  const sel    = document.getElementById('pl-turno');
+  sel.innerHTML = '<option value="">Seleccionar turno...</option>';
+  if (!salaId) return;
+  try {
+    const data = await API.get('/core/turnos/?sala='+salaId+'&activo=true');
+    UI.llenarSelect(sel, data.results||data, 'id', t => t.nombre+' ('+t.hora_inicio?.slice(0,5)+'-'+t.hora_fin?.slice(0,5)+')');
+  } catch {}
+}
+
+// ── Calendario ──
+function cambiarMes(delta) {
+  fechaActual = new Date(fechaActual.getFullYear(), fechaActual.getMonth()+delta, 1);
+  cargarPlanificacionesMes().then(renderCalendario);
+}
+
+function irHoy() {
+  fechaActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  diaSeleccionado = hoy.toISOString().split('T')[0];
+  cargarPlanificacionesMes().then(()=>{ renderCalendario(); mostrarPlanifDia(diaSeleccionado); });
+}
+
+async function cargarPlanificacionesMes() {
+  const año  = fechaActual.getFullYear();
+  const mes  = fechaActual.getMonth()+1;
+  const sala = document.getElementById('f-sala').value;
+  let url = '/agenda/planificaciones/?ordering=fecha&page_size=200';
+  if (sala) url += '&sala='+sala;
+  try {
+    const data = await API.get(url);
+    planificaciones = (data.results||data).filter(p => {
+      const d = new Date(p.fecha);
+      return d.getFullYear()===año && (d.getMonth()+1)===mes;
+    });
+  } catch { planificaciones=[]; }
+}
+
+function renderCalendario() {
+  const año  = fechaActual.getFullYear();
+  const mes  = fechaActual.getMonth();
+  document.getElementById('mes-label').textContent = MESES[mes]+' '+año;
+
+  const headers = document.getElementById('cal-headers');
+  headers.innerHTML = DIAS_SM.map(d=>'<div class="cal-header">'+d+'</div>').join('');
+
+  const diasMes   = new Date(año,mes+1,0).getDate();
+  const primerDia = new Date(año,mes,1).getDay();
+  const diasPlanif = new Set(planificaciones.map(p=>p.fecha));
+  const hoyStr = hoy.toISOString().split('T')[0];
+
+  let html = '';
+  for (let i=0;i<primerDia;i++) {
+    const d = new Date(año,mes,1-(primerDia-i));
+    html += '<div class="cal-dia otro-mes"><div class="cal-num">'+d.getDate()+'</div></div>';
+  }
+  for (let d=1;d<=diasMes;d++) {
+    const fechaISO = año+'-'+String(mes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const esHoy    = fechaISO===hoyStr;
+    const esSel    = fechaISO===diaSeleccionado;
+    const tienePl  = diasPlanif.has(fechaISO);
+    html += '<div class="cal-dia '+(esHoy?'hoy ':'')+(tienePl?'tiene-planif ':'')+(esSel?'seleccionado ':'')+'"'
+      +' onclick="seleccionarDia(\''+fechaISO+'\','+d+')">'
+      +'<div class="cal-num">'+d+'</div>'
+      +(tienePl?'<div class="cal-punto"></div>':'')
+      +'</div>';
+  }
+  document.getElementById('cal-dias').innerHTML = html;
+}
+
+function seleccionarDia(fecha, num) {
+  diaSeleccionado = fecha;
+  document.getElementById('pl-fecha').value = fecha;
+  document.getElementById('dia-label').textContent =
+    DIAS_SM[new Date(fecha+'T00:00:00').getDay()]+' '+num+' de '+MESES[fechaActual.getMonth()];
+  document.getElementById('btn-add-planif').style.display='';
+  renderCalendario();
+  mostrarPlanifDia(fecha);
+}
+
+function mostrarPlanifDia(fecha) {
+  const cont = document.getElementById('planif-del-dia');
+  const pls  = planificaciones.filter(p=>p.fecha===fecha);
+  if (!pls.length) {
+    cont.innerHTML='<div style="text-align:center;padding:var(--gap-md);color:var(--texto-suave)">'
+      +'<p style="font-weight:600;font-size:var(--text-sm)">Sin planificación este día</p></div>';
+    return;
+  }
+  cont.innerHTML = pls.map(p=>`
+    <div style="padding:var(--gap-sm) 0;border-bottom:1px dashed var(--gris-100)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span class="chip chip-turquesa">${p.turno_nombre}</span>
+        <div style="display:flex;gap:4px">
+          ${p.visible_padres?'<span class="chip chip-verde" style="font-size:.65rem">Visible padres</span>':''}
+          <button class="btn btn-outline btn-sm" onclick="editarPlanif('${p.id}')">✏️</button>
+          <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+            onclick="eliminarPlanif('${p.id}')">🗑️</button>
+        </div>
+      </div>
+      <p style="font-size:var(--text-sm);color:var(--texto);margin-bottom:4px">${p.actividades}</p>
+      ${p.areas_trabajadas?'<div>'+p.areas_trabajadas.split(',').map(a=>'<span class="chip chip-violeta" style="font-size:.65rem;margin:2px">'+a.trim()+'</span>').join('')+'</div>':''}
+      ${p.observaciones?'<p style="font-size:var(--text-xs);color:var(--texto-suave);font-style:italic;margin-top:4px">"'+p.observaciones+'"</p>':''}
+    </div>`).join('')+'<div style="margin-top:var(--gap-sm)"><button class="btn btn-outline btn-sm" onclick="abrirNuevaPlanif()">➕ Agregar otro turno</button></div>';
+}
+
+function recargar() { cargarPlanificacionesMes().then(()=>{ renderCalendario(); if(diaSeleccionado) mostrarPlanifDia(diaSeleccionado); }); }
+
+// ── CRUD Planificación ──
+function abrirNuevaPlanif() {
+  editandoPlanifId = null;
+  document.getElementById('titulo-modal-planif').textContent='Nueva planificación';
+  document.getElementById('pl-id').value='';
+  document.getElementById('pl-fecha').value = diaSeleccionado||hoy.toISOString().split('T')[0];
+  ['pl-actividades','pl-areas','pl-observaciones'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pl-sala').value=''; document.getElementById('pl-turno').innerHTML='<option value="">Primero elige sala</option>';
+  document.getElementById('pl-visible').checked=true;
+  document.querySelectorAll('#modal-planif .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-planif');
+}
+
+async function editarPlanif(id) {
+  editandoPlanifId = id;
+  document.getElementById('titulo-modal-planif').textContent='Editar planificación';
+  try {
+    const p = await API.get('/agenda/planificaciones/'+id+'/');
+    document.getElementById('pl-id').value            = id;
+    document.getElementById('pl-fecha').value         = p.fecha;
+    document.getElementById('pl-sala').value          = p.sala;
+    await cargarTurnosPlanif();
+    document.getElementById('pl-turno').value         = p.turno;
+    document.getElementById('pl-actividades').value   = p.actividades;
+    document.getElementById('pl-areas').value         = p.areas_trabajadas||'';
+    document.getElementById('pl-observaciones').value = p.observaciones||'';
+    document.getElementById('pl-visible').checked     = p.visible_padres;
+    UI.abrirModal('modal-planif');
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function guardarPlanif() {
+  const errores = Validar.formulario({
+    'pl-fecha':       [()=>Validar.fecha(document.getElementById('pl-fecha').value,'Fecha')],
+    'pl-sala':        [()=>Validar.requerido(document.getElementById('pl-sala').value,'Sala')],
+    'pl-turno':       [()=>Validar.requerido(document.getElementById('pl-turno').value,'Turno')],
+    'pl-actividades': [()=>Validar.requerido(document.getElementById('pl-actividades').value,'Actividades')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-planif ')) return;
+  const datos = {
+    fecha:           document.getElementById('pl-fecha').value,
+    sala:            document.getElementById('pl-sala').value,
+    turno:           document.getElementById('pl-turno').value,
+    actividades:     document.getElementById('pl-actividades').value,
+    areas_trabajadas:document.getElementById('pl-areas').value,
+    observaciones:   document.getElementById('pl-observaciones').value,
+    visible_padres:  document.getElementById('pl-visible').checked,
+    educadora:       null,
+  };
+  try {
+    if (editandoPlanifId) await API.patch('/agenda/planificaciones/'+editandoPlanifId+'/',datos);
+    else                  await API.post('/agenda/planificaciones/',datos);
+    UI.toast('Planificación guardada','exito');
+    UI.cerrarModal('modal-planif');
+    recargar();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminarPlanif(id) {
+  if (!confirm('Eliminar esta planificación?')) return;
+  try {
+    await API.delete('/agenda/planificaciones/'+id+'/');
+    UI.toast('Planificación eliminada','exito');
+    recargar();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+// ── Planes individuales ──
+async function cargarPlanesInd() {
+  const cont = document.getElementById('lista-planes-ind');
+  const sala = document.getElementById('f-sala').value;
+  UI.mostrarLoader(cont,'Cargando planes...');
+  try {
+    const data  = await API.get('/agenda/planes-individuales/?activo=true&page_size=100');
+    const lista = data.results||data;
+    if (!lista.length) { UI.vacio(cont,'Sin planes individuales activos','🧠'); return; }
+    cont.innerHTML = lista.map(p=>`
+      <div class="plan-card ${p.origen==='centro_misael'?'misael':'individual'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--gap-sm)">
+          <div>
+            <div style="font-weight:800;font-size:var(--text-sm)">${p.nino_nombre}</div>
+            <div style="font-size:var(--text-xs);color:var(--texto-suave)">${p.origen_display}</div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <span class="chip ${p.origen==='centro_misael'?'chip-coral':'chip-violeta'}" style="font-size:.65rem">
+              ${p.origen==='centro_misael'?'🧠 Misael':'👩‍🏫 Educadora'}
+            </span>
+            <button class="btn btn-outline btn-sm" onclick="verDetallePlan('${p.id}')">Ver</button>
+            <button class="btn btn-outline btn-sm" onclick="editarPlanInd('${p.id}')">✏️</button>
+            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminarPlanInd('${p.id}','${p.nino_nombre}')">🗑️</button>
+          </div>
+        </div>
+        <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-sm)">
+          ${p.descripcion?.slice(0,100)}${p.descripcion?.length>100?'...':''}
+        </p>
+        <div>
+          ${p.objetivos?.slice(0,3).map(obj=>`
+            <div class="objetivo-row">
+              <div class="obj-dot" style="background:${obj.estado==='logrado'?'var(--verde)':obj.estado==='en_proceso'?'var(--amarillo)':'var(--gris-300)'}"></div>
+              <span style="flex:1;font-size:var(--text-xs);font-weight:600">${obj.descripcion?.slice(0,60)}</span>
+              <span class="chip ${obj.estado==='logrado'?'chip-verde':obj.estado==='en_proceso'?'chip-amarillo':'chip-gris'}" style="font-size:.6rem">${obj.estado_display}</span>
+              <button class="btn btn-outline btn-sm" style="font-size:.6rem;padding:2px 6px"
+                onclick="abrirRegistroObj('${obj.id}','${obj.descripcion?.slice(0,40)}')">📝</button>
+            </div>`).join('')||''}
+          ${(p.objetivos?.length||0)>3?'<p style="font-size:var(--text-xs);color:var(--texto-suave);text-align:center;padding:.4rem">+'+(p.objetivos.length-3)+' más → <a href="#" onclick="verDetallePlan(\''+p.id+'\');return false" style="color:var(--turquesa-d)">ver todos</a></p>':''}
+        </div>
+      </div>`).join('');
+  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+function abrirNuevoPlanInd() {
+  editandoPlanIndId = null;
+  document.getElementById('titulo-modal-pi').textContent='Nuevo plan individual';
+  ['pi-id','pi-descripcion','pi-fin'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pi-nino').value   = '';
+  document.getElementById('pi-origen').value = 'educadora';
+  document.getElementById('pi-inicio').value = hoy.toISOString().split('T')[0];
+  document.querySelectorAll('#modal-plan-ind .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-plan-ind');
+}
+
+async function editarPlanInd(id) {
+  editandoPlanIndId = id;
+  document.getElementById('titulo-modal-pi').textContent='Editar plan individual';
+  try {
+    const p = await API.get('/agenda/planes-individuales/'+id+'/');
+    document.getElementById('pi-id').value          = id;
+    document.getElementById('pi-nino').value        = p.nino;
+    document.getElementById('pi-origen').value      = p.origen;
+    document.getElementById('pi-inicio').value      = p.fecha_inicio;
+    document.getElementById('pi-fin').value         = p.fecha_fin||'';
+    document.getElementById('pi-descripcion').value = p.descripcion;
+    UI.abrirModal('modal-plan-ind');
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function guardarPlanInd() {
+  const errores = Validar.formulario({
+    'pi-nino':       [()=>Validar.requerido(document.getElementById('pi-nino').value,'Niño/a')],
+    'pi-descripcion':[()=>Validar.requerido(document.getElementById('pi-descripcion').value,'Descripción')],
+    'pi-inicio':     [()=>Validar.fecha(document.getElementById('pi-inicio').value,'Fecha inicio')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-plan-ind ')) return;
+  const datos = {
+    nino:        document.getElementById('pi-nino').value,
+    origen:      document.getElementById('pi-origen').value,
+    descripcion: document.getElementById('pi-descripcion').value,
+    fecha_inicio:document.getElementById('pi-inicio').value,
+    fecha_fin:   document.getElementById('pi-fin').value||null,
+    creado_por:  null, activo:true,
+  };
+  try {
+    if (editandoPlanIndId) await API.patch('/agenda/planes-individuales/'+editandoPlanIndId+'/',datos);
+    else                   await API.post('/agenda/planes-individuales/',datos);
+    UI.toast('Plan guardado','exito');
+    UI.cerrarModal('modal-plan-ind');
+    cargarPlanesInd();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminarPlanInd(id, nombre) {
+  if (!confirm('Eliminar el plan de "'+nombre+'"?')) return;
+  try {
+    await API.patch('/agenda/planes-individuales/'+id+'/',{activo:false});
+    UI.toast('Plan desactivado','exito');
+    cargarPlanesInd();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+// ── Detalle plan con objetivos ──
+async function verDetallePlan(id) {
+  planDetalleId = id;
+  UI.abrirModal('modal-detalle-plan');
+  const cont = document.getElementById('contenido-detalle-plan');
+  cont.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  document.getElementById('btn-agregar-objetivo').onclick = ()=>abrirNuevoObjetivo(id);
+  try {
+    const p = await API.get('/agenda/planes-individuales/'+id+'/');
+    document.getElementById('titulo-modal-dp').textContent = 'Plan: '+p.nino_nombre;
+    cont.innerHTML = `
+      <div style="background:var(--gris-50);border-radius:var(--radio-lg);padding:var(--gap-md);margin-bottom:var(--gap-md)">
+        <div style="font-weight:700">${p.nino_nombre} · <span class="chip ${p.origen==='centro_misael'?'chip-coral':'chip-violeta'}" style="font-size:.7rem">${p.origen_display}</span></div>
+        <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-top:4px">${p.descripcion}</p>
+      </div>
+      <div id="lista-objetivos-detalle">
+        ${p.objetivos?.length?p.objetivos.map(obj=>`
+          <div class="objetivo-row">
+            <div class="obj-dot" style="background:${obj.estado==='logrado'?'var(--verde)':obj.estado==='en_proceso'?'var(--amarillo)':'var(--gris-300)'}"></div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:var(--text-sm)">${obj.descripcion}</div>
+              <div style="font-size:var(--text-xs);color:var(--texto-suave)">${obj.area_display}</div>
+            </div>
+            <span class="chip ${obj.estado==='logrado'?'chip-verde':obj.estado==='en_proceso'?'chip-amarillo':'chip-gris'}" style="font-size:.65rem">${obj.estado_display}</span>
+            <button class="btn btn-outline btn-sm" style="font-size:.65rem;padding:2px 8px"
+              onclick="abrirRegistroObj('${obj.id}','${obj.descripcion?.replace(/'/g,'')}')">📝 Avance</button>
+            <button class="btn btn-sm" style="font-size:.65rem;padding:2px 8px;background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminarObjetivo('${obj.id}')">🗑️</button>
+          </div>`).join('')
+          :'<p style="font-size:var(--text-sm);color:var(--texto-suave);text-align:center;padding:var(--gap-md)">Sin objetivos aún. Agrega el primero →</p>'}
+      </div>`;
+  } catch (err) {
+    cont.innerHTML = '<div class="alerta alerta-peligro">Error: '+err.message+'</div>';
+  }
+}
+
+function abrirNuevoObjetivo(planId) {
+  document.getElementById('obj-plan-id').value  = planId;
+  document.getElementById('obj-id').value       = '';
+  document.getElementById('obj-descripcion').value = '';
+  document.getElementById('obj-area').value     = '';
+  document.getElementById('obj-estado').value   = 'pendiente';
+  document.querySelectorAll('#modal-objetivo .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-objetivo');
+}
+
+async function guardarObjetivo() {
+  const errores = Validar.formulario({
+    'obj-descripcion':[()=>Validar.requerido(document.getElementById('obj-descripcion').value,'Descripción')],
+    'obj-area':        [()=>Validar.requerido(document.getElementById('obj-area').value,'Área')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-objetivo ')) return;
+  const datos = {
+    plan:       document.getElementById('obj-plan-id').value,
+    descripcion:document.getElementById('obj-descripcion').value,
+    area:       document.getElementById('obj-area').value,
+    estado:     document.getElementById('obj-estado').value,
+  };
+  try {
+    await API.post('/agenda/objetivos/',datos);
+    UI.toast('Objetivo agregado','exito');
+    UI.cerrarModal('modal-objetivo');
+    verDetallePlan(datos.plan);
+    cargarPlanesInd();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminarObjetivo(id) {
+  if (!confirm('Eliminar este objetivo?')) return;
+  try {
+    await API.delete('/agenda/objetivos/'+id+'/');
+    UI.toast('Objetivo eliminado','exito');
+    if (planDetalleId) verDetallePlan(planDetalleId);
+    cargarPlanesInd();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+function abrirRegistroObj(objId, descripcion) {
+  document.getElementById('reg-obj-id').value  = objId;
+  document.getElementById('reg-resultado').value = '';
+  document.getElementById('reg-observacion').value = '';
+  document.getElementById('reg-fecha').value   = hoy.toISOString().split('T')[0];
+  document.getElementById('info-objetivo-reg').innerHTML =
+    '<div style="font-weight:700;font-size:var(--text-sm)">'+descripcion+'</div>';
+  document.querySelectorAll('#modal-registro-obj .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-registro-obj');
+}
+
+async function guardarRegistroObj() {
+  const errores = Validar.formulario({
+    'reg-fecha':     [()=>Validar.fecha(document.getElementById('reg-fecha').value,'Fecha')],
+    'reg-resultado': [()=>Validar.requerido(document.getElementById('reg-resultado').value,'Resultado')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-registro-obj ')) return;
+  const datos = {
+    objetivo:    document.getElementById('reg-obj-id').value,
+    fecha:       document.getElementById('reg-fecha').value,
+    resultado:   document.getElementById('reg-resultado').value,
+    observacion: document.getElementById('reg-observacion').value,
+    educadora:   null,
+  };
+  try {
+    await API.post('/agenda/registros-objetivos/',datos);
+    UI.toast('Avance registrado correctamente','exito');
+    UI.cerrarModal('modal-registro-obj');
+    if (planDetalleId) verDetallePlan(planDetalleId);
+    cargarPlanesInd();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+inicializar();
+</script>
+</body>
+</html>

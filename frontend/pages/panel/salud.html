@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salud — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">🏥 Salud e incidentes</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-coral" onclick="abrirNuevo()">⚠️ Registrar incidente</button>
+      </div>
+    </header>
+    <div class="pagina">
+
+      <!-- Stats -->
+      <div class="grid-stats mb-lg">
+        <div class="stat-card">
+          <div class="stat-icon coral">⚠️</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-hoy">—</div>
+            <div class="etiqueta">Incidentes hoy</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amarillo">📅</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-mes">—</div>
+            <div class="etiqueta">Este mes</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon violeta">🏥</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-medico">—</div>
+            <div class="etiqueta">Requirieron atención médica</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon verde">✅</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-notif">—</div>
+            <div class="etiqueta">Tutores notificados</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;margin-bottom:var(--gap-lg);
+        background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+        box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
+        <div class="form-grupo" style="margin:0;flex:1;min-width:180px">
+          <label class="form-label">Buscar niño</label>
+          <input type="text" id="f-buscar" class="form-input" placeholder="Nombre del niño/a...">
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:160px">
+          <label class="form-label">Tipo</label>
+          <select id="f-tipo" class="form-select">
+            <option value="">Todos</option>
+            <option value="accidente">Accidente</option>
+            <option value="enfermedad">Enfermedad</option>
+            <option value="sintoma">Síntoma</option>
+            <option value="medicacion">Medicación</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:150px">
+          <label class="form-label">Fecha desde</label>
+          <input type="date" id="f-desde" class="form-input">
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:150px">
+          <label class="form-label">Fecha hasta</label>
+          <input type="date" id="f-hasta" class="form-input">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:6px">
+          <button class="btn btn-primary" onclick="cargar()">Buscar</button>
+          <button class="btn btn-outline" onclick="limpiarFiltros()">✕</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-titulo">Registro de incidentes</h3>
+          <span id="total-incidentes" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th>Niño/a</th><th>Tipo</th><th>Fecha y hora</th>
+              <th>Descripción</th><th>Acción tomada</th>
+              <th>Tutor notif.</th><th>Atención médica</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-incidentes"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal incidente -->
+<div class="modal-overlay" id="modal-incidente">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-inc">Registrar incidente</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="inc-id">
+
+    <div style="background:var(--coral-l);border:1.5px solid var(--coral);border-radius:var(--radio-lg);
+      padding:var(--gap-md);margin-bottom:var(--gap-md);font-size:var(--text-sm);
+      color:var(--coral-d);font-weight:600">
+      ⚠️ Registra cualquier situación de salud que ocurra durante la jornada.
+      El tutor principal será notificado automáticamente.
+    </div>
+
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Niño/a *</label>
+        <select id="inc-nino" class="form-select">
+          <option value="">Seleccionar niño/a...</option>
+        </select>
+        <span class="form-error" data-error="inc-nino"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Sucursal *</label>
+        <select id="inc-sucursal" class="form-select">
+          <option value="">Seleccionar...</option>
+        </select>
+        <span class="form-error" data-error="inc-sucursal"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Tipo de incidente *</label>
+        <select id="inc-tipo" class="form-select">
+          <option value="">Seleccionar...</option>
+          <option value="accidente">🤕 Accidente</option>
+          <option value="enfermedad">🤒 Enfermedad</option>
+          <option value="sintoma">😟 Síntoma observado</option>
+          <option value="medicacion">💊 Medicación aplicada</option>
+        </select>
+        <span class="form-error" data-error="inc-tipo"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Fecha *</label>
+        <input type="date" id="inc-fecha" class="form-input">
+        <span class="form-error" data-error="inc-fecha"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Hora *</label>
+        <input type="time" id="inc-hora" class="form-input">
+        <span class="form-error" data-error="inc-hora"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Descripción del incidente *</label>
+        <textarea id="inc-descripcion" class="form-textarea"
+          placeholder="Describe qué ocurrió con el mayor detalle posible..."></textarea>
+        <span class="form-error" data-error="inc-descripcion"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Acción tomada *</label>
+        <textarea id="inc-accion" class="form-textarea"
+          placeholder="Qué se hizo: primeros auxilios, llamada a los padres, medicación..."></textarea>
+        <span class="form-error" data-error="inc-accion"></span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:var(--gap-md)">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+        <input type="checkbox" id="inc-notificado" style="width:16px;height:16px">
+        ✅ El tutor fue notificado
+      </label>
+      <div id="campo-hora-notif" style="display:none;margin-left:24px">
+        <label class="form-label">Hora de notificación</label>
+        <input type="time" id="inc-hora-notif" class="form-input" style="max-width:160px">
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+        <input type="checkbox" id="inc-medico" style="width:16px;height:16px">
+        🏥 Requirió atención médica externa
+      </label>
+    </div>
+
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-incidente')">Cancelar</button>
+      <button class="btn btn-coral" onclick="guardarIncidente()">Registrar incidente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ver detalle -->
+<div class="modal-overlay" id="modal-detalle-inc">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <h3 class="modal-titulo">📋 Detalle del incidente</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <div id="detalle-inc-contenido"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:var(--gap-md)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-detalle-inc')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('salud');
+const hoy  = new Date().toISOString().split('T')[0];
+const ahora = new Date().toTimeString().slice(0,5);
+document.getElementById('inc-fecha').value = hoy;
+document.getElementById('inc-hora').value  = ahora;
+let editandoId = null;
+
+// Toggle hora notificación
+document.getElementById('inc-notificado').addEventListener('change', function() {
+  document.getElementById('campo-hora-notif').style.display = this.checked ? '' : 'none';
+  if (this.checked) document.getElementById('inc-hora-notif').value = ahora;
+});
+
+async function inicializar() {
+  await Promise.all([cargar(), cargarSelectores(), cargarStats()]);
+}
+
+async function cargarSelectores() {
+  try {
+    const [ninos, sucursales] = await Promise.all([
+      API.get('/ninos/ninos/?activo=true&page_size=500'),
+      API.get('/core/sucursales/?activa=true'),
+    ]);
+    UI.llenarSelect(document.getElementById('inc-nino'),
+      ninos.results||ninos, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)');
+    UI.llenarSelect(document.getElementById('inc-sucursal'),
+      sucursales.results||sucursales, 'id', 'nombre');
+  } catch {}
+}
+
+async function cargarStats() {
+  try {
+    const mes = hoy.slice(0,7);
+    const [hoyData, mesData, medicoData, notifData] = await Promise.all([
+      API.get('/salud/incidentes/?fecha='+hoy+'&page_size=1'),
+      API.get('/salud/incidentes/?page_size=500'),
+      API.get('/salud/incidentes/?requirio_atencion_medica=true&page_size=1'),
+      API.get('/salud/incidentes/?notificado_tutor=true&page_size=1'),
+    ]);
+    document.getElementById('stat-hoy').textContent   = hoyData.count||0;
+    const mesFiltrado = (mesData.results||mesData).filter(i => i.fecha?.startsWith(mes));
+    document.getElementById('stat-mes').textContent   = mesFiltrado.length;
+    document.getElementById('stat-medico').textContent= medicoData.count||0;
+    document.getElementById('stat-notif').textContent = notifData.count||0;
+  } catch {}
+}
+
+async function cargar() {
+  const tbody  = document.getElementById('tbody-incidentes');
+  const buscar = document.getElementById('f-buscar').value.trim();
+  const tipo   = document.getElementById('f-tipo').value;
+  const desde  = document.getElementById('f-desde').value;
+  const hasta  = document.getElementById('f-hasta').value;
+  let url = '/salud/incidentes/?page_size=100&ordering=-fecha,-hora';
+  if (buscar) url += '&search='+encodeURIComponent(buscar);
+  if (tipo)   url += '&tipo='+tipo;
+  tbody.innerHTML = '<tr><td colspan="8"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  try {
+    const data  = await API.get(url);
+    let lista = data.results||data;
+    if (desde) lista = lista.filter(i => i.fecha >= desde);
+    if (hasta) lista = lista.filter(i => i.fecha <= hasta);
+    document.getElementById('total-incidentes').textContent = lista.length+' incidente(s)';
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin incidentes registrados</td></tr>';
+      return;
+    }
+    const tipoIcons = { accidente:'🤕', enfermedad:'🤒', sintoma:'😟', medicacion:'💊' };
+    const tipoColors = { accidente:'chip-coral', enfermedad:'chip-amarillo', sintoma:'chip-turquesa', medicacion:'chip-violeta' };
+    tbody.innerHTML = lista.map(inc => `
+      <tr>
+        <td style="font-weight:700">${inc.nino_nombre}</td>
+        <td><span class="chip ${tipoColors[inc.tipo]||'chip-gris'}">${tipoIcons[inc.tipo]||''} ${inc.tipo_display}</span></td>
+        <td>
+          <div style="font-weight:700">${UI.fecha(inc.fecha)}</div>
+          <div style="font-size:var(--text-xs);color:var(--texto-suave)">${inc.hora?.slice(0,5)||'—'}</div>
+        </td>
+        <td style="font-size:var(--text-sm);max-width:200px">
+          ${inc.descripcion?.slice(0,80)}${inc.descripcion?.length>80?'...':''}
+        </td>
+        <td style="font-size:var(--text-sm);max-width:180px">
+          ${inc.accion_tomada?.slice(0,60)}${inc.accion_tomada?.length>60?'...':''}
+        </td>
+        <td>${inc.notificado_tutor
+          ? '<span class="chip chip-verde">✅ Sí</span>'
+          : '<span class="chip chip-coral">❌ No</span>'}</td>
+        <td>${inc.requirio_atencion_medica
+          ? '<span class="chip chip-violeta">🏥 Sí</span>'
+          : '<span class="chip chip-gris">No</span>'}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-outline btn-sm" onclick="verDetalle('${inc.id}')">👁 Ver</button>
+            <button class="btn btn-outline btn-sm" onclick="editar('${inc.id}')">✏️</button>
+            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminar('${inc.id}','incidente de ${inc.nino_nombre}')">🗑️</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+  }
+}
+
+function limpiarFiltros() {
+  ['f-buscar','f-tipo','f-desde','f-hasta'].forEach(id=>document.getElementById(id).value='');
+  cargar();
+}
+
+function abrirNuevo() {
+  editandoId = null;
+  document.getElementById('titulo-modal-inc').textContent = 'Registrar incidente';
+  ['inc-id','inc-descripcion','inc-accion'].forEach(id=>document.getElementById(id).value='');
+  ['inc-nino','inc-sucursal','inc-tipo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inc-fecha').value = hoy;
+  document.getElementById('inc-hora').value  = ahora;
+  document.getElementById('inc-notificado').checked = false;
+  document.getElementById('inc-medico').checked     = false;
+  document.getElementById('campo-hora-notif').style.display = 'none';
+  document.querySelectorAll('#modal-incidente .form-error').forEach(el=>el.textContent='');
+  document.querySelectorAll('#modal-incidente .input-error').forEach(el=>el.classList.remove('input-error'));
+  UI.abrirModal('modal-incidente');
+}
+
+async function editar(id) {
+  editandoId = id;
+  document.getElementById('titulo-modal-inc').textContent = 'Editar incidente';
+  try {
+    const inc = await API.get('/salud/incidentes/'+id+'/');
+    document.getElementById('inc-id').value          = id;
+    document.getElementById('inc-nino').value        = inc.nino;
+    document.getElementById('inc-sucursal').value    = inc.sucursal;
+    document.getElementById('inc-tipo').value        = inc.tipo;
+    document.getElementById('inc-fecha').value       = inc.fecha;
+    document.getElementById('inc-hora').value        = inc.hora?.slice(0,5)||ahora;
+    document.getElementById('inc-descripcion').value = inc.descripcion;
+    document.getElementById('inc-accion').value      = inc.accion_tomada;
+    document.getElementById('inc-notificado').checked = inc.notificado_tutor;
+    document.getElementById('inc-medico').checked    = inc.requirio_atencion_medica;
+    if (inc.hora_notificacion) {
+      document.getElementById('campo-hora-notif').style.display = '';
+      document.getElementById('inc-hora-notif').value = inc.hora_notificacion.slice(0,5);
+    }
+    UI.abrirModal('modal-incidente');
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function verDetalle(id) {
+  UI.abrirModal('modal-detalle-inc');
+  const cont = document.getElementById('detalle-inc-contenido');
+  cont.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const inc = await API.get('/salud/incidentes/'+id+'/');
+    const tipoIcons = { accidente:'🤕', enfermedad:'🤒', sintoma:'😟', medicacion:'💊' };
+    cont.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;
+        background:var(--coral-l);padding:var(--gap-md);border-radius:var(--radio-lg);margin-bottom:var(--gap-md)">
+        <div>
+          <div style="font-family:var(--font-display);font-size:var(--text-xl)">${inc.nino_nombre}</div>
+          <div style="font-size:var(--text-sm);color:var(--coral-d);font-weight:600">${tipoIcons[inc.tipo]||''} ${inc.tipo_display}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:700">${UI.fecha(inc.fecha)}</div>
+          <div style="font-size:var(--text-sm);color:var(--texto-suave)">${inc.hora?.slice(0,5)||''}</div>
+        </div>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Descripción</label>
+        <p style="font-size:var(--text-sm);line-height:1.7;padding:var(--gap-md);
+          background:var(--gris-50);border-radius:var(--radio-lg)">${inc.descripcion}</p>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Acción tomada</label>
+        <p style="font-size:var(--text-sm);line-height:1.7;padding:var(--gap-md);
+          background:var(--gris-50);border-radius:var(--radio-lg)">${inc.accion_tomada}</p>
+      </div>
+      <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap">
+        <span class="chip ${inc.notificado_tutor?'chip-verde':'chip-coral'}">
+          ${inc.notificado_tutor?'✅ Tutor notificado':'❌ Tutor no notificado'}
+        </span>
+        ${inc.hora_notificacion?'<span class="chip chip-gris">🕐 '+inc.hora_notificacion.slice(0,5)+'</span>':''}
+        <span class="chip ${inc.requirio_atencion_medica?'chip-violeta':'chip-gris'}">
+          ${inc.requirio_atencion_medica?'🏥 Requirió atención médica':'Sin atención médica'}
+        </span>
+      </div>
+      <div style="margin-top:var(--gap-md);font-size:var(--text-xs);color:var(--texto-suave)">
+        Reportado por: <strong>${inc.reportado_por_nombre||'—'}</strong>
+        · Sucursal: <strong>${inc.sucursal_nombre||'—'}</strong>
+      </div>`;
+  } catch (err) {
+    cont.innerHTML = '<div class="alerta alerta-peligro">Error: '+err.message+'</div>';
+  }
+}
+
+async function guardarIncidente() {
+  const errores = Validar.formulario({
+    'inc-nino':        [()=>Validar.requerido(document.getElementById('inc-nino').value,'Niño/a')],
+    'inc-sucursal':    [()=>Validar.requerido(document.getElementById('inc-sucursal').value,'Sucursal')],
+    'inc-tipo':        [()=>Validar.requerido(document.getElementById('inc-tipo').value,'Tipo de incidente')],
+    'inc-fecha':       [()=>Validar.fecha(document.getElementById('inc-fecha').value,'Fecha')],
+    'inc-hora':        [()=>Validar.requerido(document.getElementById('inc-hora').value,'Hora')],
+    'inc-descripcion': [()=>Validar.requerido(document.getElementById('inc-descripcion').value,'Descripción')],
+    'inc-accion':      [()=>Validar.requerido(document.getElementById('inc-accion').value,'Acción tomada')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-incidente ')) return;
+
+  const notificado = document.getElementById('inc-notificado').checked;
+  const datos = {
+    nino:                    document.getElementById('inc-nino').value,
+    sucursal:                document.getElementById('inc-sucursal').value,
+    tipo:                    document.getElementById('inc-tipo').value,
+    fecha:                   document.getElementById('inc-fecha').value,
+    hora:                    document.getElementById('inc-hora').value,
+    descripcion:             document.getElementById('inc-descripcion').value,
+    accion_tomada:           document.getElementById('inc-accion').value,
+    notificado_tutor:        notificado,
+    hora_notificacion:       notificado ? document.getElementById('inc-hora-notif').value : null,
+    requirio_atencion_medica:document.getElementById('inc-medico').checked,
+    reportado_por:           null,
+  };
+  try {
+    if (editandoId) await API.patch('/salud/incidentes/'+editandoId+'/',datos);
+    else            await API.post('/salud/incidentes/',datos);
+    UI.toast('Incidente registrado correctamente','exito');
+    UI.cerrarModal('modal-incidente');
+    cargar(); cargarStats();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminar(id, nombre) {
+  if (!confirm('Eliminar '+nombre+'?\nEsta acción no se puede deshacer.')) return;
+  try {
+    await API.delete('/salud/incidentes/'+id+'/');
+    UI.toast('Incidente eliminado','exito');
+    cargar(); cargarStats();
+  } catch (err) { UI.toast('No se puede eliminar: '+err.message,'error'); }
+}
+
+inicializar();
+</script>
+</body>
+</html>

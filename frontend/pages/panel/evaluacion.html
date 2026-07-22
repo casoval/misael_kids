@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desarrollo — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    .hito-card {
+      background:var(--blanco);border:1.5px solid var(--gris-100);border-radius:var(--radio-xl);
+      padding:var(--gap-md);margin-bottom:var(--gap-sm);box-shadow:var(--sombra-sm);
+      transition:all var(--trans-fast);
+    }
+    .hito-card:hover { border-color:var(--turquesa); }
+    .hito-estado-dot {
+      width:12px;height:12px;border-radius:50%;flex-shrink:0;
+    }
+    .dot-logrado    { background:var(--verde); }
+    .dot-en_proceso { background:var(--amarillo); }
+    .dot-no_logrado { background:var(--gris-300); }
+    .area-header {
+      font-family:var(--font-display);font-size:var(--text-lg);
+      color:var(--texto);margin:var(--gap-md) 0 var(--gap-sm);
+      display:flex;align-items:center;gap:var(--gap-sm);
+    }
+    .progreso-area {
+      height:8px;background:var(--gris-100);border-radius:var(--radio-full);
+      overflow:hidden;margin-bottom:var(--gap-md);
+    }
+    .progreso-fill {
+      height:100%;border-radius:var(--radio-full);
+      background:linear-gradient(90deg,var(--turquesa),var(--verde));
+      transition:width .6s ease;
+    }
+    .eval-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--gap-md); }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">🌱 Evaluación del desarrollo</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-primary" onclick="UI.abrirModal('modal-nueva-eval')">➕ Nueva evaluación</button>
+        <button class="btn btn-outline" onclick="cambiarTab('hitos')">📚 Catálogo de hitos</button>
+      </div>
+    </header>
+    <div class="pagina">
+
+      <!-- Tabs -->
+      <div class="page-tabs mb-lg">
+        <button class="page-tab activo" onclick="cambiarTab('evaluaciones')" id="tab-evaluaciones">
+          📊 Evaluaciones por niño
+        </button>
+        <button class="page-tab" onclick="cambiarTab('alertas')" id="tab-alertas">
+          ⚠️ Alertas de rezago
+          <span id="badge-alertas" class="chip chip-coral" style="margin-left:4px;display:none"></span>
+        </button>
+        <button class="page-tab" onclick="cambiarTab('hitos')" id="tab-hitos">
+          📚 Catálogo de hitos
+        </button>
+      </div>
+
+      <!-- Panel: Evaluaciones por niño -->
+      <div class="tab-panel activo" id="panel-evaluaciones">
+        <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;margin-bottom:var(--gap-lg);
+          background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+          box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
+          <div class="form-grupo" style="margin:0;flex:1;min-width:200px">
+            <label class="form-label">Seleccionar niño/a</label>
+            <select id="f-nino-eval" class="form-select" onchange="cargarEvalNino()">
+              <option value="">Seleccionar niño/a...</option>
+            </select>
+          </div>
+          <div class="form-grupo" style="margin:0;min-width:160px">
+            <label class="form-label">Área</label>
+            <select id="f-area-eval" class="form-select" onchange="cargarEvalNino()">
+              <option value="">Todas las áreas</option>
+              <option value="motricidad_fina">Motricidad fina</option>
+              <option value="motricidad_gruesa">Motricidad gruesa</option>
+              <option value="lenguaje">Lenguaje</option>
+              <option value="social">Social</option>
+              <option value="cognitivo">Cognitivo</option>
+              <option value="autonomia">Autonomía</option>
+            </select>
+          </div>
+        </div>
+        <div id="contenido-eval">
+          <div style="text-align:center;padding:var(--gap-2xl);color:var(--texto-suave)">
+            <div style="font-size:3rem;margin-bottom:var(--gap-md)">👶</div>
+            <p style="font-weight:600">Selecciona un niño/a para ver sus evaluaciones</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel: Alertas de rezago -->
+      <div class="tab-panel" id="panel-alertas">
+        <div class="alerta alerta-warn mb-md">
+          ⚠️ Los siguientes niños tienen hitos marcados como alerta de rezago.
+          Se recomienda derivación al Centro Misael para evaluación profesional.
+        </div>
+        <div id="lista-alertas-rezago">
+          <div class="loader"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Panel: Catálogo de hitos -->
+      <div class="tab-panel" id="panel-hitos">
+        <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;margin-bottom:var(--gap-lg);
+          background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+          box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
+          <div class="form-grupo" style="margin:0;min-width:160px">
+            <label class="form-label">Área</label>
+            <select id="f-area-hito" class="form-select" onchange="cargarHitos()">
+              <option value="">Todas</option>
+              <option value="motricidad_fina">Motricidad fina</option>
+              <option value="motricidad_gruesa">Motricidad gruesa</option>
+              <option value="lenguaje">Lenguaje</option>
+              <option value="social">Social</option>
+              <option value="cognitivo">Cognitivo</option>
+              <option value="autonomia">Autonomía</option>
+            </select>
+          </div>
+          <div class="form-grupo" style="margin:0;min-width:160px">
+            <label class="form-label">Edad mínima (meses)</label>
+            <input type="number" id="f-edad-hito" class="form-input" placeholder="Ej: 12" min="0" max="72">
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:6px">
+            <button class="btn btn-primary" onclick="cargarHitos()">Filtrar</button>
+          </div>
+        </div>
+        <div id="lista-hitos">
+          <div class="loader"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Nueva evaluación -->
+<div class="modal-overlay" id="modal-nueva-eval">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-eval">Nueva evaluación</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="eval-id">
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Niño/a *</label>
+        <select id="eval-nino" class="form-select" onchange="cargarHitosModal()">
+          <option value="">Seleccionar...</option>
+        </select>
+        <span class="form-error" data-error="eval-nino"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Hito a evaluar *</label>
+        <select id="eval-hito" class="form-select">
+          <option value="">Primero selecciona niño</option>
+        </select>
+        <span class="form-error" data-error="eval-hito"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Fecha de evaluación *</label>
+        <input type="date" id="eval-fecha" class="form-input">
+        <span class="form-error" data-error="eval-fecha"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Estado *</label>
+        <select id="eval-estado" class="form-select">
+          <option value="">Seleccionar...</option>
+          <option value="logrado">✅ Logrado</option>
+          <option value="en_proceso">⏳ En proceso</option>
+          <option value="no_logrado">❌ No logrado aún</option>
+        </select>
+        <span class="form-error" data-error="eval-estado"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Observaciones</label>
+        <textarea id="eval-observacion" class="form-textarea" style="min-height:70px"
+          placeholder="Notas sobre el desempeño del niño/a en este hito..."></textarea>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700">
+          <input type="checkbox" id="eval-alerta" style="width:16px;height:16px">
+          ⚠️ Marcar como alerta de rezago (recomienda derivación al Centro Misael)
+        </label>
+      </div>
+    </div>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-md)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-nueva-eval')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEvaluacion()">Guardar evaluación</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('evaluacion');
+const hoy = new Date().toISOString().split('T')[0];
+document.getElementById('eval-fecha').value = hoy;
+let editandoId = null;
+let ninosData  = [];
+let hitosData  = [];
+
+const areaIcons = {
+  motricidad_fina:'✋',motricidad_gruesa:'🏃',lenguaje:'💬',
+  social:'👥',cognitivo:'🧠',autonomia:'⭐'
+};
+
+async function inicializar() {
+  await cargarSelectores();
+  cargarHitos();
+  cargarAlertasRezago();
+}
+
+async function cargarSelectores() {
+  try {
+    const [ninos, hitos] = await Promise.all([
+      API.get('/ninos/ninos/?activo=true&page_size=500'),
+      API.get('/evaluacion/hitos/?activo=true&page_size=500'),
+    ]);
+    ninosData = ninos.results||ninos;
+    hitosData = hitos.results||hitos;
+    [document.getElementById('f-nino-eval'), document.getElementById('eval-nino')].forEach(sel =>
+      UI.llenarSelect(sel, ninosData, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)'));
+  } catch {}
+}
+
+function cambiarTab(tab) {
+  ['evaluaciones','alertas','hitos'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('activo',t===tab);
+    document.getElementById('panel-'+t).classList.toggle('activo',t===tab);
+  });
+  if (tab==='alertas') cargarAlertasRezago();
+  if (tab==='hitos')   cargarHitos();
+}
+
+async function cargarEvalNino() {
+  const ninoId = document.getElementById('f-nino-eval').value;
+  const area   = document.getElementById('f-area-eval').value;
+  const cont   = document.getElementById('contenido-eval');
+  if (!ninoId) {
+    cont.innerHTML = '<div style="text-align:center;padding:var(--gap-2xl);color:var(--texto-suave)"><div style="font-size:3rem">👶</div><p style="font-weight:600">Selecciona un niño/a</p></div>';
+    return;
+  }
+  UI.mostrarLoader(cont,'Cargando evaluaciones...');
+  try {
+    const nino = ninosData.find(n=>n.id===ninoId);
+    let url = '/evaluacion/evaluaciones/?nino='+ninoId+'&page_size=500';
+    if (area) url += '&hito__area='+area;
+    const data = await API.get(url);
+    const evals = data.results||data;
+
+    if (!evals.length) {
+      cont.innerHTML = '<div style="text-align:center;padding:var(--gap-xl);color:var(--texto-suave);font-weight:600"><div style="font-size:2.5rem;margin-bottom:8px">🌱</div><p>Sin evaluaciones registradas para este niño/a</p><button class="btn btn-primary mt-md" onclick="UI.abrirModal(\'modal-nueva-eval\')">➕ Agregar primera evaluación</button></div>';
+      return;
+    }
+
+    // Agrupar por área
+    const porArea = {};
+    evals.forEach(ev => {
+      const area = ev.hito_area;
+      if (!porArea[area]) porArea[area] = [];
+      porArea[area].push(ev);
+    });
+
+    // Calcular % logrado general
+    const logrados  = evals.filter(e=>e.estado==='logrado').length;
+    const pctGeneral = Math.round((logrados/evals.length)*100);
+
+    cont.innerHTML = `
+      <div class="card mb-lg">
+        <div style="display:flex;align-items:center;gap:var(--gap-md);margin-bottom:var(--gap-md)">
+          <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--turquesa),var(--verde));
+            display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:1.2rem">
+            ${UI.iniciales(nino?.nombre_completo||'')}
+          </div>
+          <div>
+            <div style="font-family:var(--font-display);font-size:var(--text-2xl)">${nino?.nombre_completo}</div>
+            <div style="font-size:var(--text-sm);color:var(--texto-suave)">${nino?.edad_en_meses} meses · ${evals.length} hitos evaluados</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-family:var(--font-display);font-size:var(--text-3xl);color:var(--verde-d)">${pctGeneral}%</div>
+            <div style="font-size:var(--text-xs);color:var(--texto-suave);font-weight:700">Logrado</div>
+          </div>
+        </div>
+        <div class="progreso-area"><div class="progreso-fill" style="width:${pctGeneral}%"></div></div>
+        <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap">
+          <span class="chip chip-verde">✅ ${logrados} Logrados</span>
+          <span class="chip chip-amarillo">⏳ ${evals.filter(e=>e.estado==='en_proceso').length} En proceso</span>
+          <span class="chip chip-gris">📌 ${evals.filter(e=>e.estado==='no_logrado').length} No logrado</span>
+          ${evals.filter(e=>e.alerta_rezago).length?'<span class="chip chip-coral">⚠️ '+evals.filter(e=>e.alerta_rezago).length+' Alertas</span>':''}
+        </div>
+      </div>
+
+      ${Object.entries(porArea).map(([area, evs]) => {
+        const log = evs.filter(e=>e.estado==='logrado').length;
+        const pct = Math.round((log/evs.length)*100);
+        return `
+          <div class="area-header">${areaIcons[area]||'🌱'} ${evs[0]?.hito_area||area} <span style="font-size:var(--text-sm);color:var(--texto-suave);font-family:var(--font-body)">${log}/${evs.length} logrados</span></div>
+          <div class="progreso-area"><div class="progreso-fill" style="width:${pct}%"></div></div>
+          <div class="eval-grid mb-lg">
+            ${evs.map(ev => `
+              <div class="hito-card">
+                <div style="display:flex;align-items:flex-start;gap:var(--gap-sm);margin-bottom:6px">
+                  <div class="hito-estado-dot dot-${ev.estado}" style="margin-top:4px"></div>
+                  <div style="flex:1">
+                    <div style="font-weight:700;font-size:var(--text-sm)">${ev.hito_nombre}</div>
+                    <div style="font-size:var(--text-xs);color:var(--texto-suave)">${UI.fecha(ev.fecha)}</div>
+                  </div>
+                  ${ev.alerta_rezago?'<span title="Alerta de rezago">⚠️</span>':''}
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                  <span class="chip ${ev.estado==='logrado'?'chip-verde':ev.estado==='en_proceso'?'chip-amarillo':'chip-gris'}"
+                    style="font-size:.65rem">${ev.estado_display}</span>
+                  <button class="btn btn-outline btn-sm" style="font-size:.65rem;padding:2px 8px"
+                    onclick="editarEval('${ev.id}')">✏️</button>
+                  <button class="btn btn-sm" style="font-size:.65rem;padding:2px 8px;background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+                    onclick="eliminarEval('${ev.id}')">🗑️</button>
+                </div>
+                ${ev.observacion?'<p style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:4px;font-style:italic">'+ev.observacion+'</p>':''}
+              </div>`).join('')}
+          </div>`;
+      }).join('')}
+      <div style="margin-top:var(--gap-md)">
+        <button class="btn btn-primary" onclick="abrirEvalParaNino('${ninoId}')">➕ Agregar evaluación</button>
+      </div>`;
+  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+async function cargarAlertasRezago() {
+  const cont = document.getElementById('lista-alertas-rezago');
+  UI.mostrarLoader(cont,'Cargando alertas...');
+  try {
+    const data = await API.get('/evaluacion/evaluaciones/alertas-rezago/?page_size=100');
+    const lista = data.results||data;
+    const badge = document.getElementById('badge-alertas');
+    badge.textContent = lista.length; badge.style.display = lista.length?'':'none';
+    if (!lista.length) { UI.vacio(cont,'¡Sin alertas de rezago!','✅'); return; }
+    // Agrupar por niño
+    const porNino = {};
+    lista.forEach(ev => {
+      if (!porNino[ev.nino]) porNino[ev.nino] = { nombre:ev.nino_nombre, evals:[] };
+      porNino[ev.nino].evals.push(ev);
+    });
+    cont.innerHTML = Object.values(porNino).map(grupo => `
+      <div class="card mb-md" style="border-color:var(--coral)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--gap-md)">
+          <div>
+            <div style="font-weight:800;font-size:var(--text-lg)">${grupo.nombre}</div>
+            <div style="font-size:var(--text-sm);color:var(--coral-d);font-weight:700">
+              ⚠️ ${grupo.evals.length} alerta(s) de rezago
+            </div>
+          </div>
+          <a href="/panel/misael-link/" class="btn btn-coral btn-sm">🔗 Derivar al Centro Misael</a>
+        </div>
+        ${grupo.evals.map(ev => `
+          <div style="display:flex;align-items:center;gap:var(--gap-sm);padding:.5rem 0;
+            border-bottom:1px dashed var(--gris-100)">
+            <span>⚠️</span>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:var(--text-sm)">${ev.hito_nombre}</div>
+              <div style="font-size:var(--text-xs);color:var(--texto-suave)">${ev.hito_area} · ${UI.fecha(ev.fecha)}</div>
+            </div>
+            <span class="chip chip-coral" style="font-size:.65rem">${ev.estado_display}</span>
+          </div>`).join('')}
+      </div>`).join('');
+  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+async function cargarHitos() {
+  const cont  = document.getElementById('lista-hitos');
+  const area  = document.getElementById('f-area-hito').value;
+  const edad  = document.getElementById('f-edad-hito').value;
+  let url = '/evaluacion/hitos/?activo=true&page_size=200&ordering=edad_min_meses';
+  if (area) url += '&area='+area;
+  if (edad) url += '&edad_min_meses='+edad;
+  UI.mostrarLoader(cont,'Cargando hitos...');
+  try {
+    const data  = await API.get(url);
+    const lista = data.results||data;
+    if (!lista.length) { UI.vacio(cont,'Sin hitos con esos filtros','📚'); return; }
+    // Agrupar por área
+    const porArea = {};
+    lista.forEach(h => {
+      if (!porArea[h.area]) porArea[h.area] = [];
+      porArea[h.area].push(h);
+    });
+    cont.innerHTML = Object.entries(porArea).map(([area, hitos]) => `
+      <div class="card mb-md">
+        <div class="card-header">
+          <h3 class="card-titulo">${areaIcons[area]||'🌱'} ${hitos[0]?.area_display||area}</h3>
+          <span class="chip chip-turquesa">${hitos.length} hitos</span>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr><th>Hito</th><th>Edad mínima</th><th>Edad máxima</th><th>Descripción</th></tr></thead>
+            <tbody>
+              ${hitos.map(h => `
+                <tr>
+                  <td style="font-weight:700;font-size:var(--text-sm)">${h.nombre}</td>
+                  <td><span class="chip chip-turquesa">${h.edad_min_meses}m</span></td>
+                  <td><span class="chip chip-verde">${h.edad_max_meses}m</span></td>
+                  <td style="font-size:var(--text-sm);color:var(--texto-suave)">${h.descripcion||'—'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`).join('');
+  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+async function cargarHitosModal() {
+  const ninoId = document.getElementById('eval-nino').value;
+  const sel    = document.getElementById('eval-hito');
+  sel.innerHTML = '<option value="">Cargando hitos...</option>';
+  if (!ninoId) { sel.innerHTML='<option value="">Primero selecciona niño</option>'; return; }
+  const nino = ninosData.find(n=>n.id===ninoId);
+  const edad = nino?.edad_en_meses||0;
+  try {
+    const data = await API.get('/evaluacion/hitos/?activo=true&page_size=200');
+    const hitos = (data.results||data);
+    sel.innerHTML = '<option value="">Seleccionar hito...</option>';
+    hitos.forEach(h => {
+      const opt = document.createElement('option');
+      opt.value = h.id;
+      opt.textContent = h.nombre + ' ('+h.edad_min_meses+'–'+h.edad_max_meses+'m) — '+h.area_display;
+      if (edad >= h.edad_min_meses && edad <= h.edad_max_meses) {
+        opt.style.fontWeight = '700';
+        opt.textContent = '★ ' + opt.textContent;
+      }
+      sel.appendChild(opt);
+    });
+  } catch {}
+}
+
+function abrirEvalParaNino(ninoId) {
+  document.getElementById('eval-nino').value = ninoId;
+  cargarHitosModal();
+  document.getElementById('eval-id').value = '';
+  document.getElementById('eval-fecha').value = hoy;
+  document.getElementById('eval-estado').value = '';
+  document.getElementById('eval-observacion').value = '';
+  document.getElementById('eval-alerta').checked = false;
+  document.querySelectorAll('#modal-nueva-eval .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-nueva-eval');
+}
+
+async function editarEval(id) {
+  editandoId = id;
+  document.getElementById('titulo-modal-eval').textContent = 'Editar evaluación';
+  try {
+    const ev = await API.get('/evaluacion/evaluaciones/'+id+'/');
+    document.getElementById('eval-id').value          = id;
+    document.getElementById('eval-nino').value        = ev.nino;
+    await cargarHitosModal();
+    document.getElementById('eval-hito').value        = ev.hito;
+    document.getElementById('eval-fecha').value       = ev.fecha;
+    document.getElementById('eval-estado').value      = ev.estado;
+    document.getElementById('eval-observacion').value = ev.observacion||'';
+    document.getElementById('eval-alerta').checked    = ev.alerta_rezago;
+    UI.abrirModal('modal-nueva-eval');
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function guardarEvaluacion() {
+  const errores = Validar.formulario({
+    'eval-nino':   [()=>Validar.requerido(document.getElementById('eval-nino').value,'Niño/a')],
+    'eval-hito':   [()=>Validar.requerido(document.getElementById('eval-hito').value,'Hito')],
+    'eval-fecha':  [()=>Validar.fecha(document.getElementById('eval-fecha').value,'Fecha')],
+    'eval-estado': [()=>Validar.requerido(document.getElementById('eval-estado').value,'Estado')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-nueva-eval ')) return;
+  const id = document.getElementById('eval-id').value;
+  const datos = {
+    nino:          document.getElementById('eval-nino').value,
+    hito:          document.getElementById('eval-hito').value,
+    fecha:         document.getElementById('eval-fecha').value,
+    estado:        document.getElementById('eval-estado').value,
+    observacion:   document.getElementById('eval-observacion').value,
+    alerta_rezago: document.getElementById('eval-alerta').checked,
+    educadora:     null,
+  };
+  try {
+    if (id) await API.patch('/evaluacion/evaluaciones/'+id+'/',datos);
+    else    await API.post('/evaluacion/evaluaciones/',datos);
+    UI.toast('Evaluación guardada correctamente','exito');
+    UI.cerrarModal('modal-nueva-eval');
+    const ninoId = document.getElementById('f-nino-eval').value;
+    if (ninoId) cargarEvalNino();
+    cargarAlertasRezago();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminarEval(id) {
+  if (!confirm('Eliminar esta evaluación?')) return;
+  try {
+    await API.delete('/evaluacion/evaluaciones/'+id+'/');
+    UI.toast('Evaluación eliminada','exito');
+    cargarEvalNino();
+    cargarAlertasRezago();
+  } catch (err) { UI.toast('No se puede eliminar: '+err.message,'error'); }
+}
+
+inicializar();
+</script>
+</body>
+</html>

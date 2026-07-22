@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutores — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">👨‍👩‍👧 Tutores y padres</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-primary" onclick="abrirNuevo()">➕ Nuevo tutor</button>
+      </div>
+    </header>
+    <div class="pagina">
+      <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;margin-bottom:var(--gap-lg);
+        background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+        box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
+        <div class="form-grupo" style="margin:0;flex:1;min-width:200px">
+          <label class="form-label">Buscar</label>
+          <input type="text" id="f-buscar" class="form-input" placeholder="Nombre, CI o email...">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:6px">
+          <button class="btn btn-primary" onclick="cargar()">Buscar</button>
+          <button class="btn btn-outline" onclick="document.getElementById('f-buscar').value='';cargar()">✕</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-titulo">Tutores registrados</h3>
+          <span id="total-tutores" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th>Tutor/a</th><th>CI</th><th>Parentesco</th>
+              <th>Teléfono</th><th>Email</th><th>Niños</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-tutores"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal tutor -->
+<div class="modal-overlay" id="modal-tutor">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal">Nuevo tutor</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="t-id">
+
+    <div id="aviso-cuenta" style="background:var(--verde-l);border-radius:var(--radio-lg);
+      padding:var(--gap-md);margin-bottom:var(--gap-md);font-size:var(--text-sm);
+      color:var(--verde-d);font-weight:600">
+      Se creará un acceso al portal de padres. Contraseña inicial: <strong>MisaelKids2025!</strong>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Nombres *</label>
+        <input type="text" id="t-nombres" class="form-input" placeholder="Nombres completos">
+        <span class="form-error" data-error="t-nombres"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Apellidos *</label>
+        <input type="text" id="t-apellidos" class="form-input" placeholder="Apellidos">
+        <span class="form-error" data-error="t-apellidos"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">CI / DNI *</label>
+        <input type="text" id="t-ci" class="form-input" placeholder="Número de CI"
+          oninput="if(document.getElementById('t-sin-email').checked) document.getElementById('t-username').value=this.value.trim()">
+        <span class="form-error" data-error="t-ci"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Parentesco *</label>
+        <select id="t-parentesco" class="form-select">
+          <option value="">Seleccionar...</option>
+          <option value="padre">Padre</option>
+          <option value="madre">Madre</option>
+          <option value="abuelo">Abuelo/a</option>
+          <option value="tutor_legal">Tutor legal</option>
+          <option value="otro">Otro</option>
+        </select>
+        <span class="form-error" data-error="t-parentesco"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Teléfono principal *</label>
+        <input type="text" id="t-telefono" class="form-input" placeholder="Ej: 76XXXXXX">
+        <span class="form-error" data-error="t-telefono"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Teléfono alternativo</label>
+        <input type="text" id="t-telefono-alt" class="form-input" placeholder="Opcional">
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1" id="campo-t-email">
+        <label class="form-label">Email (para acceso al portal) *</label>
+        <input type="email" id="t-email" class="form-input" placeholder="correo@ejemplo.com">
+        <span class="form-error" data-error="t-email"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700">
+          <input type="checkbox" id="t-sin-email" onchange="toggleSinEmail()" style="width:16px;height:16px">
+          🆔 No tiene email — usar su CI como nombre de usuario para acceder al portal
+        </label>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1;display:none" id="campo-t-username">
+        <label class="form-label">Nombre de usuario (acceso al portal) *</label>
+        <input type="text" id="t-username" class="form-input" placeholder="Se sugiere el CI">
+        <span class="form-error" data-error="t-username"></span>
+      </div>
+    </div>
+
+    <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
+    <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">
+      Vincular al niño/a
+    </p>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Niño/a</label>
+        <select id="t-nino" class="form-select">
+          <option value="">Seleccionar niño/a...</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Rol en la familia</label>
+        <div style="display:flex;flex-direction:column;gap:6px;padding-top:.3rem">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+            <input type="checkbox" id="t-es-principal" style="width:16px;height:16px">
+            Tutor principal (recibe notificaciones)
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+            <input type="checkbox" id="t-puede-retirar" checked style="width:16px;height:16px">
+            Autorizado a retirar al niño/a
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-md)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-tutor')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTutor()">Guardar tutor</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: vincular tutor a niño adicional -->
+<div class="modal-overlay" id="modal-vincular">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo">Vincular tutor a niño/a</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="v-tutor-id">
+    <div class="form-grupo">
+      <label class="form-label">Tutor</label>
+      <input type="text" id="v-tutor-nombre" class="form-input" disabled>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Niño/a *</label>
+      <select id="v-nino" class="form-select">
+        <option value="">Seleccionar niño/a...</option>
+      </select>
+      <span class="form-error" data-error="v-nino"></span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:var(--gap-md)">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+        <input type="checkbox" id="v-es-principal" style="width:16px;height:16px">
+        Tutor principal del niño/a
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+        <input type="checkbox" id="v-puede-retirar" checked style="width:16px;height:16px">
+        Autorizado a retirar
+      </label>
+    </div>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-vincular')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarVinculo()">Vincular</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('tutores');
+let editandoId = null;
+
+async function inicializar() {
+  await Promise.all([cargar(), cargarNinosSelectores()]);
+}
+
+async function cargarNinosSelectores() {
+  try {
+    const data = await API.get('/ninos/ninos/?activo=true&page_size=200');
+    const lista = data.results||data;
+    [document.getElementById('t-nino'), document.getElementById('v-nino')].forEach(sel => {
+      UI.llenarSelect(sel, lista, 'id', n => n.nombre_completo + ' (' + n.edad_en_meses + ' meses)');
+    });
+  } catch {}
+}
+
+async function cargar() {
+  const tbody  = document.getElementById('tbody-tutores');
+  const buscar = document.getElementById('f-buscar').value.trim();
+  let url = '/ninos/tutores/?page_size=100';
+  if (buscar) url += '&search=' + encodeURIComponent(buscar);
+  tbody.innerHTML = '<tr><td colspan="7"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  try {
+    const data  = await API.get(url);
+    const lista = data.results||data;
+    document.getElementById('total-tutores').textContent = lista.length + ' tutor(es)';
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin tutores registrados</td></tr>';
+      return;
+    }
+    // Para cada tutor, contar cuántos niños tiene
+    tbody.innerHTML = lista.map(t => `
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:var(--gap-sm)">
+            <div style="width:38px;height:38px;border-radius:50%;
+              background:linear-gradient(135deg,var(--coral),var(--naranja));
+              display:flex;align-items:center;justify-content:center;
+              color:white;font-weight:800;font-size:var(--text-sm);flex-shrink:0">
+              ${UI.iniciales(t.nombres+' '+t.apellidos)}
+            </div>
+            <div>
+              <div style="font-weight:700">${t.nombres} ${t.apellidos}</div>
+              <div style="font-size:var(--text-xs);color:var(--texto-suave)">${t.email||'Sin email'}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-weight:600">${t.ci}</td>
+        <td><span class="chip chip-turquesa">${t.parentesco_display}</span></td>
+        <td>${t.telefono}</td>
+        <td>${t.email||'—'}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="abrirVincular('${t.id}','${t.nombres} ${t.apellidos}')">
+            + Vincular niño
+          </button>
+        </td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-outline btn-sm" onclick="editar('${t.id}')">Editar</button>
+            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminar('${t.id}','${t.nombres} ${t.apellidos}')">Eliminar</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+  }
+}
+
+function toggleSinEmail() {
+  const sinEmail = document.getElementById('t-sin-email').checked;
+  document.getElementById('campo-t-email').style.display    = sinEmail?'none':'';
+  document.getElementById('campo-t-username').style.display = sinEmail?'':'none';
+  if (sinEmail && !document.getElementById('t-username').value) {
+    document.getElementById('t-username').value = document.getElementById('t-ci').value.trim();
+  }
+}
+
+function abrirNuevo() {
+  editandoId = null;
+  document.getElementById('titulo-modal').textContent = 'Nuevo tutor';
+  document.getElementById('aviso-cuenta').style.display = '';
+  ['t-id','t-nombres','t-apellidos','t-ci','t-telefono','t-telefono-alt','t-email','t-username'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('t-sin-email').checked = false;
+  document.getElementById('t-sin-email').parentElement.style.display = 'flex';
+  toggleSinEmail();
+  document.getElementById('t-parentesco').value = '';
+  document.getElementById('t-nino').value       = '';
+  document.getElementById('t-es-principal').checked  = false;
+  document.getElementById('t-puede-retirar').checked = true;
+  document.querySelectorAll('#modal-tutor .form-error').forEach(el => el.textContent='');
+  document.querySelectorAll('#modal-tutor .input-error').forEach(el => el.classList.remove('input-error'));
+  UI.abrirModal('modal-tutor');
+}
+
+async function editar(id) {
+  editandoId = id;
+  document.getElementById('titulo-modal').textContent = 'Editar tutor';
+  document.getElementById('aviso-cuenta').style.display = 'none';
+  // El tipo de acceso (email/usuario) no se modifica al editar — solo gestión de usuarios puede hacerlo
+  document.getElementById('t-sin-email').parentElement.style.display = 'none';
+  document.getElementById('campo-t-username').style.display = 'none';
+  document.getElementById('campo-t-email').style.display = '';
+  try {
+    const t = await API.get('/ninos/tutores/'+id+'/');
+    document.getElementById('t-id').value           = id;
+    document.getElementById('t-nombres').value      = t.nombres;
+    document.getElementById('t-apellidos').value    = t.apellidos;
+    document.getElementById('t-ci').value           = t.ci;
+    document.getElementById('t-telefono').value     = t.telefono;
+    document.getElementById('t-telefono-alt').value = t.telefono_alt||'';
+    document.getElementById('t-email').value        = t.email||'';
+    document.getElementById('t-parentesco').value   = t.parentesco;
+    UI.abrirModal('modal-tutor');
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function guardarTutor() {
+  const sinEmail = document.getElementById('t-sin-email').checked;
+  const reglas = {
+    't-nombres':    [() => Validar.requerido(document.getElementById('t-nombres').value, 'Nombres')],
+    't-apellidos':  [() => Validar.requerido(document.getElementById('t-apellidos').value, 'Apellidos')],
+    't-ci':         [() => Validar.requerido(document.getElementById('t-ci').value, 'CI')],
+    't-parentesco': [() => Validar.requerido(document.getElementById('t-parentesco').value, 'Parentesco')],
+    't-telefono':   [() => Validar.requerido(document.getElementById('t-telefono').value, 'Teléfono')],
+  };
+  if (!editandoId) {
+    if (sinEmail) {
+      reglas['t-username'] = [
+        () => Validar.requerido(document.getElementById('t-username').value, 'Nombre de usuario'),
+        () => {
+          const v = document.getElementById('t-username').value;
+          if (v && !/^[a-zA-Z0-9_.-]+$/.test(v)) return 'Solo letras, números, puntos, guiones y guion bajo';
+          return null;
+        }
+      ];
+    } else {
+      reglas['t-email'] = [() => Validar.email(document.getElementById('t-email').value)];
+    }
+  }
+  const errores = Validar.formulario(reglas);
+  if (!Validar.mostrarErrores(errores, '#modal-tutor ')) return;
+
+  const datos = {
+    nombres:      document.getElementById('t-nombres').value.trim(),
+    apellidos:    document.getElementById('t-apellidos').value.trim(),
+    ci:           document.getElementById('t-ci').value.trim(),
+    parentesco:   document.getElementById('t-parentesco').value,
+    telefono:     document.getElementById('t-telefono').value.trim(),
+    telefono_alt: document.getElementById('t-telefono-alt').value.trim(),
+    email:        sinEmail ? '' : document.getElementById('t-email').value.trim(),
+  };
+
+  try {
+    let tutorId = editandoId;
+    if (!editandoId) {
+      // Crear usuario para acceso al portal (email o nombre de usuario)
+      const datosUsuario = {
+        nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor',
+        password: 'MisaelKids2025!', password2: 'MisaelKids2025!',
+      };
+      if (sinEmail) datosUsuario.username = document.getElementById('t-username').value.trim();
+      else datosUsuario.email = datos.email;
+
+      const usuario = await API.post('/auth/usuarios/', datosUsuario);
+      datos.usuario = usuario.id;
+      const tutor = await API.post('/ninos/tutores/', datos);
+      tutorId = tutor.id;
+      UI.toast('Tutor creado correctamente'+(sinEmail?' — usuario: '+datosUsuario.username:''), 'exito');
+
+      // Vincular al niño si seleccionó uno
+      const ninoId = document.getElementById('t-nino').value;
+      if (ninoId) {
+        await API.post('/ninos/tutores-nino/', {
+          nino: ninoId, tutor: tutorId,
+          es_principal:  document.getElementById('t-es-principal').checked,
+          puede_retirar: document.getElementById('t-puede-retirar').checked,
+        });
+      }
+    } else {
+      await API.patch('/ninos/tutores/'+editandoId+'/', datos);
+      UI.toast('Tutor actualizado correctamente', 'exito');
+    }
+    UI.cerrarModal('modal-tutor');
+    cargar();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminar(id, nombre) {
+  if (!confirm('Eliminar al tutor "'+nombre+'"?\nPerderá acceso al portal.')) return;
+  try {
+    await API.delete('/ninos/tutores/'+id+'/');
+    UI.toast('Tutor eliminado', 'exito');
+    cargar();
+  } catch (err) { UI.toast('No se puede eliminar: '+err.message,'error'); }
+}
+
+function abrirVincular(tutorId, tutorNombre) {
+  document.getElementById('v-tutor-id').value    = tutorId;
+  document.getElementById('v-tutor-nombre').value = tutorNombre;
+  document.getElementById('v-nino').value         = '';
+  document.getElementById('v-es-principal').checked  = false;
+  document.getElementById('v-puede-retirar').checked = true;
+  document.querySelectorAll('#modal-vincular .form-error').forEach(el => el.textContent='');
+  UI.abrirModal('modal-vincular');
+}
+
+async function guardarVinculo() {
+  const ninoId = document.getElementById('v-nino').value;
+  if (!ninoId) {
+    Validar.mostrarErrores({'v-nino': 'Selecciona un niño/a'}, '#modal-vincular ');
+    return;
+  }
+  try {
+    await API.post('/ninos/tutores-nino/', {
+      nino:          ninoId,
+      tutor:         document.getElementById('v-tutor-id').value,
+      es_principal:  document.getElementById('v-es-principal').checked,
+      puede_retirar: document.getElementById('v-puede-retirar').checked,
+    });
+    UI.toast('Tutor vinculado al niño/a correctamente', 'exito');
+    UI.cerrarModal('modal-vincular');
+    cargar();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+inicializar();
+</script>
+</body>
+</html>

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sucursales — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    .sucursal-card {
+      background:var(--blanco);border:2px solid var(--gris-100);
+      border-radius:var(--radio-xl);padding:var(--gap-xl);
+      box-shadow:var(--sombra-md);transition:all var(--trans-fast);position:relative;overflow:hidden;
+    }
+    .sucursal-card::before {
+      content:'';position:absolute;top:0;left:0;right:0;height:5px;
+      background:linear-gradient(90deg,var(--turquesa),var(--verde));
+    }
+    .sucursal-card:hover { transform:translateY(-2px);box-shadow:var(--sombra-xl); }
+    .suc-header { display:flex;align-items:flex-start;gap:var(--gap-md);margin-bottom:var(--gap-lg); }
+    .suc-icono {
+      width:56px;height:56px;border-radius:var(--radio-lg);
+      background:linear-gradient(135deg,var(--turquesa-l),var(--verde-l));
+      display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;
+    }
+    .suc-nombre { font-family:var(--font-display);font-size:var(--text-2xl);color:var(--texto); }
+    .suc-ciudad { font-size:var(--text-sm);color:var(--texto-suave);font-weight:600; }
+    .suc-stats { display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap-sm);margin-bottom:var(--gap-lg); }
+    .suc-stat { background:var(--gris-50);border-radius:var(--radio-lg);padding:var(--gap-sm);text-align:center; }
+    .suc-stat .val { font-family:var(--font-display);font-size:var(--text-xl);color:var(--turquesa-d); }
+    .suc-stat .lbl { font-size:var(--text-xs);color:var(--texto-suave);font-weight:700; }
+    .sala-row {
+      display:flex;align-items:center;gap:var(--gap-sm);
+      background:var(--gris-50);border-radius:var(--radio-md);
+      padding:.5rem var(--gap-sm);margin-bottom:6px;
+    }
+    .sala-info { flex:1; }
+    .sala-nombre { font-weight:700;font-size:var(--text-sm); }
+    .sala-meta { font-size:var(--text-xs);color:var(--texto-suave); }
+    .turno-row {
+      display:flex;align-items:center;gap:8px;padding:.35rem 0;
+      border-bottom:1px dashed var(--gris-100);font-size:var(--text-xs);
+    }
+    .turno-row:last-child { border-bottom:none; }
+    .turnos-lista { margin-top:4px;margin-left:1.6rem;display:none; }
+    .turnos-lista.abierto { display:block; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">🏢 Sucursales</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-primary" onclick="abrirNuevaSucursal()">➕ Nueva sucursal</button>
+      </div>
+    </header>
+    <div class="pagina">
+      <div class="grid-stats mb-lg">
+        <div class="stat-card"><div class="stat-icon turquesa">🏢</div>
+          <div class="stat-info"><div class="valor" id="stat-suc">—</div><div class="etiqueta">Sucursales activas</div></div></div>
+        <div class="stat-card"><div class="stat-icon verde">🏠</div>
+          <div class="stat-info"><div class="valor" id="stat-salas">—</div><div class="etiqueta">Salas totales</div></div></div>
+        <div class="stat-card"><div class="stat-icon coral">⏰</div>
+          <div class="stat-info"><div class="valor" id="stat-turnos">—</div><div class="etiqueta">Turnos activos</div></div></div>
+        <div class="stat-card"><div class="stat-icon amarillo">👶</div>
+          <div class="stat-info"><div class="valor" id="stat-cap">—</div><div class="etiqueta">Capacidad total</div></div></div>
+      </div>
+      <div class="grid-2" id="suc-grid">
+        <div class="loader" style="grid-column:1/-1">
+          <div class="spinner"></div>
+          <p style="color:var(--texto-suave);font-weight:600">Cargando sucursales...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Sucursal -->
+<div class="modal-overlay" id="modal-sucursal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-suc">🏢 Nueva sucursal</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="suc-id">
+    <div class="form-grupo">
+      <label class="form-label">Nombre *</label>
+      <input type="text" id="suc-nombre" class="form-input" placeholder="Ej: Misael Kids — Miraflores">
+      <span class="form-error" data-error="suc-nombre"></span>
+    </div>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Ciudad *</label>
+        <input type="text" id="suc-ciudad" class="form-input" value="La Paz">
+        <span class="form-error" data-error="suc-ciudad"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Teléfono</label>
+        <input type="text" id="suc-telefono" class="form-input" placeholder="2-XXXXXXX">
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Dirección *</label>
+      <input type="text" id="suc-direccion" class="form-input" placeholder="Av. ... Calle ... N° ...">
+      <span class="form-error" data-error="suc-direccion"></span>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Descripción</label>
+      <textarea id="suc-desc" class="form-textarea" style="min-height:60px"></textarea>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+      <input type="checkbox" id="suc-activa" checked style="width:16px;height:16px"> ✅ Sucursal activa
+    </label>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-sucursal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarSucursal()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Sala -->
+<div class="modal-overlay" id="modal-sala">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-sala">🏠 Nueva sala</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="sa-id">
+    <input type="hidden" id="sa-sucursal-id">
+    <div class="form-grupo">
+      <label class="form-label">Nombre *</label>
+      <input type="text" id="sa-nombre" class="form-input" placeholder="Ej: Sala Cuna, Sala Medio">
+      <span class="form-error" data-error="sa-nombre"></span>
+    </div>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Edad mínima (meses) *</label>
+        <input type="number" id="sa-min" class="form-input" placeholder="0" min="0">
+        <span class="form-error" data-error="sa-min"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Edad máxima (meses) *</label>
+        <input type="number" id="sa-max" class="form-input" placeholder="24" min="1">
+        <span class="form-error" data-error="sa-max"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Capacidad máxima *</label>
+        <input type="number" id="sa-cap" class="form-input" placeholder="15" min="1">
+        <span class="form-error" data-error="sa-cap"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Descripción</label>
+        <textarea id="sa-desc" class="form-textarea" style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+      <input type="checkbox" id="sa-activa" checked style="width:16px;height:16px"> ✅ Sala activa
+    </label>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-sala')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarSala()">💾 Guardar sala</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Turno -->
+<div class="modal-overlay" id="modal-turno">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-turno">⏰ Nuevo turno</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="tu-id">
+    <input type="hidden" id="tu-sala-id">
+    <div class="form-grupo">
+      <label class="form-label">Nombre *</label>
+      <input type="text" id="tu-nombre" class="form-input" placeholder="Ej: Turno mañana">
+      <span class="form-error" data-error="tu-nombre"></span>
+    </div>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Tipo *</label>
+        <select id="tu-tipo" class="form-select">
+          <option value="manana">Mañana</option>
+          <option value="tarde">Tarde</option>
+          <option value="completo">Turno completo</option>
+          <option value="especial">Especial</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Hora inicio *</label>
+        <input type="time" id="tu-inicio" class="form-input" value="08:00">
+        <span class="form-error" data-error="tu-inicio"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Hora fin *</label>
+        <input type="time" id="tu-fin" class="form-input" value="12:30">
+        <span class="form-error" data-error="tu-fin"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Costo mensual (Bs.) *</label>
+        <input type="number" id="tu-mensual" class="form-input" placeholder="700.00" step="0.01">
+        <span class="form-error" data-error="tu-mensual"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Costo diario (Bs.) *</label>
+        <input type="number" id="tu-diario" class="form-input" placeholder="45.00" step="0.01">
+        <span class="form-error" data-error="tu-diario"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Descripción</label>
+        <textarea id="tu-desc" class="form-textarea" style="min-height:55px"></textarea>
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+      <input type="checkbox" id="tu-activo" checked style="width:16px;height:16px"> ✅ Turno activo
+    </label>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-turno')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTurno()">💾 Guardar turno</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('sucursales', ['admin','directora']);
+
+// Cache global para evitar pasar objetos complejos en onclick
+const _cache = { sucursales: {}, salas: {}, turnos: {} };
+
+let editandoSucId = null, editandoSalaId = null, editandoTurnoId = null;
+
+async function cargarSucursales() {
+  const grid = document.getElementById('suc-grid');
+  grid.innerHTML = '<div class="loader" style="grid-column:1/-1"><div class="spinner"></div><p style="color:var(--texto-suave);font-weight:600">Cargando sucursales...</p></div>';
+  try {
+    const [sucResp, salasResp, turnosResp] = await Promise.all([
+      API.get('/core/sucursales/?page_size=50'),
+      API.get('/core/salas/?page_size=200'),
+      API.get('/core/turnos/?page_size=500'),
+    ]);
+
+    const lista      = sucResp.results   || sucResp;
+    const todasSalas = salasResp.results || salasResp;
+    const todosTurnos= turnosResp.results|| turnosResp;
+
+    // Guardar en cache global
+    lista.forEach(s => _cache.sucursales[s.id] = s);
+    todasSalas.forEach(s => _cache.salas[s.id] = s);
+    todosTurnos.forEach(t => _cache.turnos[t.id] = t);
+
+    // Calcular stats
+    let totalSalas = todasSalas.length, totalCap = 0;
+    todasSalas.forEach(s => totalCap += s.capacidad_maxima||0);
+    document.getElementById('stat-suc').textContent   = lista.filter(s=>s.activa).length;
+    document.getElementById('stat-salas').textContent = totalSalas;
+    document.getElementById('stat-turnos').textContent= todosTurnos.filter(t=>t.activo).length;
+    document.getElementById('stat-cap').textContent   = totalCap;
+
+    if (!lista.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:3rem">
+        <div style="font-size:3rem;margin-bottom:1rem">🏢</div>
+        <p style="color:var(--texto-suave);font-weight:600;margin-bottom:1rem">Sin sucursales registradas</p>
+        <button class="btn btn-primary" onclick="abrirNuevaSucursal()">➕ Crear primera sucursal</button>
+      </div>`;
+      return;
+    }
+
+    // Agrupar salas y turnos por sucursal
+    const salasPorSuc = {};
+    todasSalas.forEach(sala => {
+      const sid = sala.sucursal;
+      if (!salasPorSuc[sid]) salasPorSuc[sid] = [];
+      salasPorSuc[sid].push({
+        ...sala,
+        _turnos: todosTurnos.filter(t => t.sala === sala.id)
+      });
+    });
+
+    grid.innerHTML = lista.map(suc => {
+      const salas = salasPorSuc[suc.id] || [];
+      const cap   = salas.reduce((a,s)=>a+(s.capacidad_maxima||0), 0);
+
+      const salasHTML = salas.length ? salas.map(sala => {
+        const turnosHTML = sala._turnos.map(t => `
+          <div class="turno-row">
+            <span style="flex:1">⏰ ${t.nombre} (${(t.hora_inicio||'').slice(0,5)}-${(t.hora_fin||'').slice(0,5)})</span>
+            <span class="chip chip-turquesa" style="font-size:.6rem">${UI.moneda(t.costo_mensual)}/mes</span>
+            ${!t.activo?'<span class="chip chip-gris" style="font-size:.6rem">Inactivo</span>':''}
+            <button class="btn btn-outline btn-sm" style="padding:1px 6px;font-size:.65rem"
+              onclick="editarTurnoPorId('${t.id}')">✏️</button>
+            <button class="btn btn-sm" style="padding:1px 6px;font-size:.65rem;background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminarTurnoPorId('${t.id}')">🗑️</button>
+          </div>`).join('');
+
+        return `<div class="sala-row">
+          <div style="font-size:1.1rem">🏠</div>
+          <div class="sala-info">
+            <div class="sala-nombre">${sala.nombre} ${!sala.activa?'<span class="chip chip-coral" style="font-size:.6rem">Inactiva</span>':''}</div>
+            <div class="sala-meta">${sala.rango_edad||''} · Cap: ${sala.capacidad_maxima}
+              ${sala._turnos.length?` · <span style="cursor:pointer;color:var(--turquesa-d);font-weight:700" onclick="toggleTurnos('${sala.id}')">${sala._turnos.length} turno(s) ▾</span>`:''}
+            </div>
+            <div class="turnos-lista" id="turnos-${sala.id}">
+              ${turnosHTML}
+              <div style="margin-top:4px">
+                <button class="btn btn-outline btn-sm" style="font-size:.65rem"
+                  onclick="abrirNuevoTurnoPorSala('${sala.id}')">➕ Turno</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-outline btn-sm" style="padding:4px 8px"
+              onclick="editarSalaPorId('${sala.id}','${suc.id}')">✏️</button>
+            <button class="btn btn-sm" style="padding:4px 8px;background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminarSalaPorId('${sala.id}')">🗑️</button>
+          </div>
+        </div>`;
+      }).join('') : '<p style="font-size:var(--text-sm);color:var(--texto-suave);text-align:center;padding:.5rem">Sin salas aún</p>';
+
+      return `<div class="sucursal-card ${suc.activa?'':'inactiva'}">
+        <div class="suc-header">
+          <div class="suc-icono">🏢</div>
+          <div style="flex:1">
+            <div class="suc-nombre">${suc.nombre}</div>
+            <div class="suc-ciudad">📍 ${suc.direccion||''}, ${suc.ciudad||''}</div>
+            ${suc.telefono?`<div style="font-size:var(--text-xs);color:var(--texto-suave)">📞 ${suc.telefono}</div>`:''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+            ${suc.activa?'<span class="chip chip-verde">✅ Activa</span>':'<span class="chip chip-coral">❌ Inactiva</span>'}
+            <div style="display:flex;gap:4px;margin-top:4px">
+              <button class="btn btn-outline btn-sm" onclick="editarSucursalPorId('${suc.id}')">✏️ Editar</button>
+              <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+                onclick="eliminarSucursalPorId('${suc.id}')">🗑️</button>
+            </div>
+          </div>
+        </div>
+        <div class="suc-stats">
+          <div class="suc-stat"><div class="val">${salas.length}</div><div class="lbl">Salas</div></div>
+          <div class="suc-stat"><div class="val">${cap}</div><div class="lbl">Capacidad</div></div>
+          <div class="suc-stat"><div class="val">${suc.activa?'✅':'❌'}</div><div class="lbl">Estado</div></div>
+        </div>
+        <div class="mb-md">${salasHTML}</div>
+        <div style="display:flex;gap:var(--gap-sm)">
+          <button class="btn btn-outline btn-sm" style="flex:1" onclick="abrirNuevaSalaPorSuc('${suc.id}')">
+            🏠 Agregar sala
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+
+  } catch (err) {
+    console.error('cargarSucursales error:', err);
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem">
+      <div style="font-size:2.5rem;margin-bottom:1rem">⚠️</div>
+      <p style="color:var(--coral-d);font-weight:700">${err.message}</p>
+      <button class="btn btn-primary mt-md" onclick="cargarSucursales()">🔄 Reintentar</button>
+    </div>`;
+  }
+}
+
+function toggleTurnos(salaId) {
+  document.getElementById('turnos-'+salaId).classList.toggle('abierto');
+}
+
+// ── Sucursal CRUD ──────────────────────────────────────────
+function abrirNuevaSucursal() {
+  editandoSucId = null;
+  document.getElementById('titulo-modal-suc').textContent = '🏢 Nueva sucursal';
+  ['suc-id','suc-nombre','suc-telefono','suc-direccion','suc-desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('suc-ciudad').value = 'La Paz';
+  document.getElementById('suc-activa').checked = true;
+  document.querySelectorAll('#modal-sucursal .form-error').forEach(el=>el.textContent='');
+  document.querySelectorAll('#modal-sucursal .input-error').forEach(el=>el.classList.remove('input-error'));
+  UI.abrirModal('modal-sucursal');
+}
+
+function editarSucursalPorId(id) {
+  const suc = _cache.sucursales[id];
+  if (!suc) return UI.toast('Datos no disponibles','warn');
+  editandoSucId = id;
+  document.getElementById('titulo-modal-suc').textContent = '✏️ Editar sucursal';
+  document.getElementById('suc-id').value       = id;
+  document.getElementById('suc-nombre').value   = suc.nombre;
+  document.getElementById('suc-ciudad').value   = suc.ciudad;
+  document.getElementById('suc-telefono').value = suc.telefono||'';
+  document.getElementById('suc-direccion').value= suc.direccion||'';
+  document.getElementById('suc-desc').value     = suc.descripcion||'';
+  document.getElementById('suc-activa').checked = suc.activa;
+  document.querySelectorAll('#modal-sucursal .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-sucursal');
+}
+
+async function guardarSucursal() {
+  const errores = Validar.formulario({
+    'suc-nombre':    [()=>Validar.requerido(document.getElementById('suc-nombre').value,'Nombre')],
+    'suc-ciudad':    [()=>Validar.requerido(document.getElementById('suc-ciudad').value,'Ciudad')],
+    'suc-direccion': [()=>Validar.requerido(document.getElementById('suc-direccion').value,'Dirección')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-sucursal ')) return;
+  const datos = {
+    nombre:      document.getElementById('suc-nombre').value.trim(),
+    ciudad:      document.getElementById('suc-ciudad').value.trim(),
+    telefono:    document.getElementById('suc-telefono').value.trim(),
+    direccion:   document.getElementById('suc-direccion').value.trim(),
+    descripcion: document.getElementById('suc-desc').value.trim(),
+    activa:      document.getElementById('suc-activa').checked,
+  };
+  try {
+    if (editandoSucId) await API.patch('/core/sucursales/'+editandoSucId+'/', datos);
+    else               await API.post('/core/sucursales/', datos);
+    UI.toast('✅ Sucursal guardada','exito');
+    UI.cerrarModal('modal-sucursal');
+    cargarSucursales();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminarSucursalPorId(id) {
+  const suc = _cache.sucursales[id];
+  if (!confirm('¿Eliminar la sucursal "'+suc?.nombre+'"?\nSe eliminarán también sus salas y turnos.')) return;
+  try {
+    await API.delete('/core/sucursales/'+id+'/');
+    UI.toast('Sucursal eliminada','exito');
+    cargarSucursales();
+  } catch (err) { UI.toast('No se puede eliminar: '+err.message,'error'); }
+}
+
+// ── Sala CRUD ──────────────────────────────────────────────
+function abrirNuevaSalaPorSuc(sucId) {
+  editandoSalaId = null;
+  const suc = _cache.sucursales[sucId];
+  document.getElementById('sa-sucursal-id').value = sucId;
+  document.getElementById('titulo-modal-sala').textContent = '🏠 Nueva sala — '+(suc?.nombre||'');
+  ['sa-id','sa-nombre','sa-desc'].forEach(id=>document.getElementById(id).value='');
+  ['sa-min','sa-max','sa-cap'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sa-activa').checked = true;
+  document.querySelectorAll('#modal-sala .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-sala');
+}
+
+function editarSalaPorId(salaId, sucId) {
+  const sala = _cache.salas[salaId];
+  if (!sala) return UI.toast('Datos no disponibles','warn');
+  editandoSalaId = salaId;
+  document.getElementById('sa-sucursal-id').value = sucId;
+  document.getElementById('titulo-modal-sala').textContent = '✏️ Editar sala — '+sala.nombre;
+  document.getElementById('sa-id').value     = salaId;
+  document.getElementById('sa-nombre').value = sala.nombre;
+  document.getElementById('sa-min').value    = sala.edad_min_meses;
+  document.getElementById('sa-max').value    = sala.edad_max_meses;
+  document.getElementById('sa-cap').value    = sala.capacidad_maxima;
+  document.getElementById('sa-desc').value   = sala.descripcion||'';
+  document.getElementById('sa-activa').checked = sala.activa;
+  document.querySelectorAll('#modal-sala .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-sala');
+}
+
+async function guardarSala() {
+  const errores = Validar.formulario({
+    'sa-nombre':[()=>Validar.requerido(document.getElementById('sa-nombre').value,'Nombre')],
+    'sa-min':   [()=>Validar.numero(document.getElementById('sa-min').value,'Edad mínima')],
+    'sa-max':   [()=>{
+      const min=parseFloat(document.getElementById('sa-min').value);
+      const max=parseFloat(document.getElementById('sa-max').value);
+      const base=Validar.numero(document.getElementById('sa-max').value,'Edad máxima');
+      if (base) return base;
+      if (!isNaN(min)&&!isNaN(max)&&min>=max) return 'La edad máxima debe ser mayor a la mínima';
+      return null;
+    }],
+    'sa-cap':[()=>Validar.numero(document.getElementById('sa-cap').value,'Capacidad')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-sala ')) return;
+  const datos = {
+    sucursal:        document.getElementById('sa-sucursal-id').value,
+    nombre:          document.getElementById('sa-nombre').value.trim(),
+    edad_min_meses:  document.getElementById('sa-min').value,
+    edad_max_meses:  document.getElementById('sa-max').value,
+    capacidad_maxima:document.getElementById('sa-cap').value,
+    descripcion:     document.getElementById('sa-desc').value.trim(),
+    activa:          document.getElementById('sa-activa').checked,
+  };
+  try {
+    if (editandoSalaId) await API.patch('/core/salas/'+editandoSalaId+'/', datos);
+    else                await API.post('/core/salas/', datos);
+    UI.toast('✅ Sala guardada','exito');
+    UI.cerrarModal('modal-sala');
+    cargarSucursales();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminarSalaPorId(id) {
+  const sala = _cache.salas[id];
+  if (!confirm('¿Eliminar la sala "'+sala?.nombre+'"?\nSe eliminarán también sus turnos.')) return;
+  try {
+    await API.delete('/core/salas/'+id+'/');
+    UI.toast('Sala eliminada','exito');
+    cargarSucursales();
+  } catch (err) { UI.toast('No se puede eliminar: '+err.message,'error'); }
+}
+
+// ── Turno CRUD ─────────────────────────────────────────────
+function abrirNuevoTurnoPorSala(salaId) {
+  editandoTurnoId = null;
+  const sala = _cache.salas[salaId];
+  document.getElementById('tu-sala-id').value = salaId;
+  document.getElementById('titulo-modal-turno').textContent = '⏰ Nuevo turno — '+(sala?.nombre||'');
+  ['tu-id','tu-mensual','tu-diario','tu-desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tu-nombre').value = 'Turno mañana'+(sala?' — '+sala.nombre:'');
+  document.getElementById('tu-tipo').value   = 'manana';
+  document.getElementById('tu-inicio').value = '08:00';
+  document.getElementById('tu-fin').value    = '12:30';
+  document.getElementById('tu-activo').checked = true;
+  document.querySelectorAll('#modal-turno .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-turno');
+}
+
+function editarTurnoPorId(id) {
+  const t = _cache.turnos[id];
+  if (!t) return UI.toast('Datos no disponibles','warn');
+  editandoTurnoId = id;
+  document.getElementById('tu-sala-id').value  = t.sala;
+  document.getElementById('titulo-modal-turno').textContent = '✏️ Editar turno — '+t.nombre;
+  document.getElementById('tu-id').value       = id;
+  document.getElementById('tu-nombre').value   = t.nombre;
+  document.getElementById('tu-tipo').value     = t.tipo;
+  document.getElementById('tu-inicio').value   = (t.hora_inicio||'').slice(0,5);
+  document.getElementById('tu-fin').value      = (t.hora_fin||'').slice(0,5);
+  document.getElementById('tu-mensual').value  = t.costo_mensual;
+  document.getElementById('tu-diario').value   = t.costo_diario;
+  document.getElementById('tu-desc').value     = t.descripcion||'';
+  document.getElementById('tu-activo').checked = t.activo;
+  document.querySelectorAll('#modal-turno .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-turno');
+}
+
+async function guardarTurno() {
+  const errores = Validar.formulario({
+    'tu-nombre': [()=>Validar.requerido(document.getElementById('tu-nombre').value,'Nombre')],
+    'tu-inicio': [()=>Validar.requerido(document.getElementById('tu-inicio').value,'Hora inicio')],
+    'tu-fin':    [()=>{
+      const ini=document.getElementById('tu-inicio').value;
+      const fin=document.getElementById('tu-fin').value;
+      const base=Validar.requerido(fin,'Hora fin');
+      if (base) return base;
+      if (ini&&fin&&ini>=fin) return 'La hora fin debe ser posterior al inicio';
+      return null;
+    }],
+    'tu-mensual':[()=>Validar.numero(document.getElementById('tu-mensual').value,'Costo mensual')],
+    'tu-diario': [()=>Validar.numero(document.getElementById('tu-diario').value,'Costo diario')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-turno ')) return;
+  const datos = {
+    sala:          document.getElementById('tu-sala-id').value,
+    nombre:        document.getElementById('tu-nombre').value.trim(),
+    tipo:          document.getElementById('tu-tipo').value,
+    hora_inicio:   document.getElementById('tu-inicio').value,
+    hora_fin:      document.getElementById('tu-fin').value,
+    costo_mensual: document.getElementById('tu-mensual').value,
+    costo_diario:  document.getElementById('tu-diario').value,
+    descripcion:   document.getElementById('tu-desc').value.trim(),
+    activo:        document.getElementById('tu-activo').checked,
+  };
+  try {
+    if (editandoTurnoId) await API.patch('/core/turnos/'+editandoTurnoId+'/', datos);
+    else                 await API.post('/core/turnos/', datos);
+    UI.toast('✅ Turno guardado','exito');
+    UI.cerrarModal('modal-turno');
+    cargarSucursales();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminarTurnoPorId(id) {
+  const t = _cache.turnos[id];
+  if (!confirm('¿Eliminar el turno "'+t?.nombre+'"?')) return;
+  try {
+    await API.delete('/core/turnos/'+id+'/');
+    UI.toast('Turno eliminado','exito');
+    cargarSucursales();
+  } catch (err) { UI.toast('No se puede eliminar: '+err.message,'error'); }
+}
+
+cargarSucursales();
+</script>
+</body>
+</html>

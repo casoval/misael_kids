@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    /* ── Bienvenida ── */
+    .bienvenida {
+      background: linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
+      border-radius: var(--radio-xl);
+      padding: var(--gap-xl);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--gap-xl);
+      position: relative;
+      overflow: hidden;
+    }
+    .bienvenida::before {
+      content: '';
+      position: absolute;
+      width: 250px; height: 250px;
+      background: rgba(255,255,255,.08);
+      border-radius: 50%;
+      top: -80px; right: -60px;
+    }
+    .bienvenida::after {
+      content: '';
+      position: absolute;
+      width: 150px; height: 150px;
+      background: rgba(255,255,255,.06);
+      border-radius: 50%;
+      bottom: -40px; right: 120px;
+    }
+    .bienvenida-texto h2 {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      margin-bottom: .3rem;
+    }
+    .bienvenida-texto p {
+      opacity: .85;
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+    .bienvenida-emoji {
+      font-size: 4rem;
+      position: relative;
+      z-index: 1;
+      animation: mecerse 3s ease-in-out infinite;
+    }
+    @keyframes mecerse {
+      0%,100% { transform: rotate(-5deg); }
+      50%      { transform: rotate(5deg); }
+    }
+
+    /* ── Sección de acceso rápido ── */
+    .acceso-rapido {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--gap-md);
+      margin-bottom: var(--gap-xl);
+    }
+    .acceso-btn {
+      background: var(--blanco);
+      border: 2px solid var(--gris-100);
+      border-radius: var(--radio-xl);
+      padding: var(--gap-lg) var(--gap-md);
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--trans-fast);
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--gap-sm);
+      box-shadow: var(--sombra-sm);
+    }
+    .acceso-btn:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--sombra-lg);
+      border-color: var(--turquesa);
+    }
+    .acceso-btn .icono {
+      width: 52px; height: 52px;
+      border-radius: var(--radio-lg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+    }
+    .acceso-btn .etiqueta {
+      font-weight: 700;
+      font-size: var(--text-sm);
+      color: var(--texto);
+    }
+
+    /* ── Layout dos columnas ── */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: var(--gap-xl);
+      align-items: start;
+    }
+    @media (max-width: 1100px) {
+      .dash-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Lista de asistencia de hoy ── */
+    .nino-fila {
+      display: flex;
+      align-items: center;
+      gap: var(--gap-md);
+      padding: .75rem 0;
+      border-bottom: 1px dashed var(--gris-100);
+    }
+    .nino-fila:last-child { border-bottom: none; }
+    .nino-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--turquesa), var(--verde));
+      display: flex; align-items: center; justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: var(--text-sm);
+      flex-shrink: 0;
+    }
+    .nino-nombre {
+      font-weight: 700;
+      font-size: var(--text-sm);
+      color: var(--texto);
+    }
+    .nino-sala {
+      font-size: var(--text-xs);
+      color: var(--texto-suave);
+    }
+
+    /* ── Alertas recientes ── */
+    .alerta-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--gap-sm);
+      padding: var(--gap-sm) 0;
+      border-bottom: 1px dashed var(--gris-100);
+    }
+    .alerta-item:last-child { border-bottom: none; }
+    .alerta-icono {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem;
+      flex-shrink: 0;
+    }
+    .alerta-texto {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--texto);
+      line-height: 1.4;
+    }
+    .alerta-tiempo {
+      font-size: var(--text-xs);
+      color: var(--texto-suave);
+    }
+
+    /* ── Mini calendario de eventos ── */
+    .evento-item {
+      display: flex;
+      gap: var(--gap-md);
+      align-items: center;
+      padding: .7rem 0;
+      border-bottom: 1px dashed var(--gris-100);
+    }
+    .evento-item:last-child { border-bottom: none; }
+    .evento-fecha {
+      width: 44px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .evento-dia {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      color: var(--turquesa-d);
+      line-height: 1;
+    }
+    .evento-mes {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--texto-suave);
+      text-transform: uppercase;
+    }
+    .evento-info .titulo {
+      font-weight: 700;
+      font-size: var(--text-sm);
+      color: var(--texto);
+    }
+    .evento-info .detalle {
+      font-size: var(--text-xs);
+      color: var(--texto-suave);
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- ══ CONTENIDO PRINCIPAL ══ -->
+  <main class="main-content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:var(--gap-md)">
+        <button id="sidebar-toggle" class="btn btn-outline btn-icon" style="display:none">☰</button>
+        <h1 class="topbar-titulo">🏠 Dashboard</h1>
+      </div>
+      <div class="topbar-acciones">
+        <span id="fecha-hoy" style="font-weight:600;color:var(--texto-suave);font-size:var(--text-sm)"></span>
+        <button class="btn btn-primary btn-sm" onclick="location.href='/panel/asistencia/'">
+          📋 Tomar asistencia
+        </button>
+        <a id="btn-admin-django" href="/admin/" target="_blank" rel="noopener"
+          style="display:none;padding:.45rem var(--gap-md);border-radius:var(--radio-lg);
+          background:var(--gris-100);color:var(--gris-600);font-weight:700;font-size:var(--text-sm);
+          text-decoration:none;border:1.5px solid var(--gris-200);transition:all var(--trans-fast)"
+          onmouseover="this.style.background='var(--gris-200)'"
+          onmouseout="this.style.background='var(--gris-100)'">
+          ⚙️ Admin ↗
+        </a>
+      </div>
+    </header>
+
+    <div class="pagina">
+
+      <!-- Bienvenida -->
+      <div class="bienvenida">
+        <div class="bienvenida-texto">
+          <h2 id="saludo-texto">¡Buenos días! 👋</h2>
+          <p id="saludo-nombre">Cargando tu información...</p>
+        </div>
+        <div class="bienvenida-emoji">🌸</div>
+      </div>
+
+      <!-- Estadísticas -->
+      <div class="grid-stats mb-lg" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon turquesa">👶</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-ninos">—</div>
+            <div class="etiqueta">Niños activos</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon verde">✅</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-presentes">—</div>
+            <div class="etiqueta">Presentes hoy</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon coral">❌</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-ausentes">—</div>
+            <div class="etiqueta">Ausentes hoy</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amarillo">💰</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-cobros">—</div>
+            <div class="etiqueta">Cobros pendientes</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon violeta">📦</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-stock">—</div>
+            <div class="etiqueta">Alertas de stock</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accesos rápidos -->
+      <div class="acceso-rapido mb-lg">
+        <a class="acceso-btn" href="/panel/asistencia/">
+          <div class="icono" style="background:var(--turquesa-l)">📋</div>
+          <span class="etiqueta">Asistencia</span>
+        </a>
+        <a class="acceso-btn" href="/panel/ninos/">
+          <div class="icono" style="background:var(--coral-l)">👶</div>
+          <span class="etiqueta">Registrar niño</span>
+        </a>
+        <a class="acceso-btn" href="/panel/cobros/">
+          <div class="icono" style="background:var(--amarillo-l)">💰</div>
+          <span class="etiqueta">Cobros</span>
+        </a>
+        <a class="acceso-btn" href="/panel/agenda/">
+          <div class="icono" style="background:var(--verde-l)">📔</div>
+          <span class="etiqueta">Agenda</span>
+        </a>
+        <a class="acceso-btn" href="/panel/comunicacion/">
+          <div class="icono" style="background:var(--violeta-l)">📨</div>
+          <span class="etiqueta">Mensajes</span>
+        </a>
+        <a class="acceso-btn" href="/panel/salud/">
+          <div class="icono" style="background:var(--naranja-l)">🏥</div>
+          <span class="etiqueta">Incidente</span>
+        </a>
+      </div>
+
+      <!-- Grid dos columnas -->
+      <div class="dash-grid">
+
+        <!-- Columna izquierda: asistencia de hoy -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-titulo">📋 Asistencia de hoy</h3>
+              <a href="/panel/asistencia/" class="btn btn-outline btn-sm">Ver todo →</a>
+            </div>
+            <div id="lista-asistencia">
+              <div class="loader"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna derecha -->
+        <div style="display:flex;flex-direction:column;gap:var(--gap-lg)">
+
+          <!-- Alertas rápidas -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-titulo">⚠️ Alertas</h3>
+            </div>
+            <div id="lista-alertas">
+              <div class="loader"><div class="spinner"></div></div>
+            </div>
+          </div>
+
+          <!-- Próximos avisos -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-titulo">📢 Últimos avisos</h3>
+              <a href="/panel/comunicacion/" class="btn btn-outline btn-sm">Ver →</a>
+            </div>
+            <div id="lista-avisos">
+              <div class="loader"><div class="spinner"></div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /pagina -->
+  </main>
+</div><!-- /app-layout -->
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+// ── Inicializar sidebar dinámico y verificar autenticación ──
+initPanel('dashboard', ['admin', 'directora', 'educadora', 'ayudante', 'administrativo', 'cocina']);
+const usr = Auth.getUsuario();
+
+// Saludo según hora
+const hora = new Date().getHours();
+const saludo = hora < 12 ? '¡Buenos días' : hora < 18 ? '¡Buenas tardes' : '¡Buenas noches';
+document.getElementById('saludo-texto').textContent = `${saludo}! 👋`;
+document.getElementById('saludo-nombre').textContent =
+  `Bienvenida/o, ${usr.nombres}. Aquí está el resumen de hoy.`;
+
+// Mostrar botón Admin Django solo para administradores
+if (usr.rol === 'admin') {
+  document.getElementById('btn-admin-django').style.display = '';
+}
+
+
+// ── Fecha de hoy ──
+const hoy = new Date();
+document.getElementById('fecha-hoy').textContent = hoy.toLocaleDateString('es-BO', {
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+});
+
+// ── Cargar todos los datos del dashboard ──
+async function cargarDashboard() {
+  await Promise.all([
+    cargarStats(),
+    cargarAsistenciaHoy(),
+    cargarAlertas(),
+    cargarAvisos(),
+  ]);
+}
+
+// ── Estadísticas ──
+async function cargarStats() {
+  try {
+    const [ninos, asistHoy, cobros, stockAlertas] = await Promise.all([
+      API.get('/ninos/ninos/?activo=true&limit=1'),
+      API.get('/asistencia/asistencia/hoy/'),
+      API.get('/inscripciones/cobros/?estado=pendiente&limit=1'),
+      API.get('/inventario/items/alertas-stock/'),
+    ]);
+
+    const presentes = asistHoy.filter(a => a.estado === 'presente').length;
+    const ausentes  = asistHoy.filter(a => a.estado !== 'presente').length;
+
+    document.getElementById('stat-ninos').textContent     = ninos.count ?? '—';
+    document.getElementById('stat-presentes').textContent = presentes;
+    document.getElementById('stat-ausentes').textContent  = ausentes;
+    document.getElementById('stat-cobros').textContent    = cobros.count ?? '—';
+    document.getElementById('stat-stock').textContent     = stockAlertas.length ?? 0;
+
+    // Badge en sidebar
+    if (cobros.count > 0) {
+      const badge = document.getElementById('badge-cobros');
+      badge.textContent = cobros.count > 99 ? '99+' : cobros.count;
+      badge.style.display = '';
+    }
+
+  } catch (err) {
+    console.warn('Error cargando stats:', err.message);
+  }
+}
+
+// ── Asistencia de hoy ──
+async function cargarAsistenciaHoy() {
+  const cont = document.getElementById('lista-asistencia');
+  try {
+    const data = await API.get('/asistencia/asistencia/hoy/');
+    if (!data.length) {
+      UI.vacio(cont, 'Sin registros de asistencia hoy', '📋');
+      return;
+    }
+    // Mostrar máximo 8 para no sobrecargar el dashboard
+    const visibles = data.slice(0, 8);
+    cont.innerHTML = visibles.map(a => `
+      <div class="nino-fila">
+        <div class="nino-avatar">${UI.iniciales(a.nino_nombre)}</div>
+        <div style="flex:1">
+          <div class="nino-nombre">${a.nino_nombre}</div>
+          <div class="nino-sala">${a.sala_nombre} · ${a.turno_nombre}</div>
+        </div>
+        ${UI.chipAsistencia(a.estado)}
+        <span style="font-size:var(--text-xs);color:var(--texto-suave)">
+          ${a.hora_entrada ? a.hora_entrada.slice(0,5) : '—'}
+        </span>
+      </div>
+    `).join('') + (data.length > 8 ? `
+      <div style="text-align:center;padding:.75rem;font-size:var(--text-sm);color:var(--texto-suave);font-weight:600">
+        +${data.length - 8} más →
+        <a href="/panel/asistencia/" style="color:var(--turquesa-d)">ver todos</a>
+      </div>` : '');
+  } catch {
+    UI.vacio(cont, 'No se pudo cargar la asistencia', '⚠️');
+  }
+}
+
+// ── Alertas ──
+async function cargarAlertas() {
+  const cont = document.getElementById('lista-alertas');
+  const alertas = [];
+
+  try {
+    // Stock bajo
+    const stock = await API.get('/inventario/items/alertas-stock/');
+    stock.slice(0,3).forEach(item => {
+      alertas.push({
+        icono: '📦', color: 'var(--naranja-l)',
+        texto: `Stock bajo: <b>${item.nombre}</b> (${item.stock_actual} ${item.unidad})`,
+        tipo: 'warn',
+      });
+    });
+
+    // Cobros vencidos
+    const vencidos = await API.get('/inscripciones/cobros/?estado=vencido&limit=3');
+    if (vencidos.count > 0) {
+      alertas.push({
+        icono: '💰', color: 'var(--coral-l)',
+        texto: `<b>${vencidos.count}</b> cobro(s) vencido(s) sin pagar`,
+        tipo: 'peligro',
+      });
+    }
+
+    // Alertas de desarrollo
+    const rezago = await API.get('/evaluacion/evaluaciones/alertas-rezago/');
+    rezago.slice(0,2).forEach(ev => {
+      alertas.push({
+        icono: '🌱', color: 'var(--amarillo-l)',
+        texto: `Posible rezago: <b>${ev.nino_nombre}</b> — ${ev.hito_area}`,
+        tipo: 'warn',
+      });
+    });
+
+  } catch {}
+
+  if (!alertas.length) {
+    cont.innerHTML = `
+      <div style="text-align:center;padding:var(--gap-lg);color:var(--texto-suave)">
+        <div style="font-size:2rem;margin-bottom:.5rem">✨</div>
+        <p style="font-weight:600;font-size:var(--text-sm)">¡Sin alertas por ahora!</p>
+      </div>`;
+    return;
+  }
+
+  cont.innerHTML = alertas.map(a => `
+    <div class="alerta-item">
+      <div class="alerta-icono" style="background:${a.color}">${a.icono}</div>
+      <div>
+        <div class="alerta-texto">${a.texto}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Últimos avisos ──
+async function cargarAvisos() {
+  const cont = document.getElementById('lista-avisos');
+  try {
+    const data = await API.get('/comunicacion/avisos/?limit=4');
+    const avisos = data.results || data;
+    if (!avisos.length) {
+      UI.vacio(cont, 'Sin avisos recientes', '📢');
+      return;
+    }
+    cont.innerHTML = avisos.slice(0,4).map(av => `
+      <div class="alerta-item">
+        <div class="alerta-icono" style="background:var(--turquesa-l)">
+          ${av.importante ? '🔔' : '📢'}
+        </div>
+        <div>
+          <div class="alerta-texto">${av.titulo}</div>
+          <div class="alerta-tiempo">
+            ${av.sala_nombre ? av.sala_nombre + ' · ' : ''}
+            ${new Date(av.publicado_en).toLocaleDateString('es-BO')}
+          </div>
+        </div>
+        ${av.importante ? '<span class="chip chip-coral">Importante</span>' : ''}
+      </div>
+    `).join('');
+  } catch {
+    UI.vacio(cont, 'No se pudieron cargar los avisos', '⚠️');
+  }
+}
+
+// Iniciar
+cargarDashboard();
+</script>
+</body>
+</html>

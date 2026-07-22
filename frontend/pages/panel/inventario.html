@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    .filtros-bar {
+      background: var(--blanco); border-radius: var(--radio-xl);
+      padding: var(--gap-lg); box-shadow: var(--sombra-sm);
+      border: 1.5px solid var(--gris-100);
+      display: flex; flex-wrap: wrap; gap: var(--gap-md); align-items: flex-end;
+      margin-bottom: var(--gap-lg);
+    }
+    .filtros-bar .form-grupo { margin-bottom: 0; flex: 1; min-width: 160px; }
+
+    /* ── Grid de ítems de inventario ── */
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--gap-md);
+    }
+
+    .item-card {
+      background: var(--blanco);
+      border: 2px solid var(--gris-100);
+      border-radius: var(--radio-xl);
+      padding: var(--gap-lg);
+      box-shadow: var(--sombra-sm);
+      transition: all var(--trans-fast);
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap-sm);
+    }
+    .item-card:hover { transform: translateY(-3px); box-shadow: var(--sombra-lg); }
+    .item-card.alerta-stock { border-color: var(--coral); }
+
+    .item-header {
+      display: flex; align-items: flex-start; gap: var(--gap-sm);
+    }
+    .item-icono {
+      width: 46px; height: 46px;
+      border-radius: var(--radio-lg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    .item-nombre {
+      font-weight: 800; font-size: var(--text-sm); color: var(--texto); line-height: 1.3;
+    }
+    .item-categoria {
+      font-size: var(--text-xs); color: var(--texto-suave); font-weight: 600;
+    }
+
+    /* ── Barra de stock visual ── */
+    .stock-bar-wrap {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .stock-bar-labels {
+      display: flex; justify-content: space-between;
+      font-size: var(--text-xs); font-weight: 700;
+    }
+    .stock-bar {
+      height: 8px; border-radius: var(--radio-full);
+      background: var(--gris-100); overflow: hidden;
+    }
+    .stock-bar-fill {
+      height: 100%; border-radius: var(--radio-full);
+      transition: width .5s ease;
+    }
+
+    .item-acciones {
+      display: flex; gap: 6px; margin-top: auto;
+    }
+
+    /* ── Alertas de stock ── */
+    .alertas-banner {
+      background: linear-gradient(135deg, var(--coral-l), #FFE8E8);
+      border: 2px solid var(--coral);
+      border-radius: var(--radio-xl);
+      padding: var(--gap-lg);
+      margin-bottom: var(--gap-lg);
+      display: none;
+    }
+    .alertas-banner.visible { display: block; }
+    .alertas-banner h3 {
+      font-family: var(--font-display); color: var(--coral-d);
+      margin-bottom: var(--gap-sm); display: flex; align-items: center; gap: var(--gap-sm);
+    }
+    .alerta-stock-item {
+      display: flex; align-items: center; gap: var(--gap-sm);
+      padding: .4rem 0; border-bottom: 1px dashed rgba(255,107,107,.3);
+      font-size: var(--text-sm); font-weight: 600; color: var(--coral-d);
+    }
+    .alerta-stock-item:last-child { border-bottom: none; }
+
+    /* ── Selector de tipo de movimiento ── */
+    .tipo-movimiento-btns {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: var(--gap-sm);
+      margin-bottom: var(--gap-md);
+    }
+    .tipo-mov-btn {
+      padding: var(--gap-md); border-radius: var(--radio-lg);
+      border: 2px solid var(--gris-200); background: var(--blanco);
+      cursor: pointer; text-align: center; transition: all var(--trans-fast);
+      font-family: var(--font-body);
+    }
+    .tipo-mov-btn:hover { transform: translateY(-2px); }
+    .tipo-mov-btn.entrada.sel  { border-color:var(--verde);    background:var(--verde-l); }
+    .tipo-mov-btn.salida.sel   { border-color:var(--coral);    background:var(--coral-l); }
+    .tipo-mov-btn.ajuste.sel   { border-color:var(--amarillo); background:var(--amarillo-l); }
+    .tipo-mov-btn .t-icono { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+    .tipo-mov-btn .t-label { font-size: var(--text-xs); font-weight: 700; }
+
+    /* ── Historial de movimientos ── */
+    .movimiento-item {
+      display: flex; align-items: center; gap: var(--gap-md);
+      padding: .6rem 0; border-bottom: 1px dashed var(--gris-100);
+      font-size: var(--text-sm);
+    }
+    .movimiento-item:last-child { border-bottom: none; }
+    .mov-icono {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; flex-shrink: 0;
+    }
+    .mov-icono.entrada  { background: var(--verde-l); }
+    .mov-icono.salida   { background: var(--coral-l); }
+    .mov-icono.ajuste   { background: var(--amarillo-l); }
+
+    /* ── Categorías color mapping ── */
+    .cat-didactico  { background: var(--turquesa-l); }
+    .cat-juguetes   { background: var(--coral-l); }
+    .cat-limpieza   { background: var(--verde-l); }
+    .cat-mobiliario { background: var(--violeta-l); }
+    .cat-otro       { background: var(--gris-100); }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">📦 Inventario</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-primary" onclick="UI.abrirModal('modal-nuevo-item')">
+          ➕ Nuevo ítem
+        </button>
+      </div>
+    </header>
+
+    <div class="pagina">
+
+      <!-- Banner de alertas de stock -->
+      <div class="alertas-banner" id="alertas-banner">
+        <h3>⚠️ Ítems con stock bajo</h3>
+        <div id="lista-alertas-stock"></div>
+      </div>
+
+      <!-- Stats de inventario -->
+      <div class="grid-stats mb-lg">
+        <div class="stat-card">
+          <div class="stat-icon turquesa">📦</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-total-items">—</div>
+            <div class="etiqueta">Ítems registrados</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon coral">⚠️</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-alertas" style="color:var(--coral-d)">—</div>
+            <div class="etiqueta">Stock bajo</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon verde">✅</div>
+          <div class="stat-info">
+            <div class="valor" id="stat-ok">—</div>
+            <div class="etiqueta">Stock correcto</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filtros-bar">
+        <div class="form-grupo">
+          <label class="form-label">🔍 Buscar</label>
+          <input type="text" id="buscar-item" class="form-input" placeholder="Nombre del ítem...">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Categoría</label>
+          <select class="form-select" id="filtro-categoria">
+            <option value="">Todas</option>
+            <option value="didactico">📚 Didáctico</option>
+            <option value="juguetes">🧸 Juguetes</option>
+            <option value="limpieza">🧹 Limpieza</option>
+            <option value="mobiliario">🪑 Mobiliario</option>
+            <option value="otro">📦 Otro</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">🏢 Sucursal</label>
+          <select class="form-select" id="filtro-suc-inv">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="max-width:160px">
+          <label class="form-label">Mostrar</label>
+          <select class="form-select" id="filtro-alerta">
+            <option value="">Todos</option>
+            <option value="alerta">⚠️ Solo alertas</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="cargarItems()">🔍 Filtrar</button>
+      </div>
+
+      <!-- Grid de ítems -->
+      <div class="items-grid" id="items-grid">
+        <div class="loader" style="grid-column:1/-1">
+          <div class="spinner"></div>
+          <p style="color:var(--texto-suave);font-weight:600">Cargando inventario...</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ══ MODAL: Nuevo ítem ══ -->
+<div class="modal-overlay" id="modal-nuevo-item">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo">📦 Nuevo ítem de inventario</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <div class="grid-2">
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Nombre del ítem *</label>
+        <input type="text" id="ni-nombre" class="form-input" placeholder="Ej: Bloques de madera, Crayones...">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Categoría *</label>
+        <select id="ni-categoria" class="form-select">
+          <option value="">Seleccionar...</option>
+          <option value="didactico">📚 Material didáctico</option>
+          <option value="juguetes">🧸 Juguetes</option>
+          <option value="limpieza">🧹 Limpieza e higiene</option>
+          <option value="mobiliario">🪑 Mobiliario</option>
+          <option value="otro">📦 Otro</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">🏢 Sucursal *</label>
+        <select id="ni-sucursal" class="form-select">
+          <option value="">Seleccionar...</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Unidad de medida *</label>
+        <input type="text" id="ni-unidad" class="form-input" placeholder="unidades, cajas, litros...">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Stock inicial *</label>
+        <input type="number" id="ni-stock" class="form-input" placeholder="0" min="0">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Stock mínimo (alerta) *</label>
+        <input type="number" id="ni-stock-min" class="form-input" placeholder="5" min="0">
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Descripción</label>
+        <textarea id="ni-descripcion" class="form-textarea" style="min-height:60px"
+          placeholder="Descripción o detalles adicionales..."></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-nuevo-item')">Cancelar</button>
+      <button class="btn btn-primary" onclick="crearItem()">📦 Crear ítem</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Registrar movimiento ══ -->
+<div class="modal-overlay" id="modal-movimiento">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-movimiento">📦 Registrar movimiento</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+
+    <div id="info-item-modal" style="background:var(--gris-50);border-radius:var(--radio-lg);
+      padding:var(--gap-md);margin-bottom:var(--gap-lg)"></div>
+
+    <div class="tipo-movimiento-btns">
+      <button class="tipo-mov-btn entrada sel" onclick="seleccionarTipoMov('entrada',this)">
+        <span class="t-icono">📥</span>
+        <span class="t-label" style="color:var(--verde-d)">Entrada</span>
+      </button>
+      <button class="tipo-mov-btn salida" onclick="seleccionarTipoMov('salida',this)">
+        <span class="t-icono">📤</span>
+        <span class="t-label" style="color:var(--coral-d)">Salida</span>
+      </button>
+      <button class="tipo-mov-btn ajuste" onclick="seleccionarTipoMov('ajuste',this)">
+        <span class="t-icono">⚖️</span>
+        <span class="t-label" style="color:#92400E">Ajuste</span>
+      </button>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label" id="label-cantidad">Cantidad *</label>
+        <input type="number" id="mov-cantidad" class="form-input" placeholder="0" min="1">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">📅 Fecha</label>
+        <input type="date" id="mov-fecha" class="form-input">
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Motivo / descripción *</label>
+      <textarea id="mov-motivo" class="form-textarea" style="min-height:70px"
+        placeholder="Ej: Compra de materiales, uso en sala cuna, inventario físico..."></textarea>
+    </div>
+
+    <div id="nuevo-stock-preview" style="display:none;background:var(--turquesa-l);
+      border-radius:var(--radio-lg);padding:var(--gap-md);margin-bottom:var(--gap-md);
+      font-weight:700;color:var(--turquesa-d);text-align:center"></div>
+
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-movimiento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarMovimiento()">✅ Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Historial de movimientos ══ -->
+<div class="modal-overlay" id="modal-historial">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-historial">📜 Historial</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <div id="contenido-historial">
+      <div class="loader"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('inventario', ['admin', 'directora', 'educadora', 'ayudante', 'administrativo']);
+Auth.requerirAuth(['admin','directora','administrativo','educadora']);
+
+const usr = Auth.getUsuario();
+document.getElementById('usr-avatar').textContent = UI.iniciales(`${usr.nombres} ${usr.apellidos}`);
+document.getElementById('usr-nombre').textContent = `${usr.nombres} ${usr.apellidos}`;
+document.getElementById('usr-rol').textContent    = usr.rol_display || usr.rol;
+
+let itemActual  = null;
+let tipoMovActual = 'entrada';
+
+// Fecha de hoy para movimientos
+document.getElementById('mov-fecha').value = new Date().toISOString().split('T')[0];
+
+// ── Iconos y colores por categoría ──
+const catConfig = {
+  didactico:  { icono:'📚', clase:'cat-didactico',  label:'Didáctico' },
+  juguetes:   { icono:'🧸', clase:'cat-juguetes',   label:'Juguetes'  },
+  limpieza:   { icono:'🧹', clase:'cat-limpieza',   label:'Limpieza'  },
+  mobiliario: { icono:'🪑', clase:'cat-mobiliario', label:'Mobiliario'},
+  otro:       { icono:'📦', clase:'cat-otro',        label:'Otro'      },
+};
+
+async function inicializar() {
+  await cargarSucursales();
+  await Promise.all([cargarAlertas(), cargarItems()]);
+}
+
+async function cargarSucursales() {
+  try {
+    const data = await API.get('/core/sucursales/');
+    const lista = data.results || data;
+    UI.llenarSelect(document.getElementById('filtro-suc-inv'), lista, 'id', 'nombre');
+    UI.llenarSelect(document.getElementById('ni-sucursal'), lista, 'id', 'nombre');
+  } catch {}
+}
+
+async function cargarAlertas() {
+  try {
+    const data   = await API.get('/inventario/items/alertas-stock/');
+    const banner = document.getElementById('alertas-banner');
+    const lista  = document.getElementById('lista-alertas-stock');
+    document.getElementById('stat-alertas').textContent = data.length;
+
+    if (data.length) {
+      banner.classList.add('visible');
+      lista.innerHTML = data.map(item => `
+        <div class="alerta-stock-item">
+          <span>${catConfig[item.categoria]?.icono || '📦'}</span>
+          <span style="flex:1">${item.nombre} (${item.sucursal_nombre})</span>
+          <span style="font-family:var(--font-display)">
+            ${item.stock_actual}/${item.stock_minimo} ${item.unidad}
+          </span>
+        </div>
+      `).join('');
+    }
+  } catch {}
+}
+
+async function cargarItems() {
+  const grid     = document.getElementById('items-grid');
+  const buscar   = document.getElementById('buscar-item').value.trim();
+  const cat      = document.getElementById('filtro-categoria').value;
+  const suc      = document.getElementById('filtro-suc-inv').value;
+  const soloAlert = document.getElementById('filtro-alerta').value;
+
+  UI.mostrarLoader(grid, 'Cargando inventario...');
+
+  let url = '/inventario/items/?activo=true&page_size=100';
+  if (buscar) url += `&search=${encodeURIComponent(buscar)}`;
+  if (cat)    url += `&categoria=${cat}`;
+  if (suc)    url += `&sucursal=${suc}`;
+
+  try {
+    let data  = await API.get(url);
+    let items = data.results || data;
+
+    // Filtrar alertas localmente
+    if (soloAlert === 'alerta') {
+      items = items.filter(i => i.alerta_stock_bajo);
+    }
+
+    // Stats
+    document.getElementById('stat-total-items').textContent = items.length;
+    document.getElementById('stat-ok').textContent = items.filter(i => !i.alerta_stock_bajo).length;
+
+    if (!items.length) {
+      grid.innerHTML = `<div class="loader" style="grid-column:1/-1">
+        <div style="font-size:3rem">📦</div>
+        <p style="color:var(--texto-suave);font-weight:600">Sin ítems con esos filtros</p>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = items.map(item => {
+      const cc       = catConfig[item.categoria] || catConfig.otro;
+      const porcentaje = Math.min(100, Math.round((item.stock_actual / Math.max(item.stock_minimo * 2, 1)) * 100));
+      const colorBarra = item.alerta_stock_bajo
+        ? 'var(--coral)'
+        : porcentaje < 70 ? 'var(--amarillo)' : 'var(--verde)';
+      return `
+        <div class="item-card ${item.alerta_stock_bajo ? 'alerta-stock' : ''}">
+          <div class="item-header">
+            <div class="item-icono ${cc.clase}">${cc.icono}</div>
+            <div style="flex:1;min-width:0">
+              <div class="item-nombre">${item.nombre}</div>
+              <div class="item-categoria">${cc.label} · ${item.sucursal_nombre}</div>
+            </div>
+            ${item.alerta_stock_bajo
+              ? '<span style="font-size:1.1rem" title="Stock bajo">⚠️</span>'
+              : ''}
+          </div>
+
+          <!-- Barra de stock -->
+          <div class="stock-bar-wrap">
+            <div class="stock-bar-labels">
+              <span style="color:var(--texto-suave)">Stock actual</span>
+              <span style="font-family:var(--font-display);font-size:var(--text-lg);color:${
+                item.alerta_stock_bajo ? 'var(--coral-d)' : 'var(--texto)'
+              }">${item.stock_actual} <span style="font-size:var(--text-xs);font-weight:700;font-family:var(--font-body)">${item.unidad}</span></span>
+            </div>
+            <div class="stock-bar">
+              <div class="stock-bar-fill" style="width:${porcentaje}%;background:${colorBarra}"></div>
+            </div>
+            <div style="font-size:var(--text-xs);color:var(--texto-suave);font-weight:600;text-align:right">
+              Mínimo: ${item.stock_minimo} ${item.unidad}
+            </div>
+          </div>
+
+          <div class="item-acciones">
+            <button class="btn btn-primary btn-sm" style="flex:1"
+              onclick="abrirMovimiento(${JSON.stringify(item).replace(/"/g,'&quot;')})">
+              📦 Movimiento
+            </button>
+            <button class="btn btn-outline btn-sm"
+              onclick="verHistorial(${JSON.stringify(item).replace(/"/g,'&quot;')})">
+              📜
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    grid.innerHTML = `<div class="loader" style="grid-column:1/-1">
+      <p style="color:var(--coral);font-weight:700">Error: ${err.message}</p>
+    </div>`;
+  }
+}
+
+// ── Seleccionar tipo de movimiento ──
+function seleccionarTipoMov(tipo, btn) {
+  tipoMovActual = tipo;
+  document.querySelectorAll('.tipo-mov-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+
+  const labelCant = document.getElementById('label-cantidad');
+  if (tipo === 'ajuste') {
+    labelCant.textContent = 'Nuevo stock total *';
+    document.getElementById('mov-cantidad').placeholder = 'Ingresa el stock total actual';
+  } else {
+    labelCant.textContent = `Cantidad a ${tipo === 'entrada' ? 'agregar' : 'retirar'} *`;
+    document.getElementById('mov-cantidad').placeholder = '0';
+  }
+
+  // Preview del nuevo stock
+  actualizarPreviewStock();
+}
+
+function actualizarPreviewStock() {
+  if (!itemActual) return;
+  const cant    = parseInt(document.getElementById('mov-cantidad').value) || 0;
+  const preview = document.getElementById('nuevo-stock-preview');
+  let nuevo;
+  if (tipoMovActual === 'entrada')  nuevo = itemActual.stock_actual + cant;
+  if (tipoMovActual === 'salida')   nuevo = Math.max(0, itemActual.stock_actual - cant);
+  if (tipoMovActual === 'ajuste')   nuevo = cant;
+  if (cant > 0) {
+    preview.style.display = '';
+    preview.textContent   = `Stock resultante: ${nuevo} ${itemActual.unidad}`;
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+function abrirMovimiento(item) {
+  itemActual      = item;
+  tipoMovActual   = 'entrada';
+  document.getElementById('mov-cantidad').value = '';
+  document.getElementById('mov-motivo').value   = '';
+  document.getElementById('nuevo-stock-preview').style.display = 'none';
+  document.querySelectorAll('.tipo-mov-btn').forEach((b,i) => {
+    b.classList.toggle('sel', i === 0);
+  });
+  document.getElementById('label-cantidad').textContent = 'Cantidad a agregar *';
+  document.getElementById('titulo-movimiento').textContent = `📦 ${item.nombre}`;
+  document.getElementById('info-item-modal').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:700">${item.nombre}</div>
+        <div style="font-size:var(--text-xs);color:var(--texto-suave)">${item.sucursal_nombre}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-display);font-size:var(--text-2xl)">
+          ${item.stock_actual}
+        </div>
+        <div style="font-size:var(--text-xs);color:var(--texto-suave);font-weight:700">
+          ${item.unidad} en stock
+        </div>
+      </div>
+    </div>
+  `;
+  UI.abrirModal('modal-movimiento');
+}
+
+document.getElementById('mov-cantidad').addEventListener('input', actualizarPreviewStock);
+
+async function confirmarMovimiento() {
+  const cantidad = parseInt(document.getElementById('mov-cantidad').value);
+  const motivo   = document.getElementById('mov-motivo').value.trim();
+  const fecha    = document.getElementById('mov-fecha').value;
+
+  if (!cantidad || cantidad < 0 || !motivo) {
+    UI.toast('Completa cantidad y motivo', 'warn');
+    return;
+  }
+
+  try {
+    await API.post(`/inventario/items/${itemActual.id}/registrar-movimiento/`, {
+      tipo:     tipoMovActual,
+      cantidad, motivo, fecha,
+    });
+    UI.cerrarModal('modal-movimiento');
+    UI.toast('✅ Movimiento registrado', 'exito');
+    cargarItems();
+    cargarAlertas();
+  } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+}
+
+// ── Ver historial ──
+async function verHistorial(item) {
+  document.getElementById('titulo-historial').textContent = `📜 ${item.nombre}`;
+  UI.abrirModal('modal-historial');
+  const cont = document.getElementById('contenido-historial');
+  UI.mostrarLoader(cont, 'Cargando historial...');
+
+  try {
+    const data = await API.get(`/inventario/movimientos/?item=${item.id}&ordering=-fecha`);
+    const lista = data.results || data;
+
+    cont.innerHTML = lista.length ? lista.map(m => `
+      <div class="movimiento-item">
+        <div class="mov-icono ${m.tipo}">
+          ${m.tipo==='entrada'?'📥':m.tipo==='salida'?'📤':'⚖️'}
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:var(--text-sm)">${m.motivo}</div>
+          <div style="font-size:var(--text-xs);color:var(--texto-suave)">${UI.fecha(m.fecha)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--font-display);font-size:var(--text-lg);
+            color:${m.tipo==='entrada'?'var(--verde-d)':m.tipo==='salida'?'var(--coral-d)':'var(--amarillo-d)'}">
+            ${m.tipo==='entrada'?'+':m.tipo==='salida'?'-':'='} ${m.cantidad}
+          </div>
+          <div style="font-size:var(--text-xs);color:var(--texto-suave)">${item.unidad}</div>
+        </div>
+      </div>
+    `).join('') : `<div class="loader">
+      <div style="font-size:2rem">📜</div>
+      <p style="color:var(--texto-suave);font-weight:600">Sin movimientos registrados</p>
+    </div>`;
+  } catch (err) {
+    cont.innerHTML = `<div class="alerta alerta-peligro">Error: ${err.message}</div>`;
+  }
+}
+
+// ── Crear ítem ──
+async function crearItem() {
+  const nombre    = document.getElementById('ni-nombre').value.trim();
+  const categoria = document.getElementById('ni-categoria').value;
+  const sucursal  = document.getElementById('ni-sucursal').value;
+  const unidad    = document.getElementById('ni-unidad').value.trim();
+  const stock     = parseInt(document.getElementById('ni-stock').value) || 0;
+  const stockMin  = parseInt(document.getElementById('ni-stock-min').value) || 1;
+
+  if (!nombre || !categoria || !sucursal || !unidad) {
+    UI.toast('Completa todos los campos obligatorios', 'warn'); return;
+  }
+
+  try {
+    await API.post('/inventario/items/', {
+      nombre, categoria, sucursal, unidad,
+      stock_actual:  stock,
+      stock_minimo:  stockMin,
+      descripcion:   document.getElementById('ni-descripcion').value,
+    });
+    UI.cerrarModal('modal-nuevo-item');
+    UI.toast('✅ Ítem creado correctamente', 'exito');
+    ['ni-nombre','ni-categoria','ni-sucursal','ni-unidad','ni-stock','ni-stock-min','ni-descripcion']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    cargarItems();
+  } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+}
+
+inicializar();
+</script>
+</body>
+</html>

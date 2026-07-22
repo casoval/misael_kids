@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Padres — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    /* ── Layout portal (sin sidebar) ── */
+    .portal-layout {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: var(--gap-md);
+      min-height: 100vh;
+    }
+
+    /* ── Header del portal ── */
+    .portal-header {
+      background: linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
+      border-radius: var(--radio-xl);
+      padding: var(--gap-xl);
+      color: white;
+      margin-bottom: var(--gap-lg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .portal-header::before {
+      content: '🌸🌟🦋';
+      position: absolute; right: var(--gap-xl); top: 50%;
+      transform: translateY(-50%);
+      font-size: 3rem; opacity: .3; letter-spacing: .5rem;
+    }
+    .portal-header-left h1 {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      margin-bottom: .3rem;
+    }
+    .portal-header-left p {
+      opacity: .85; font-size: var(--text-sm); font-weight: 600;
+    }
+    .portal-header-logo {
+      width: 56px; height: 56px;
+      background: rgba(255,255,255,.2);
+      border-radius: var(--radio-lg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+    }
+
+    /* ── Navegación por tabs (portal) ── */
+    .portal-nav {
+      display: flex;
+      gap: var(--gap-sm);
+      background: var(--blanco);
+      border-radius: var(--radio-xl);
+      padding: .5rem;
+      margin-bottom: var(--gap-lg);
+      box-shadow: var(--sombra-sm);
+      border: 1.5px solid var(--gris-100);
+      overflow-x: auto;
+    }
+    .portal-tab {
+      display: flex;
+      align-items: center;
+      gap: var(--gap-sm);
+      padding: .65rem var(--gap-md);
+      border-radius: var(--radio-lg);
+      border: none;
+      background: none;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: var(--text-sm);
+      color: var(--gris-500);
+      cursor: pointer;
+      transition: all var(--trans-fast);
+      white-space: nowrap;
+    }
+    .portal-tab.activo {
+      background: linear-gradient(135deg, var(--turquesa-l), #E0FFF4);
+      color: var(--turquesa-d);
+      box-shadow: var(--sombra-sm);
+    }
+    .portal-tab:hover:not(.activo) {
+      background: var(--gris-50);
+      color: var(--turquesa-d);
+    }
+
+    /* ── Tarjeta de hijo ── */
+    .hijo-card {
+      background: linear-gradient(135deg, #FFF9DB, #FFE4E4);
+      border: 2px solid var(--amarillo);
+      border-radius: var(--radio-xl);
+      padding: var(--gap-lg);
+      display: flex;
+      align-items: center;
+      gap: var(--gap-lg);
+      margin-bottom: var(--gap-lg);
+    }
+    .hijo-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--coral), var(--naranja));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; font-weight: 900; color: white;
+      border: 3px solid rgba(255,255,255,.5);
+      flex-shrink: 0;
+    }
+    .hijo-info h2 {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      color: var(--texto);
+    }
+    .hijo-chips {
+      display: flex; gap: var(--gap-sm); margin-top: .4rem; flex-wrap: wrap;
+    }
+
+    /* ── Secciones del portal ── */
+    .seccion-portal { display: none; }
+    .seccion-portal.activa { display: block; }
+
+    /* ── Bitácora del día ── */
+    .bitacora-dia {
+      background: var(--blanco);
+      border-radius: var(--radio-xl);
+      border: 1.5px solid var(--gris-100);
+      overflow: hidden;
+      margin-bottom: var(--gap-md);
+      box-shadow: var(--sombra-sm);
+    }
+    .bitacora-dia-header {
+      background: linear-gradient(135deg, var(--turquesa-l), #E0FFF4);
+      padding: var(--gap-md) var(--gap-lg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .bitacora-dia-fecha {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      color: var(--turquesa-d);
+    }
+    .bitacora-dia-body {
+      padding: var(--gap-lg);
+    }
+    .area-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px;
+      border-radius: var(--radio-full);
+      font-size: var(--text-xs); font-weight: 700;
+      background: var(--violeta-l); color: var(--violeta-d);
+      margin: 2px;
+    }
+
+    /* ── Cobros pendientes en portal ── */
+    .cobro-card {
+      background: var(--blanco);
+      border: 2px solid var(--gris-100);
+      border-radius: var(--radio-xl);
+      padding: var(--gap-lg);
+      display: flex;
+      align-items: center;
+      gap: var(--gap-md);
+      margin-bottom: var(--gap-md);
+      box-shadow: var(--sombra-sm);
+      transition: all var(--trans-fast);
+    }
+    .cobro-card.vencido { border-color: var(--coral); background: var(--coral-l); }
+    .cobro-card.pendiente { border-color: var(--amarillo); }
+    .cobro-icono {
+      width: 52px; height: 52px;
+      border-radius: var(--radio-lg);
+      background: var(--amarillo-l);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; flex-shrink: 0;
+    }
+    .cobro-icono.vencido { background: var(--coral-l); }
+    .cobro-monto {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      color: var(--texto);
+      line-height: 1;
+    }
+    .cobro-meta {
+      font-size: var(--text-xs);
+      color: var(--texto-suave);
+      font-weight: 600;
+    }
+
+    /* ── Mensajes del portal ── */
+    .mensaje-item {
+      background: var(--blanco);
+      border-radius: var(--radio-xl);
+      border: 1.5px solid var(--gris-100);
+      padding: var(--gap-lg);
+      margin-bottom: var(--gap-md);
+      box-shadow: var(--sombra-sm);
+    }
+    .mensaje-item.no-leido {
+      border-color: var(--turquesa);
+      border-left: 4px solid var(--turquesa);
+      background: var(--turquesa-l);
+    }
+    .mensaje-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: var(--gap-sm);
+    }
+    .mensaje-asunto {
+      font-weight: 800; color: var(--texto); font-size: var(--text-sm);
+    }
+    .mensaje-cuerpo {
+      font-size: var(--text-sm); color: var(--texto-suave); line-height: 1.6;
+    }
+    .mensaje-remitente {
+      font-size: var(--text-xs); color: var(--texto-suave);
+      font-weight: 600; margin-top: var(--gap-sm);
+    }
+
+    /* ── Aviso de ausencia ── */
+    .aviso-ausencia-form {
+      background: var(--amarillo-l);
+      border: 2px solid var(--amarillo);
+      border-radius: var(--radio-xl);
+      padding: var(--gap-lg);
+      margin-bottom: var(--gap-lg);
+    }
+
+    /* ── Bottom nav móvil (solo portal) ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--blanco);
+      border-top: 2px solid var(--gris-100);
+      display: none;
+      padding: .5rem;
+      z-index: 100;
+      box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+    }
+    @media (max-width: 600px) {
+      .bottom-nav { display: flex; justify-content: space-around; }
+      .portal-nav { display: none; }
+      .portal-layout { padding-bottom: 80px; }
+    }
+    .bottom-nav-btn {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 2px; background: none; border: none; cursor: pointer;
+      font-family: var(--font-body); font-size: var(--text-xs); font-weight: 700;
+      color: var(--gris-400); padding: .4rem .8rem; border-radius: var(--radio-md);
+      transition: all var(--trans-fast);
+    }
+    .bottom-nav-btn .icono { font-size: 1.4rem; }
+    .bottom-nav-btn.activo { color: var(--turquesa-d); }
+  </style>
+</head>
+<body>
+<div class="bg-burbujas"></div>
+
+<div class="portal-layout">
+
+  <!-- Header del portal -->
+  <header class="portal-header">
+    <div class="portal-header-left">
+      <h1>Hola, <span id="saludo-nombre">Papá/Mamá</span> 👋</h1>
+      <p id="fecha-hoy-portal">Hoy es un gran día en el jardín</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:var(--gap-md);position:relative;z-index:1">
+      <div class="portal-header-logo">🌱</div>
+      <button onclick="Auth.cerrar()" class="btn" style="background:rgba(255,255,255,.2);color:white;border:2px solid rgba(255,255,255,.3)">
+        🚪 Salir
+      </button>
+    </div>
+  </header>
+
+  <!-- Selector de hijo (si tiene varios) -->
+  <div id="selector-hijo" style="display:none;margin-bottom:var(--gap-md)">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-titulo">👶 Selecciona un hijo/a</h3>
+      </div>
+      <div id="lista-hijos-selector" style="display:flex;gap:var(--gap-sm);flex-wrap:wrap"></div>
+    </div>
+  </div>
+
+  <!-- Tarjeta del hijo activo -->
+  <div class="hijo-card" id="hijo-card" style="display:none">
+    <div class="hijo-avatar" id="hijo-avatar">?</div>
+    <div class="hijo-info">
+      <h2 id="hijo-nombre">—</h2>
+      <div class="hijo-chips" id="hijo-chips"></div>
+    </div>
+    <div style="margin-left:auto">
+      <button class="btn btn-outline btn-sm" id="btn-cambiar-hijo" style="display:none"
+        onclick="document.getElementById('selector-hijo').style.display='block'">
+        Cambiar
+      </button>
+    </div>
+  </div>
+
+  <!-- Navegación por tabs -->
+  <nav class="portal-nav" role="tablist">
+    <button class="portal-tab activo" onclick="cambiarTab('bitacora')" role="tab">📔 Bitácora</button>
+    <button class="portal-tab" onclick="cambiarTab('asistencia')" role="tab">📋 Asistencia</button>
+    <button class="portal-tab" onclick="cambiarTab('cobros')" role="tab">
+      💰 Cobros
+      <span id="badge-cobros-portal" style="display:none;background:var(--coral);color:white;border-radius:999px;padding:1px 7px;font-size:.7rem"></span>
+    </button>
+    <button class="portal-tab" onclick="cambiarTab('mensajes')" role="tab">
+      📨 Mensajes
+      <span id="badge-mensajes" style="display:none;background:var(--turquesa-d);color:white;border-radius:999px;padding:1px 7px;font-size:.7rem"></span>
+    </button>
+    <button class="portal-tab" onclick="cambiarTab('desarrollo')" role="tab">🌱 Desarrollo</button>
+    <button class="portal-tab" onclick="cambiarTab('ausencia')" role="tab">📄 Justificar</button>
+  </nav>
+
+  <!-- ══ SECCIÓN: BITÁCORA ══ -->
+  <div class="seccion-portal activa" id="sec-bitacora">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--gap-md)">
+      <h2 style="font-family:var(--font-display);font-size:var(--text-xl)">📔 Bitácora del jardín</h2>
+      <input type="month" id="mes-bitacora" class="form-input" style="max-width:180px"
+        onchange="cargarBitacora()">
+    </div>
+    <div id="contenido-bitacora">
+      <div class="loader"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ══ SECCIÓN: ASISTENCIA ══ -->
+  <div class="seccion-portal" id="sec-asistencia">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--gap-md)">
+      <h2 style="font-family:var(--font-display);font-size:var(--text-xl)">📋 Asistencia</h2>
+      <input type="month" id="mes-asistencia" class="form-input" style="max-width:180px"
+        onchange="cargarAsistenciaPortal()">
+    </div>
+    <!-- Resumen del mes -->
+    <div class="grid-stats mb-lg" id="resumen-asistencia">
+      <div class="loader"><div class="spinner"></div></div>
+    </div>
+    <!-- Tabla de días -->
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead>
+            <tr><th>Fecha</th><th>Sala</th><th>Turno</th><th>Estado</th><th>Entrada</th><th>Salida</th></tr>
+          </thead>
+          <tbody id="tabla-asistencia-portal">
+            <tr><td colspan="6"><div class="loader"><div class="spinner"></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECCIÓN: COBROS ══ -->
+  <div class="seccion-portal" id="sec-cobros">
+    <h2 style="font-family:var(--font-display);font-size:var(--text-xl);margin-bottom:var(--gap-md)">💰 Estado de pagos</h2>
+
+    <div class="grid-stats mb-lg">
+      <div class="stat-card">
+        <div class="stat-icon coral">⏳</div>
+        <div class="stat-info">
+          <div class="valor" id="portal-cobros-pendientes">—</div>
+          <div class="etiqueta">Pendientes</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon verde">✅</div>
+        <div class="stat-info">
+          <div class="valor" id="portal-cobros-pagados">—</div>
+          <div class="etiqueta">Pagados este año</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="font-weight:700;margin-bottom:var(--gap-md)">Cobros pendientes</h3>
+    <div id="lista-cobros-portal">
+      <div class="loader"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ══ SECCIÓN: MENSAJES ══ -->
+  <div class="seccion-portal" id="sec-mensajes">
+    <h2 style="font-family:var(--font-display);font-size:var(--text-xl);margin-bottom:var(--gap-md)">📨 Mensajes</h2>
+
+    <!-- Nuevo mensaje -->
+    <div class="card mb-lg">
+      <div class="card-header">
+        <h3 class="card-titulo">✍️ Enviar mensaje</h3>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Asunto</label>
+        <input type="text" id="msg-asunto" class="form-input" placeholder="Ej: Consulta sobre la actividad de hoy">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Mensaje</label>
+        <textarea id="msg-cuerpo" class="form-textarea" placeholder="Escribe tu mensaje para la educadora..."></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn btn-primary" onclick="enviarMensaje()">📨 Enviar</button>
+      </div>
+    </div>
+
+    <h3 style="font-weight:700;margin-bottom:var(--gap-md)">Mensajes recibidos</h3>
+    <div id="lista-mensajes-portal">
+      <div class="loader"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ══ SECCIÓN: DESARROLLO ══ -->
+  <div class="seccion-portal" id="sec-desarrollo">
+    <h2 style="font-family:var(--font-display);font-size:var(--text-xl);margin-bottom:var(--gap-md)">🌱 Desarrollo de mi hijo/a</h2>
+
+    <!-- Plan individual (si tiene) -->
+    <div id="seccion-plan-individual" style="display:none">
+      <div class="card mb-lg" style="border-color:var(--violeta)">
+        <div class="card-header">
+          <h3 class="card-titulo" style="color:var(--violeta-d)">🧠 Plan individual activo</h3>
+          <span class="chip chip-violeta">Personalizado</span>
+        </div>
+        <div id="plan-individual-contenido"></div>
+      </div>
+    </div>
+
+    <!-- Evaluaciones de hitos -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-titulo">📊 Evaluaciones de desarrollo</h3>
+      </div>
+      <div id="lista-evaluaciones-portal">
+        <div class="loader"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECCIÓN: JUSTIFICAR AUSENCIA ══ -->
+  <div class="seccion-portal" id="sec-ausencia">
+    <h2 style="font-family:var(--font-display);font-size:var(--text-xl);margin-bottom:var(--gap-md)">📄 Justificar ausencia</h2>
+
+    <div class="alerta alerta-info mb-md">
+      ℹ️ Avisa con anticipación cuando tu hijo/a no podrá asistir. La educadora será notificada automáticamente.
+    </div>
+
+    <div class="aviso-ausencia-form">
+      <div class="grid-2">
+        <div class="form-grupo">
+          <label class="form-label">📅 Fecha de ausencia *</label>
+          <input type="date" id="aus-fecha" class="form-input">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">⏰ Turno afectado</label>
+          <select id="aus-turno" class="form-select">
+            <option value="">Ambos turnos / Único turno</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Motivo de la ausencia *</label>
+        <textarea id="aus-motivo" class="form-textarea"
+          placeholder="Ej: Cita médica, viaje familiar, enfermedad..."></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn btn-amarillo" onclick="justificarAusencia()">
+          📄 Enviar justificación
+        </button>
+      </div>
+    </div>
+
+    <!-- Historial de justificaciones -->
+    <h3 style="font-weight:700;margin-bottom:var(--gap-md)">Historial de ausencias del mes</h3>
+    <div id="historial-ausencias">
+      <div class="loader"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+</div><!-- /portal-layout -->
+
+<!-- Bottom nav móvil -->
+<nav class="bottom-nav">
+  <button class="bottom-nav-btn activo" onclick="cambiarTab('bitacora')">
+    <span class="icono">📔</span><span>Bitácora</span>
+  </button>
+  <button class="bottom-nav-btn" onclick="cambiarTab('asistencia')">
+    <span class="icono">📋</span><span>Asistencia</span>
+  </button>
+  <button class="bottom-nav-btn" onclick="cambiarTab('cobros')">
+    <span class="icono">💰</span><span>Cobros</span>
+  </button>
+  <button class="bottom-nav-btn" onclick="cambiarTab('mensajes')">
+    <span class="icono">📨</span><span>Mensajes</span>
+  </button>
+  <button class="bottom-nav-btn" onclick="cambiarTab('desarrollo')">
+    <span class="icono">🌱</span><span>Desarrollo</span>
+  </button>
+</nav>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+Auth.requerirAuth(['tutor']);
+
+const usr = Auth.getUsuario();
+let ninoActivo = null;
+let inscripcionActiva = null;
+
+// ── Setup inicial ──
+document.getElementById('saludo-nombre').textContent =
+  usr.nombres?.split(' ')[0] || 'Familia';
+document.getElementById('fecha-hoy-portal').textContent =
+  new Date().toLocaleDateString('es-BO', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+// Fechas por defecto
+const ahora = new Date();
+const mesActual = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}`;
+document.getElementById('mes-bitacora').value   = mesActual;
+document.getElementById('mes-asistencia').value = mesActual;
+const hoyISO = ahora.toISOString().split('T')[0];
+document.getElementById('aus-fecha').value = hoyISO;
+
+// ── Cambiar tab ──
+let tabActual = 'bitacora';
+function cambiarTab(tab) {
+  tabActual = tab;
+  document.querySelectorAll('.seccion-portal').forEach(s => s.classList.remove('activa'));
+  document.querySelectorAll('.portal-tab').forEach(t => t.classList.remove('activo'));
+  document.querySelectorAll('.bottom-nav-btn').forEach(t => t.classList.remove('activo'));
+
+  document.getElementById(`sec-${tab}`)?.classList.add('activa');
+  document.querySelectorAll('.portal-tab, .bottom-nav-btn').forEach(t => {
+    if (t.getAttribute('onclick')?.includes(tab)) t.classList.add('activo');
+  });
+
+  // Cargar datos al cambiar de tab
+  if (ninoActivo) {
+    const cargadores = {
+      bitacora:    cargarBitacora,
+      asistencia:  cargarAsistenciaPortal,
+      cobros:      cargarCobrosPortal,
+      mensajes:    cargarMensajes,
+      desarrollo:  cargarDesarrollo,
+      ausencia:    cargarHistorialAusencias,
+    };
+    cargadores[tab]?.();
+  }
+}
+
+// ── Cargar hijos del tutor ──
+async function inicializar() {
+  try {
+    const data = await API.get('/ninos/ninos/?activo=true');
+    const hijos = data.results || data;
+
+    if (!hijos.length) {
+      document.getElementById('hijo-card').style.display = 'flex';
+      document.getElementById('hijo-avatar').textContent = '👶';
+      document.getElementById('hijo-nombre').textContent = 'Sin niños registrados';
+      return;
+    }
+
+    if (hijos.length > 1) {
+      document.getElementById('selector-hijo').style.display = 'block';
+      document.getElementById('btn-cambiar-hijo').style.display = '';
+      const lista = document.getElementById('lista-hijos-selector');
+      lista.innerHTML = hijos.map(h => `
+        <button class="btn btn-outline" onclick="seleccionarHijo('${h.id}')">
+          <span style="font-size:1.3rem">${h.genero==='F'?'👧':'👦'}</span>
+          ${h.nombre_completo}
+          <span class="chip chip-turquesa" style="font-size:.65rem">${h.edad_en_meses}m</span>
+        </button>
+      `).join('');
+    }
+
+    // Seleccionar el primero automáticamente
+    await seleccionarHijo(hijos[0].id);
+
+  } catch (err) {
+    UI.toast('Error cargando información: ' + err.message, 'error');
+  }
+}
+
+async function seleccionarHijo(id) {
+  try {
+    const n = await API.get(`/ninos/ninos/${id}/`);
+    ninoActivo = n;
+
+    // Actualizar card de hijo
+    document.getElementById('hijo-card').style.display  = 'flex';
+    document.getElementById('selector-hijo').style.display = 'none';
+    document.getElementById('hijo-avatar').textContent  = n.genero === 'F' ? '👧' : '👦';
+    document.getElementById('hijo-nombre').textContent  = n.nombre_completo;
+
+    // Obtener inscripcion activa
+    const insc = await API.get(`/inscripciones/inscripciones/?nino=${id}&activa=true`);
+    const inscList = insc.results || insc;
+    inscripcionActiva = inscList[0] || null;
+
+    const chips = document.getElementById('hijo-chips');
+    chips.innerHTML = [
+      `<span class="chip chip-turquesa">🎂 ${n.edad_en_meses} meses</span>`,
+      inscripcionActiva ? `<span class="chip chip-verde">📍 ${inscripcionActiva.sala_nombre} · ${inscripcionActiva.turno_nombre}</span>` : '',
+      n.tiene_plan_misael ? `<span class="chip chip-violeta">🧠 Plan Misael</span>` : '',
+    ].join('');
+
+    // Llenar select de turno en justificación
+    const ausSelect = document.getElementById('aus-turno');
+    if (inscripcionActiva) {
+      ausSelect.innerHTML = `
+        <option value="">Turno completo</option>
+        <option value="${inscripcionActiva.turno}">${inscripcionActiva.turno_nombre}</option>
+      `;
+    }
+
+    // Cargar datos del tab activo
+    cargarBitacora();
+  } catch (err) {
+    UI.toast('Error: ' + err.message, 'error');
+  }
+}
+
+// ── Bitácora ──
+async function cargarBitacora() {
+  if (!ninoActivo || tabActual !== 'bitacora') return;
+  const cont = document.getElementById('contenido-bitacora');
+  UI.mostrarLoader(cont, 'Cargando bitácora...');
+
+  const mes   = document.getElementById('mes-bitacora').value;
+  const [año, mesN] = mes.split('-');
+
+  try {
+    // Planificaciones grupales de la sala del niño (visible para padres)
+    if (!inscripcionActiva) {
+      UI.vacio(cont, 'No hay inscripción activa', '📋');
+      return;
+    }
+
+    const data = await API.get(
+      `/agenda/planificaciones/?sala=${inscripcionActiva.sala}&visible_padres=true&ordering=-fecha`
+    );
+    const lista = (data.results || data).filter(p => {
+      const d = new Date(p.fecha);
+      return d.getFullYear() == año && (d.getMonth()+1) == mesN;
+    });
+
+    if (!lista.length) {
+      UI.vacio(cont, 'Sin actividades registradas este mes', '📔');
+      return;
+    }
+
+    cont.innerHTML = lista.map(p => `
+      <div class="bitacora-dia">
+        <div class="bitacora-dia-header">
+          <div class="bitacora-dia-fecha">
+            ${new Date(p.fecha+'T00:00:00').toLocaleDateString('es-BO',{weekday:'long',day:'numeric',month:'long'})}
+          </div>
+          <span style="font-size:var(--text-xs);color:var(--turquesa-d);font-weight:700">
+            ${p.turno_nombre}
+          </span>
+        </div>
+        <div class="bitacora-dia-body">
+          <p style="font-size:var(--text-sm);color:var(--texto);margin-bottom:var(--gap-sm);line-height:1.7">
+            ${p.actividades}
+          </p>
+          ${p.areas_trabajadas ? `
+            <div style="margin-bottom:var(--gap-sm)">
+              <span style="font-size:var(--text-xs);font-weight:700;color:var(--gris-500);
+                text-transform:uppercase;letter-spacing:.05em">Áreas trabajadas:</span>
+              <div style="margin-top:4px">
+                ${p.areas_trabajadas.split(',').map(a =>
+                  `<span class="area-chip">${a.trim()}</span>`
+                ).join('')}
+              </div>
+            </div>` : ''}
+          ${p.observaciones ? `
+            <div style="background:var(--gris-50);border-radius:var(--radio-md);
+              padding:var(--gap-sm);font-size:var(--text-sm);color:var(--texto-suave);
+              font-style:italic">
+              📝 "${p.observaciones}"
+            </div>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    UI.vacio(cont, 'Error cargando bitácora: ' + err.message, '⚠️');
+  }
+}
+
+// ── Asistencia del portal ──
+async function cargarAsistenciaPortal() {
+  if (!ninoActivo || tabActual !== 'asistencia') return;
+
+  const mes     = document.getElementById('mes-asistencia').value;
+  const [año, mesN] = mes.split('-');
+  const tbody   = document.getElementById('tabla-asistencia-portal');
+  const resumen = document.getElementById('resumen-asistencia');
+
+  UI.mostrarLoader(resumen, 'Calculando...');
+  tbody.innerHTML = '<tr><td colspan="6"><div class="loader"><div class="spinner"></div></div></td></tr>';
+
+  try {
+    if (!inscripcionActiva) {
+      UI.vacio(resumen, 'Sin inscripción activa', '📋');
+      tbody.innerHTML = '';
+      return;
+    }
+
+    const data = await API.get(
+      `/asistencia/asistencia/?inscripcion=${inscripcionActiva.id}&ordering=-fecha`
+    );
+    const lista = (data.results || data).filter(a => {
+      const d = new Date(a.fecha);
+      return d.getFullYear() == año && (d.getMonth()+1) == mesN;
+    });
+
+    const presentes = lista.filter(a => a.estado === 'presente').length;
+    const ausentes  = lista.filter(a => a.estado === 'ausente').length;
+    const justif    = lista.filter(a => a.estado === 'ausente_justificado').length;
+
+    resumen.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-icon turquesa">📅</div>
+        <div class="stat-info"><div class="valor">${lista.length}</div><div class="etiqueta">Días registrados</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon verde">✅</div>
+        <div class="stat-info"><div class="valor" style="color:var(--verde-d)">${presentes}</div><div class="etiqueta">Asistencias</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon coral">❌</div>
+        <div class="stat-info"><div class="valor" style="color:var(--coral-d)">${ausentes}</div><div class="etiqueta">Ausencias</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon amarillo">📄</div>
+        <div class="stat-info"><div class="valor" style="color:var(--amarillo-d)">${justif}</div><div class="etiqueta">Justificadas</div></div>
+      </div>
+    `;
+
+    tbody.innerHTML = lista.length ? lista.map(a => `
+      <tr>
+        <td>${UI.fecha(a.fecha)}</td>
+        <td>${a.sala_nombre}</td>
+        <td>${a.turno_nombre}</td>
+        <td>${UI.chipAsistencia(a.estado)}</td>
+        <td>${a.hora_entrada?.slice(0,5) || '—'}</td>
+        <td>${a.hora_salida?.slice(0,5)  || '—'}</td>
+      </tr>
+    `).join('') : '<tr><td colspan="6"><div style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin registros este mes</div></td></tr>';
+
+  } catch (err) {
+    UI.vacio(resumen, 'Error: ' + err.message, '⚠️');
+  }
+}
+
+// ── Cobros del portal ──
+async function cargarCobrosPortal() {
+  if (!ninoActivo || tabActual !== 'cobros') return;
+  const cont = document.getElementById('lista-cobros-portal');
+  UI.mostrarLoader(cont, 'Cargando cobros...');
+
+  try {
+    if (!inscripcionActiva) {
+      UI.vacio(cont, 'Sin inscripción activa', '💰');
+      return;
+    }
+
+    const [pendientes, pagados] = await Promise.all([
+      API.get(`/inscripciones/inscripciones/${inscripcionActiva.id}/cobros-pendientes/`),
+      API.get(`/inscripciones/cobros/?inscripcion=${inscripcionActiva.id}&estado=pagado&limit=1`),
+    ]);
+
+    document.getElementById('portal-cobros-pendientes').textContent = pendientes.length;
+    document.getElementById('portal-cobros-pagados').textContent    = pagados.count ?? 0;
+
+    // Actualizar badge
+    if (pendientes.length) {
+      const badge = document.getElementById('badge-cobros-portal');
+      badge.textContent    = pendientes.length;
+      badge.style.display  = '';
+    }
+
+    cont.innerHTML = pendientes.length ? pendientes.map(c => `
+      <div class="cobro-card ${c.estado}">
+        <div class="cobro-icono ${c.estado}">
+          ${c.estado === 'vencido' ? '🔴' : '⏳'}
+        </div>
+        <div style="flex:1">
+          <div class="cobro-monto">${UI.moneda(c.monto_final)}</div>
+          <div class="cobro-meta">
+            ${c.tipo_display}
+            ${c.periodo ? '· ' + c.periodo : ''}
+          </div>
+          <div class="cobro-meta" style="color:${c.estado==='vencido'?'var(--coral-d)':'var(--texto-suave)'}">
+            Vence: ${UI.fecha(c.fecha_vencimiento)}
+          </div>
+        </div>
+        ${UI.chipEstadoCobro(c.estado)}
+      </div>
+    `).join('') : `
+      <div style="text-align:center;padding:var(--gap-xl)">
+        <div style="font-size:3rem;margin-bottom:.5rem">✅</div>
+        <p style="font-weight:700;color:var(--verde-d)">¡Sin cobros pendientes!</p>
+        <p style="font-size:var(--text-sm);color:var(--texto-suave)">Todos los pagos están al día.</p>
+      </div>`;
+
+  } catch (err) {
+    UI.vacio(cont, 'Error: ' + err.message, '⚠️');
+  }
+}
+
+// ── Mensajes ──
+async function cargarMensajes() {
+  if (!ninoActivo || tabActual !== 'mensajes') return;
+  const cont = document.getElementById('lista-mensajes-portal');
+  UI.mostrarLoader(cont, 'Cargando mensajes...');
+
+  try {
+    const data  = await API.get(`/comunicacion/mensajes/?nino=${ninoActivo.id}`);
+    const lista = data.results || data;
+
+    const noLeidos = lista.filter(m => !m.leido && m.destinatario === usr.id).length;
+    if (noLeidos) {
+      const badge      = document.getElementById('badge-mensajes');
+      badge.textContent = noLeidos;
+      badge.style.display = '';
+    }
+
+    cont.innerHTML = lista.length ? lista.map(m => `
+      <div class="mensaje-item ${!m.leido ? 'no-leido' : ''}">
+        <div class="mensaje-header">
+          <span class="mensaje-asunto">${!m.leido ? '🔵 ' : ''}${m.asunto}</span>
+          <span style="font-size:var(--text-xs);color:var(--texto-suave)">
+            ${new Date(m.created_at).toLocaleDateString('es-BO')}
+          </span>
+        </div>
+        <div class="mensaje-cuerpo">${m.cuerpo}</div>
+        <div class="mensaje-remitente">
+          De: ${m.remitente_nombre}
+        </div>
+      </div>
+    `).join('') : `<div style="text-align:center;padding:var(--gap-xl)">
+      <div style="font-size:2.5rem;margin-bottom:.5rem">📭</div>
+      <p style="color:var(--texto-suave);font-weight:600">Sin mensajes aún</p>
+    </div>`;
+
+  } catch (err) {
+    UI.vacio(cont, 'Error: ' + err.message, '⚠️');
+  }
+}
+
+async function enviarMensaje() {
+  const asunto = document.getElementById('msg-asunto').value.trim();
+  const cuerpo = document.getElementById('msg-cuerpo').value.trim();
+  if (!asunto || !cuerpo) { UI.toast('Completa asunto y mensaje', 'warn'); return; }
+
+  try {
+    // Enviamos al primer personal de la sala (educadora)
+    // En una implementación real, buscaríamos el destinatario correcto
+    await API.post('/comunicacion/mensajes/', {
+      asunto, cuerpo,
+      nino: ninoActivo.id,
+      destinatario: null, // La educadora responsable de la sala
+    });
+    document.getElementById('msg-asunto').value = '';
+    document.getElementById('msg-cuerpo').value = '';
+    UI.toast('✅ Mensaje enviado correctamente', 'exito');
+    cargarMensajes();
+  } catch (err) {
+    UI.toast('Error: ' + err.message, 'error');
+  }
+}
+
+// ── Desarrollo ──
+async function cargarDesarrollo() {
+  if (!ninoActivo || tabActual !== 'desarrollo') return;
+  const cont = document.getElementById('lista-evaluaciones-portal');
+  UI.mostrarLoader(cont, 'Cargando evaluaciones...');
+
+  try {
+    const [evaluaciones, planes] = await Promise.all([
+      API.get(`/evaluacion/evaluaciones/?nino=${ninoActivo.id}`),
+      API.get(`/agenda/planes-individuales/?nino=${ninoActivo.id}&activo=true`),
+    ]);
+
+    const listaEval  = evaluaciones.results || evaluaciones;
+    const listaPlanes = planes.results || planes;
+
+    // Mostrar plan individual si existe
+    if (listaPlanes.length) {
+      document.getElementById('seccion-plan-individual').style.display = 'block';
+      const planCont = document.getElementById('plan-individual-contenido');
+      const plan = listaPlanes[0];
+      planCont.innerHTML = `
+        <p style="font-size:var(--text-sm);color:var(--texto);margin-bottom:var(--gap-md)">${plan.descripcion}</p>
+        <div>
+          ${plan.objetivos?.map(obj => `
+            <div style="display:flex;align-items:center;gap:var(--gap-sm);
+              padding:.6rem 0;border-bottom:1px dashed var(--gris-100)">
+              <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${
+                obj.estado==='logrado'?'var(--verde)':obj.estado==='en_proceso'?'var(--amarillo)':'var(--gris-300)'
+              }"></div>
+              <div style="flex:1;font-size:var(--text-sm);font-weight:600">${obj.descripcion}</div>
+              ${obj.estado==='logrado'
+                ? '<span class="chip chip-verde">✅ Logrado</span>'
+                : obj.estado==='en_proceso'
+                  ? '<span class="chip chip-amarillo">⏳ En proceso</span>'
+                  : '<span class="chip chip-gris">Pendiente</span>'}
+            </div>
+          `).join('') || '<p style="color:var(--texto-suave);font-size:var(--text-sm)">Sin objetivos definidos</p>'}
+        </div>
+      `;
+    }
+
+    // Evaluaciones de hitos agrupadas por área
+    const areas = {};
+    listaEval.forEach(ev => {
+      if (!areas[ev.hito_area]) areas[ev.hito_area] = [];
+      areas[ev.hito_area].push(ev);
+    });
+
+    cont.innerHTML = Object.entries(areas).length ? Object.entries(areas).map(([area, evs]) => `
+      <div style="margin-bottom:var(--gap-md)">
+        <h4 style="font-weight:700;color:var(--texto);margin-bottom:var(--gap-sm);
+          font-size:var(--text-sm);text-transform:uppercase;letter-spacing:.05em;
+          color:var(--gris-500)">${area}</h4>
+        ${evs.map(ev => `
+          <div style="display:flex;align-items:center;gap:var(--gap-sm);
+            padding:.55rem 0;border-bottom:1px dashed var(--gris-100)">
+            <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${
+              ev.estado==='logrado'?'var(--verde)':ev.estado==='en_proceso'?'var(--amarillo)':'var(--gris-300)'
+            }"></div>
+            <span style="flex:1;font-size:var(--text-sm);font-weight:600">${ev.hito_nombre}</span>
+            ${ev.alerta_rezago ? '<span class="chip chip-coral">⚠️ Alerta</span>' : ''}
+            ${UI.chipAsistencia ? '' : ''}
+            <span class="chip ${ev.estado==='logrado'?'chip-verde':ev.estado==='en_proceso'?'chip-amarillo':'chip-gris'}">
+              ${ev.estado_display}
+            </span>
+          </div>
+        `).join('')}
+      </div>
+    `).join('') : `
+      <div style="text-align:center;padding:var(--gap-xl)">
+        <div style="font-size:2.5rem;margin-bottom:.5rem">🌱</div>
+        <p style="color:var(--texto-suave);font-weight:600">Sin evaluaciones registradas aún</p>
+      </div>`;
+
+  } catch (err) {
+    UI.vacio(document.getElementById('lista-evaluaciones-portal'), 'Error: ' + err.message, '⚠️');
+  }
+}
+
+// ── Justificar ausencia ──
+async function justificarAusencia() {
+  const fecha  = document.getElementById('aus-fecha').value;
+  const motivo = document.getElementById('aus-motivo').value.trim();
+  if (!fecha || !motivo) { UI.toast('Completa fecha y motivo', 'warn'); return; }
+  if (!inscripcionActiva) { UI.toast('Sin inscripción activa', 'error'); return; }
+
+  try {
+    // Buscar si hay asistencia ya registrada para ese día
+    const data = await API.get(
+      `/asistencia/asistencia/?inscripcion=${inscripcionActiva.id}&fecha=${fecha}`
+    );
+    const lista = data.results || data;
+
+    if (lista.length) {
+      // Actualizar la existente
+      await API.patch(`/asistencia/asistencia/${lista[0].id}/`, {
+        estado: 'ausente_justificado',
+        motivo_ausencia: motivo,
+      });
+    } else {
+      // Crear nueva
+      await API.post('/asistencia/asistencia/', {
+        inscripcion:     inscripcionActiva.id,
+        fecha,
+        estado:          'ausente_justificado',
+        motivo_ausencia: motivo,
+      });
+    }
+
+    document.getElementById('aus-motivo').value = '';
+    UI.toast('✅ Justificación enviada correctamente', 'exito');
+    cargarHistorialAusencias();
+  } catch (err) {
+    UI.toast('Error: ' + err.message, 'error');
+  }
+}
+
+async function cargarHistorialAusencias() {
+  if (!ninoActivo) return;
+  const cont = document.getElementById('historial-ausencias');
+  if (tabActual !== 'ausencia') return;
+  UI.mostrarLoader(cont, 'Cargando...');
+
+  try {
+    if (!inscripcionActiva) { UI.vacio(cont, 'Sin inscripción', '📋'); return; }
+    const mes = new Date();
+    const data = await API.get(
+      `/asistencia/asistencia/?inscripcion=${inscripcionActiva.id}&estado=ausente_justificado&ordering=-fecha`
+    );
+    const lista = data.results || data;
+    const mesActual = lista.filter(a => {
+      const d = new Date(a.fecha);
+      return d.getMonth() === mes.getMonth() && d.getFullYear() === mes.getFullYear();
+    });
+
+    cont.innerHTML = mesActual.length ? `<div class="tabla-wrap"><table>
+      <thead><tr><th>Fecha</th><th>Turno</th><th>Motivo</th></tr></thead>
+      <tbody>${mesActual.map(a => `
+        <tr>
+          <td>${UI.fecha(a.fecha)}</td>
+          <td>${a.turno_nombre}</td>
+          <td style="font-size:var(--text-sm)">${a.motivo_ausencia || '—'}</td>
+        </tr>`).join('')}
+      </tbody></table></div>` :
+      `<div style="text-align:center;padding:var(--gap-lg);color:var(--texto-suave);font-weight:600">
+        Sin ausencias justificadas este mes
+      </div>`;
+  } catch (err) {
+    UI.vacio(cont, 'Error: ' + err.message, '⚠️');
+  }
+}
+
+// Iniciar
+inicializar();
+</script>
+</body>
+</html>

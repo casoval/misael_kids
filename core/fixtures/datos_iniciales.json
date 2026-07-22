@@ -1,0 +1,164 @@
+[
+  {
+    "model": "core.sucursal",
+    "pk": "b0000001-0000-0000-0000-000000000001",
+    "fields": {
+      "nombre": "Misael Kids — Sede Central",
+      "direccion": "Av. Principal 123, La Paz",
+      "telefono": "22000000",
+      "ciudad": "La Paz",
+      "descripcion": "Sede principal del jardín infantil Misael Kids",
+      "directora": null,
+      "activa": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "core.sala",
+    "pk": "c0000001-0000-0000-0000-000000000001",
+    "fields": {
+      "sucursal": "b0000001-0000-0000-0000-000000000001",
+      "nombre": "Sala Cuna",
+      "edad_min_meses": 0,
+      "edad_max_meses": 24,
+      "capacidad_maxima": 10,
+      "descripcion": "Niños de 0 a 2 años",
+      "activa": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "core.sala",
+    "pk": "c0000001-0000-0000-0000-000000000002",
+    "fields": {
+      "sucursal": "b0000001-0000-0000-0000-000000000001",
+      "nombre": "Sala Medio",
+      "edad_min_meses": 25,
+      "edad_max_meses": 48,
+      "capacidad_maxima": 15,
+      "descripcion": "Niños de 2 a 4 años",
+      "activa": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "core.sala",
+    "pk": "c0000001-0000-0000-0000-000000000003",
+    "fields": {
+      "sucursal": "b0000001-0000-0000-0000-000000000001",
+      "nombre": "Sala Mayor",
+      "edad_min_meses": 49,
+      "edad_max_meses": 72,
+      "capacidad_maxima": 20,
+      "descripcion": "Niños de 4 a 6 años",
+      "activa": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "core.turno",
+    "pk": "d0000001-0000-0000-0000-000000000001",
+    "fields": {
+      "sala": "c0000001-0000-0000-0000-000000000001",
+      "nombre": "Mañana — Sala Cuna",
+      "tipo": "manana",
+      "hora_inicio": "08:00:00",
+      "hora_fin": "12:30:00",
+      "costo_mensual": "800.00",
+      "costo_diario": "50.00",
+      "descripcion": "",
+      "activo": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "core.turno",
+    "pk": "d0000001-0000-0000-0000-000000000002",
+    "fields": {
+      "sala": "c0000001-0000-0000-0000-000000000001",
+      "nombre": "Tarde — Sala Cuna",
+      "tipo": "tarde",
+      "hora_inicio": "13:00:00",
+      "hora_fin": "17:30:00",
+      "costo_mensual": "800.00",
+      "costo_diario": "50.00",
+      "descripcion": "",
+      "activo": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "core.turno",
+    "pk": "d0000001-0000-0000-0000-000000000003",
+    "fields": {
+      "sala": "c0000001-0000-0000-0000-000000000002",
+      "nombre": "Mañana — Sala Medio",
+      "tipo": "manana",
+      "hora_inicio": "08:00:00",
+      "hora_fin": "12:30:00",
+      "costo_mensual": "700.00",
+      "costo_diario": "45.00",
+      "descripcion": "",
+      "activo": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "core.turno",
+    "pk": "d0000001-0000-0000-0000-000000000004",
+    "fields": {
+      "sala": "c0000001-0000-0000-0000-000000000002",
+      "nombre": "Tarde — Sala Medio",
+      "tipo": "tarde",
+      "hora_inicio": "13:00:00",
+      "hora_fin": "17:30:00",
+      "costo_mensual": "700.00",
+      "costo_diario": "45.00",
+      "descripcion": "",
+      "activo": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "core.turno",
+    "pk": "d0000001-0000-0000-0000-000000000005",
+    "fields": {
+      "sala": "c0000001-0000-0000-0000-000000000003",
+      "nombre": "Mañana — Sala Mayor",
+      "tipo": "manana",
+      "hora_inicio": "08:00:00",
+      "hora_fin": "12:30:00",
+      "costo_mensual": "650.00",
+      "costo_diario": "40.00",
+      "descripcion": "",
+      "activo": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "core.turno",
+    "pk": "d0000001-0000-0000-0000-000000000006",
+    "fields": {
+      "sala": "c0000001-0000-0000-0000-000000000003",
+      "nombre": "Tarde — Sala Mayor",
+      "tipo": "tarde",
+      "hora_inicio": "13:00:00",
+      "hora_fin": "17:30:00",
+      "costo_mensual": "650.00",
+      "costo_diario": "40.00",
+      "descripcion": "",
+      "activo": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  }
+]

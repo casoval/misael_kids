@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comunicación — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    .msg-item {
+      background:var(--blanco);border:1.5px solid var(--gris-100);border-radius:var(--radio-xl);
+      padding:var(--gap-lg);margin-bottom:var(--gap-md);box-shadow:var(--sombra-sm);
+      cursor:pointer;transition:all var(--trans-fast);
+    }
+    .msg-item:hover { box-shadow:var(--sombra-lg);border-color:var(--turquesa); }
+    .msg-item.no-leido { border-left:4px solid var(--turquesa);background:var(--turquesa-l); }
+    .msg-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px; }
+    .msg-asunto { font-weight:800;color:var(--texto);font-size:var(--text-sm); }
+    .msg-meta { font-size:var(--text-xs);color:var(--texto-suave);font-weight:600; }
+    .msg-preview { font-size:var(--text-sm);color:var(--texto-suave);line-height:1.5; }
+    .aviso-item {
+      background:var(--blanco);border:1.5px solid var(--gris-100);border-radius:var(--radio-xl);
+      padding:var(--gap-lg);margin-bottom:var(--gap-md);box-shadow:var(--sombra-sm);
+    }
+    .aviso-item.importante { border-color:var(--coral);border-left:4px solid var(--coral); }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">📨 Comunicación</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-outline" onclick="cambiarTab('mensajes')">✉️ Mensajes</button>
+        <button class="btn btn-primary" onclick="abrirNuevoAviso()">📢 Nuevo aviso</button>
+        <button class="btn btn-outline" onclick="abrirNuevoMensaje()">✍️ Nuevo mensaje</button>
+      </div>
+    </header>
+    <div class="pagina">
+
+      <!-- Tabs -->
+      <div class="page-tabs mb-lg">
+        <button class="page-tab activo" onclick="cambiarTab('avisos')" id="tab-avisos">
+          📢 Avisos <span id="badge-avisos" class="chip chip-turquesa" style="margin-left:4px;display:none"></span>
+        </button>
+        <button class="page-tab" onclick="cambiarTab('mensajes')" id="tab-mensajes">
+          ✉️ Mensajes <span id="badge-noLeidos" class="chip chip-coral" style="margin-left:4px;display:none"></span>
+        </button>
+      </div>
+
+      <!-- Panel: Avisos -->
+      <div class="tab-panel activo" id="panel-avisos">
+        <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;margin-bottom:var(--gap-lg);
+          background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+          box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
+          <div class="form-grupo" style="margin:0;min-width:160px">
+            <label class="form-label">Sucursal</label>
+            <select id="f-suc-aviso" class="form-select">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="form-grupo" style="margin:0;min-width:140px">
+            <label class="form-label">Importancia</label>
+            <select id="f-importante" class="form-select">
+              <option value="">Todos</option>
+              <option value="true">Solo importantes</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:6px">
+            <button class="btn btn-primary" onclick="cargarAvisos()">Filtrar</button>
+          </div>
+        </div>
+        <div id="lista-avisos">
+          <div class="loader"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Panel: Mensajes -->
+      <div class="tab-panel" id="panel-mensajes">
+        <div style="display:flex;gap:var(--gap-md);margin-bottom:var(--gap-md);flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="filtrarMensajes('todos')" id="btn-todos">Todos</button>
+          <button class="btn btn-outline btn-sm" onclick="filtrarMensajes('noLeido')" id="btn-no-leidos">
+            No leídos <span id="badge-nl-btn" class="chip chip-coral" style="margin-left:4px;display:none"></span>
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="filtrarMensajes('enviados')" id="btn-enviados">Enviados</button>
+        </div>
+        <div id="lista-mensajes">
+          <div class="loader"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Nuevo aviso -->
+<div class="modal-overlay" id="modal-aviso">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-aviso">Nuevo aviso</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="av-id">
+    <div class="form-grupo">
+      <label class="form-label">Título del aviso *</label>
+      <input type="text" id="av-titulo" class="form-input" placeholder="Ej: Reunión de padres - Viernes 20 de junio">
+      <span class="form-error" data-error="av-titulo"></span>
+    </div>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Sucursal (vacío = todas)</label>
+        <select id="av-sucursal" class="form-select" onchange="cargarSalasAviso()">
+          <option value="">Todas las sucursales</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Sala (vacío = todas)</label>
+        <select id="av-sala" class="form-select" onchange="cargarTurnosAviso()">
+          <option value="">Todas las salas</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Turno (vacío = todos)</label>
+        <select id="av-turno" class="form-select">
+          <option value="">Todos los turnos</option>
+        </select>
+      </div>
+      <div class="form-grupo" style="display:flex;align-items:flex-end;padding-bottom:.35rem">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700">
+          <input type="checkbox" id="av-importante" style="width:18px;height:18px">
+          🔴 Marcar como importante
+        </label>
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Contenido del aviso *</label>
+      <textarea id="av-cuerpo" class="form-textarea" rows="5"
+        placeholder="Escribe el contenido completo del aviso para los padres..."></textarea>
+      <span class="form-error" data-error="av-cuerpo"></span>
+    </div>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-md)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-aviso')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarAviso()">📢 Publicar aviso</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo mensaje individual -->
+<div class="modal-overlay" id="modal-mensaje">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo">✍️ Nuevo mensaje</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Destinatario (tutor) *</label>
+      <select id="msg-destinatario" class="form-select">
+        <option value="">Seleccionar tutor...</option>
+      </select>
+      <span class="form-error" data-error="msg-destinatario"></span>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Niño/a relacionado (opcional)</label>
+      <select id="msg-nino" class="form-select">
+        <option value="">Sin niño específico</option>
+      </select>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Asunto *</label>
+      <input type="text" id="msg-asunto" class="form-input" placeholder="Asunto del mensaje...">
+      <span class="form-error" data-error="msg-asunto"></span>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Mensaje *</label>
+      <textarea id="msg-cuerpo" class="form-textarea" rows="5"
+        placeholder="Escribe tu mensaje para el tutor..."></textarea>
+      <span class="form-error" data-error="msg-cuerpo"></span>
+    </div>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-md)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-mensaje')">Cancelar</button>
+      <button class="btn btn-primary" onclick="enviarMensaje()">✉️ Enviar mensaje</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Leer mensaje -->
+<div class="modal-overlay" id="modal-leer-msg">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="leer-asunto">Mensaje</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <div id="leer-contenido"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:var(--gap-md)">
+      <button class="btn btn-outline btn-sm" onclick="UI.cerrarModal('modal-leer-msg')">Cerrar</button>
+      <button class="btn btn-primary btn-sm" id="btn-responder" onclick="responder()">↩️ Responder</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('comunicacion');
+const usr = Auth.getUsuario();
+let tabActual = 'avisos';
+let mensajesData = [];
+let mensajeAbierto = null;
+
+async function inicializar() {
+  await cargarSelectores();
+  await Promise.all([cargarAvisos(), cargarMensajes()]);
+}
+
+async function cargarSelectores() {
+  try {
+    const [sucursales, tutores, ninos] = await Promise.all([
+      API.get('/core/sucursales/?activa=true'),
+      API.get('/ninos/tutores/?page_size=500'),
+      API.get('/ninos/ninos/?activo=true&page_size=500'),
+    ]);
+    const listaSuc = sucursales.results||sucursales;
+    [document.getElementById('f-suc-aviso'),
+     document.getElementById('av-sucursal')].forEach(el =>
+      UI.llenarSelect(el, listaSuc, 'id', 'nombre'));
+    UI.llenarSelect(document.getElementById('msg-destinatario'),
+      tutores.results||tutores, 'id', t => t.nombres+' '+t.apellidos+' — '+t.parentesco_display);
+    UI.llenarSelect(document.getElementById('msg-nino'),
+      ninos.results||ninos, 'id', 'nombre_completo');
+  } catch {}
+}
+
+async function cargarSalasAviso() {
+  const sucId = document.getElementById('av-sucursal').value;
+  const sel   = document.getElementById('av-sala');
+  sel.innerHTML = '<option value="">Todas las salas</option>';
+  document.getElementById('av-turno').innerHTML = '<option value="">Todos los turnos</option>';
+  if (!sucId) return;
+  try {
+    const data = await API.get('/core/salas/?sucursal='+sucId+'&activa=true');
+    UI.llenarSelect(sel, data.results||data, 'id', 'nombre');
+  } catch {}
+}
+
+async function cargarTurnosAviso() {
+  const salaId = document.getElementById('av-sala').value;
+  const sel    = document.getElementById('av-turno');
+  sel.innerHTML = '<option value="">Todos los turnos</option>';
+  if (!salaId) return;
+  try {
+    const data = await API.get('/core/turnos/?sala='+salaId+'&activo=true');
+    UI.llenarSelect(sel, data.results||data, 'id', 'nombre');
+  } catch {}
+}
+
+// ── Tabs ──
+function cambiarTab(tab) {
+  tabActual = tab;
+  ['avisos','mensajes'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('activo', t===tab);
+    document.getElementById('panel-'+t).classList.toggle('activo', t===tab);
+  });
+  if (tab === 'mensajes') cargarMensajes();
+}
+
+// ── Avisos ──
+async function cargarAvisos() {
+  const cont  = document.getElementById('lista-avisos');
+  const suc   = document.getElementById('f-suc-aviso').value;
+  const imp   = document.getElementById('f-importante').value;
+  let url = '/comunicacion/avisos/?ordering=-publicado_en&page_size=50';
+  if (suc) url += '&sucursal='+suc;
+  if (imp) url += '&importante='+imp;
+  UI.mostrarLoader(cont, 'Cargando avisos...');
+  try {
+    const data  = await API.get(url);
+    const lista = data.results||data;
+    const badge = document.getElementById('badge-avisos');
+    badge.textContent = lista.length; badge.style.display = lista.length?'':'none';
+    if (!lista.length) { UI.vacio(cont,'Sin avisos publicados','📢'); return; }
+    cont.innerHTML = lista.map(av => `
+      <div class="aviso-item ${av.importante?'importante':''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--gap-sm)">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:var(--gap-sm);flex-wrap:wrap;margin-bottom:4px">
+              ${av.importante?'<span class="chip chip-coral">🔴 Importante</span>':''}
+              ${av.sucursal_nombre?'<span class="chip chip-turquesa">🏢 '+av.sucursal_nombre+'</span>':'<span class="chip chip-gris">Todas las sucursales</span>'}
+              ${av.sala_nombre?'<span class="chip chip-verde">🏠 '+av.sala_nombre+'</span>':''}
+              ${av.turno?'<span class="chip chip-amarillo">⏰ '+av.turno+'</span>':''}
+            </div>
+            <div style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--texto)">${av.titulo}</div>
+            <div style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:2px">
+              Por: ${av.autor_nombre} · ${new Date(av.publicado_en).toLocaleDateString('es-BO',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;margin-left:var(--gap-md)">
+            <button class="btn btn-outline btn-sm" onclick="editarAviso('${av.id}')">✏️ Editar</button>
+            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminarAviso('${av.id}','${av.titulo}')">🗑️</button>
+          </div>
+        </div>
+        <p style="font-size:var(--text-sm);color:var(--texto);line-height:1.7;
+          background:var(--gris-50);padding:var(--gap-md);border-radius:var(--radio-lg)">
+          ${av.cuerpo}
+        </p>
+      </div>`).join('');
+  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+function abrirNuevoAviso() {
+  document.getElementById('av-id').value = '';
+  document.getElementById('titulo-modal-aviso').textContent = 'Nuevo aviso';
+  ['av-titulo','av-cuerpo'].forEach(id=>document.getElementById(id).value='');
+  ['av-sucursal','av-sala','av-turno'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('av-importante').checked = false;
+  document.getElementById('av-sala').innerHTML = '<option value="">Todas las salas</option>';
+  document.getElementById('av-turno').innerHTML = '<option value="">Todos los turnos</option>';
+  document.querySelectorAll('#modal-aviso .form-error').forEach(el=>el.textContent='');
+  document.querySelectorAll('#modal-aviso .input-error').forEach(el=>el.classList.remove('input-error'));
+  UI.abrirModal('modal-aviso');
+  cambiarTab('avisos');
+}
+
+async function editarAviso(id) {
+  try {
+    const av = await API.get('/comunicacion/avisos/'+id+'/');
+    document.getElementById('av-id').value       = id;
+    document.getElementById('titulo-modal-aviso').textContent = 'Editar aviso';
+    document.getElementById('av-titulo').value   = av.titulo;
+    document.getElementById('av-cuerpo').value   = av.cuerpo;
+    document.getElementById('av-sucursal').value = av.sucursal||'';
+    if (av.sucursal) { await cargarSalasAviso(); document.getElementById('av-sala').value = av.sala||''; }
+    document.getElementById('av-importante').checked = av.importante;
+    UI.abrirModal('modal-aviso');
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function guardarAviso() {
+  const errores = Validar.formulario({
+    'av-titulo': [()=>Validar.requerido(document.getElementById('av-titulo').value,'Título')],
+    'av-cuerpo': [()=>Validar.requerido(document.getElementById('av-cuerpo').value,'Contenido')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-aviso ')) return;
+  const id = document.getElementById('av-id').value;
+  const datos = {
+    titulo:     document.getElementById('av-titulo').value,
+    cuerpo:     document.getElementById('av-cuerpo').value,
+    sucursal:   document.getElementById('av-sucursal').value||null,
+    sala:       document.getElementById('av-sala').value||null,
+    turno:      document.getElementById('av-turno').value||null,
+    importante: document.getElementById('av-importante').checked,
+  };
+  try {
+    if (id) await API.patch('/comunicacion/avisos/'+id+'/',datos);
+    else    await API.post('/comunicacion/avisos/',datos);
+    UI.toast('Aviso publicado correctamente','exito');
+    UI.cerrarModal('modal-aviso');
+    cargarAvisos();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminarAviso(id, titulo) {
+  if (!confirm('Eliminar el aviso "'+titulo+'"?')) return;
+  try {
+    await API.delete('/comunicacion/avisos/'+id+'/');
+    UI.toast('Aviso eliminado','exito');
+    cargarAvisos();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+// ── Mensajes ──
+let filtroMensajes = 'todos';
+async function cargarMensajes() {
+  const cont = document.getElementById('lista-mensajes');
+  UI.mostrarLoader(cont,'Cargando mensajes...');
+  try {
+    const data  = await API.get('/comunicacion/mensajes/?ordering=-created_at&page_size=100');
+    mensajesData = data.results||data;
+    const noLeidos = mensajesData.filter(m=>!m.leido && m.destinatario_nombre!==usr.nombre_completo).length;
+    ['badge-noLeidos','badge-nl-btn'].forEach(id=>{
+      const b=document.getElementById(id);
+      b.textContent=noLeidos; b.style.display=noLeidos?'':'none';
+    });
+    filtrarMensajes(filtroMensajes);
+  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+function filtrarMensajes(modo) {
+  filtroMensajes = modo;
+  ['todos','no-leidos','enviados'].forEach(m => {
+    const btn = document.getElementById('btn-'+m);
+    if (btn) btn.classList.toggle('btn-primary',
+      (m==='no-leidos'&&modo==='noLeido')||(m==='todos'&&modo==='todos')||(m==='enviados'&&modo==='enviados'));
+  });
+  let lista = [...mensajesData];
+  const usrNombre = usr.nombres+' '+usr.apellidos;
+  if (modo==='noLeido')   lista = lista.filter(m=>!m.leido && m.destinatario_nombre===usrNombre);
+  if (modo==='enviados')  lista = lista.filter(m=>m.remitente_nombre===usrNombre);
+  const cont = document.getElementById('lista-mensajes');
+  if (!lista.length) { UI.vacio(cont,'Sin mensajes','📭'); return; }
+  cont.innerHTML = lista.map(m => {
+    const esEnviado = m.remitente_nombre === usrNombre;
+    const noLeido   = !m.leido && !esEnviado;
+    return `
+      <div class="msg-item ${noLeido?'no-leido':''}" onclick="leerMensaje('${m.id}')">
+        <div class="msg-header">
+          <span class="msg-asunto">${noLeido?'🔵 ':''}${m.asunto}</span>
+          <span class="msg-meta">${new Date(m.created_at).toLocaleDateString('es-BO',{day:'numeric',month:'short'})}</span>
+        </div>
+        <div class="msg-meta" style="margin-bottom:4px">
+          ${esEnviado?'→ Para: '+m.destinatario_nombre:'De: '+m.remitente_nombre}
+          ${m.nino_nombre?' · 👶 '+m.nino_nombre:''}
+        </div>
+        <div class="msg-preview">${m.cuerpo?.slice(0,120)}${m.cuerpo?.length>120?'...':''}</div>
+      </div>`;
+  }).join('');
+}
+
+async function leerMensaje(id) {
+  mensajeAbierto = mensajesData.find(m=>m.id===id);
+  if (!mensajeAbierto) return;
+  document.getElementById('leer-asunto').textContent = mensajeAbierto.asunto;
+  document.getElementById('leer-contenido').innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:var(--gap-md);
+      background:var(--gris-50);padding:var(--gap-md);border-radius:var(--radio-lg)">
+      <div>
+        <div style="font-weight:700;font-size:var(--text-sm)">De: ${mensajeAbierto.remitente_nombre}</div>
+        <div style="font-weight:700;font-size:var(--text-sm)">Para: ${mensajeAbierto.destinatario_nombre}</div>
+        ${mensajeAbierto.nino_nombre?'<div style="font-size:var(--text-xs);color:var(--texto-suave)">👶 '+mensajeAbierto.nino_nombre+'</div>':''}
+      </div>
+      <div style="font-size:var(--text-xs);color:var(--texto-suave);text-align:right">
+        ${new Date(mensajeAbierto.created_at).toLocaleString('es-BO')}
+      </div>
+    </div>
+    <p style="font-size:var(--text-sm);line-height:1.8;white-space:pre-wrap">${mensajeAbierto.cuerpo}</p>`;
+  UI.abrirModal('modal-leer-msg');
+  // Marcar como leído
+  if (!mensajeAbierto.leido && mensajeAbierto.destinatario_nombre===usr.nombres+' '+usr.apellidos) {
+    try {
+      await API.post('/comunicacion/mensajes/'+id+'/marcar-leido/');
+      mensajesData.find(m=>m.id===id).leido = true;
+      filtrarMensajes(filtroMensajes);
+    } catch {}
+  }
+}
+
+function responder() {
+  if (!mensajeAbierto) return;
+  UI.cerrarModal('modal-leer-msg');
+  document.getElementById('msg-destinatario').value = mensajeAbierto.remitente===usr.id
+    ? mensajeAbierto.destinatario : mensajeAbierto.remitente;
+  document.getElementById('msg-nino').value  = mensajeAbierto.nino||'';
+  document.getElementById('msg-asunto').value= 'Re: '+mensajeAbierto.asunto;
+  document.getElementById('msg-cuerpo').value= '';
+  UI.abrirModal('modal-mensaje');
+}
+
+function abrirNuevoMensaje() {
+  ['msg-destinatario','msg-nino','msg-asunto','msg-cuerpo'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('#modal-mensaje .form-error').forEach(el=>el.textContent='');
+  UI.abrirModal('modal-mensaje');
+}
+
+async function enviarMensaje() {
+  const errores = Validar.formulario({
+    'msg-destinatario':[()=>Validar.requerido(document.getElementById('msg-destinatario').value,'Destinatario')],
+    'msg-asunto':      [()=>Validar.requerido(document.getElementById('msg-asunto').value,'Asunto')],
+    'msg-cuerpo':      [()=>Validar.requerido(document.getElementById('msg-cuerpo').value,'Mensaje')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-mensaje ')) return;
+  try {
+    await API.post('/comunicacion/mensajes/',{
+      destinatario: document.getElementById('msg-destinatario').value,
+      nino:         document.getElementById('msg-nino').value||null,
+      asunto:       document.getElementById('msg-asunto').value,
+      cuerpo:       document.getElementById('msg-cuerpo').value,
+    });
+    UI.cerrarModal('modal-mensaje');
+    UI.toast('Mensaje enviado correctamente','exito');
+    cargarMensajes();
+    cambiarTab('mensajes');
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+inicializar();
+</script>
+</body>
+</html>

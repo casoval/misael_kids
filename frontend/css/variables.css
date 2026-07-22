@@ -1,0 +1,93 @@
+/* ═══════════════════════════════════════════════════════════════
+   Misael Kids — Variables CSS globales
+   Paleta "Jardín mágico": vibrante, amigable, cálida
+═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Fredoka+One&display=swap');
+
+:root {
+  /* ── Colores principales ── */
+  --turquesa:     #2DD4BF;
+  --turquesa-d:   #0D9488;
+  --turquesa-l:   #CCFBF1;
+  --coral:        #FF6B6B;
+  --coral-d:      #E85555;
+  --coral-l:      #FFE4E4;
+  --amarillo:     #FFD93D;
+  --amarillo-d:   #F0C000;
+  --amarillo-l:   #FFF8D6;
+  --verde:        #6BCB77;
+  --verde-d:      #4CAF59;
+  --verde-l:      #DCFCE7;
+  --violeta:      #A78BFA;
+  --violeta-d:    #7C3AED;
+  --violeta-l:    #EDE9FE;
+  --naranja:      #FB923C;
+  --naranja-l:    #FED7AA;
+
+  /* ── Neutros ── */
+  --blanco:       #FFFFFF;
+  --gris-50:      #F8FAFC;
+  --gris-100:     #F1F5F9;
+  --gris-200:     #E2E8F0;
+  --gris-300:     #CBD5E1;
+  --gris-400:     #94A3B8;
+  --gris-500:     #64748B;
+  --gris-600:     #475569;
+  --gris-700:     #334155;
+  --gris-800:     #1E293B;
+  --texto:        #1E293B;
+  --texto-suave:  #64748B;
+
+  /* ── Semánticos ── */
+  --exito:        var(--verde);
+  --exito-l:      var(--verde-l);
+  --peligro:      var(--coral);
+  --peligro-l:    var(--coral-l);
+  --advertencia:  var(--amarillo);
+  --advertencia-l:var(--amarillo-l);
+  --info:         var(--turquesa);
+  --info-l:       var(--turquesa-l);
+
+  /* ── Tipografía ── */
+  --font-display: 'Fredoka One', cursive;
+  --font-body:    'Nunito', sans-serif;
+  --text-xs:      0.75rem;
+  --text-sm:      0.875rem;
+  --text-base:    1rem;
+  --text-lg:      1.125rem;
+  --text-xl:      1.25rem;
+  --text-2xl:     1.5rem;
+  --text-3xl:     1.875rem;
+  --text-4xl:     2.25rem;
+
+  /* ── Espaciado ── */
+  --gap-xs:  0.25rem;
+  --gap-sm:  0.5rem;
+  --gap-md:  1rem;
+  --gap-lg:  1.5rem;
+  --gap-xl:  2rem;
+  --gap-2xl: 3rem;
+
+  /* ── Bordes y sombras ── */
+  --radio-sm:  0.5rem;
+  --radio-md:  0.75rem;
+  --radio-lg:  1rem;
+  --radio-xl:  1.5rem;
+  --radio-full:9999px;
+
+  --sombra-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --sombra-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+  --sombra-lg: 0 10px 15px rgba(0,0,0,.08), 0 4px 6px rgba(0,0,0,.05);
+  --sombra-xl: 0 20px 25px rgba(0,0,0,.10), 0 10px 10px rgba(0,0,0,.04);
+  --sombra-color: 0 8px 20px rgba(45,212,191,.25);
+
+  /* ── Sidebar ── */
+  --sidebar-w: 260px;
+  --topbar-h:  64px;
+
+  /* ── Transiciones ── */
+  --trans-fast:   150ms ease;
+  --trans-base:   250ms ease;
+  --trans-slow:   400ms ease;
+}

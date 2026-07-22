@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    .reporte-card {
+      background: var(--blanco); border: 2px solid var(--gris-100);
+      border-radius: var(--radio-xl); padding: var(--gap-xl);
+      box-shadow: var(--sombra-md); transition: all var(--trans-fast);
+      cursor: pointer; text-align: center;
+    }
+    .reporte-card:hover { transform: translateY(-4px); box-shadow: var(--sombra-xl); border-color: var(--turquesa); }
+    .reporte-icono {
+      width: 72px; height: 72px; border-radius: var(--radio-xl);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.2rem; margin: 0 auto var(--gap-md);
+    }
+    .reporte-titulo { font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--gap-sm); }
+    .reporte-desc { font-size: var(--text-sm); color: var(--texto-suave); line-height: 1.6; }
+
+    /* Mini charts con CSS */
+    .mini-bar-chart { display: flex; flex-direction: column; gap: 8px; }
+    .bar-row { display: flex; align-items: center; gap: var(--gap-sm); }
+    .bar-label { font-size: var(--text-xs); font-weight: 700; color: var(--texto-suave); width: 80px; text-align: right; flex-shrink: 0; }
+    .bar-track { flex: 1; height: 22px; background: var(--gris-100); border-radius: var(--radio-full); overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: var(--radio-full); display: flex; align-items: center; padding-left: 8px; font-size: var(--text-xs); font-weight: 700; color: white; transition: width .8s ease; }
+    .bar-val { font-size: var(--text-xs); font-weight: 700; color: var(--texto); min-width: 40px; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">📊 Reportes</h1>
+      <div class="topbar-acciones">
+        <select class="form-select" id="filtro-mes-reporte" style="max-width:200px">
+        </select>
+        <select class="form-select" id="filtro-suc-reporte" style="max-width:180px">
+          <option value="">Todas las sucursales</option>
+        </select>
+        <button class="btn btn-primary" onclick="generarTodos()">🔄 Actualizar</button>
+      </div>
+    </header>
+
+    <div class="pagina">
+
+      <!-- Tarjetas de reportes disponibles -->
+      <div class="grid-4 mb-lg">
+        <div class="reporte-card" onclick="exportarAsistenciaCSV()">
+          <div class="reporte-icono" style="background:var(--turquesa-l)">📋</div>
+          <div class="reporte-titulo">Asistencia</div>
+          <div class="reporte-desc">Registro mensual de asistencia por sala</div>
+          <div class="mt-md"><span class="chip chip-turquesa">📥 CSV</span></div>
+        </div>
+        <div class="reporte-card" onclick="exportarCobrosCSV()">
+          <div class="reporte-icono" style="background:var(--verde-l)">💰</div>
+          <div class="reporte-titulo">Cobros</div>
+          <div class="reporte-desc">Estado de pagos y deudas del mes</div>
+          <div class="mt-md"><span class="chip chip-verde">📥 CSV</span></div>
+        </div>
+        <div class="reporte-card" onclick="exportarNinosCSV()">
+          <div class="reporte-icono" style="background:var(--coral-l)">👶</div>
+          <div class="reporte-titulo">Niños inscritos</div>
+          <div class="reporte-desc">Listado completo con salas y tutores</div>
+          <div class="mt-md"><span class="chip chip-coral">📥 CSV</span></div>
+        </div>
+        <div class="reporte-card" onclick="exportarStockCSV()">
+          <div class="reporte-icono" style="background:var(--amarillo-l)">📦</div>
+          <div class="reporte-titulo">Inventario</div>
+          <div class="reporte-desc">Stock actual de todos los ítems</div>
+          <div class="mt-md"><span class="chip chip-amarillo">📥 CSV</span></div>
+        </div>
+      </div>
+
+      <!-- Resúmenes visuales -->
+      <div class="grid-2">
+
+        <!-- Asistencia por sala -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-titulo">📋 Asistencia por sala (mes actual)</h3>
+          </div>
+          <div id="chart-asistencia" class="mini-bar-chart">
+            <div class="loader"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Cobros por estado -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-titulo">💰 Cobros por estado</h3>
+          </div>
+          <div id="chart-cobros" class="mini-bar-chart">
+            <div class="loader"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Niños por sala -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-titulo">👶 Niños por sala</h3>
+          </div>
+          <div id="chart-ninos-sala" class="mini-bar-chart">
+            <div class="loader"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Resumen financiero del mes -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-titulo">💵 Resumen financiero del mes</h3>
+          </div>
+          <div id="resumen-financiero">
+            <div class="loader"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('reportes', ['admin', 'directora', 'administrativo']);
+Auth.requerirAuth(['admin','directora','administrativo']);
+const usr = Auth.getUsuario();
+document.getElementById('usr-avatar').textContent = UI.iniciales(`${usr.nombres} ${usr.apellidos}`);
+document.getElementById('usr-nombre').textContent = `${usr.nombres} ${usr.apellidos}`;
+document.getElementById('usr-rol').textContent    = usr.rol_display || usr.rol;
+
+// Llenar selector de meses (últimos 12)
+const selMes = document.getElementById('filtro-mes-reporte');
+const ahora  = new Date();
+for (let i = 0; i < 12; i++) {
+  const d   = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+  const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const opt = Object.assign(document.createElement('option'), {
+    value: val, textContent: `${meses[d.getMonth()]} ${d.getFullYear()}`
+  });
+  if (i === 0) opt.selected = true;
+  selMes.appendChild(opt);
+}
+
+// Sucursales
+async function cargarSucursales() {
+  try {
+    const data = await API.get('/core/sucursales/');
+    UI.llenarSelect(document.getElementById('filtro-suc-reporte'), data.results||data, 'id', 'nombre');
+  } catch {}
+}
+
+function getMes() { return document.getElementById('filtro-mes-reporte').value; }
+function getSuc() { return document.getElementById('filtro-suc-reporte').value; }
+
+// ── Renderizar barra horizontal ──
+function renderBarra(label, valor, max, color, prefijo='', sufijo='') {
+  const pct = max > 0 ? Math.round((valor/max)*100) : 0;
+  return `
+    <div class="bar-row">
+      <span class="bar-label">${label}</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${color}">
+          ${pct > 20 ? prefijo+valor+sufijo : ''}
+        </div>
+      </div>
+      <span class="bar-val">${prefijo}${valor}${sufijo}</span>
+    </div>`;
+}
+
+async function generarTodos() {
+  await Promise.all([
+    cargarChartAsistencia(),
+    cargarChartCobros(),
+    cargarChartNinosSala(),
+    cargarResumenFinanciero(),
+  ]);
+}
+
+async function cargarChartAsistencia() {
+  const cont = document.getElementById('chart-asistencia');
+  const mes  = getMes();
+  const [año, mesN] = mes.split('-');
+  try {
+    // Asistencia del mes agrupada por sala
+    const data  = await API.get(`/asistencia/asistencia/resumen-mensual/?año=${año}&mes=${mesN}`);
+    const salas = await API.get('/core/salas/?activa=true&page_size=50');
+    const listaSalas = salas.results || salas;
+
+    if (!listaSalas.length) { UI.vacio(cont,'Sin datos','📋'); return; }
+
+    const max = Math.max(data.presentes||1, 1);
+    cont.innerHTML = `
+      ${renderBarra('Presentes', data.presentes||0, max, 'var(--verde)', '', ' días')}
+      ${renderBarra('Ausentes',  data.ausentes||0,  Math.max(data.presentes,data.ausentes,1), 'var(--coral)', '', ' días')}
+      ${renderBarra('Justif.',   data.justificados||0, Math.max(data.presentes,data.ausentes,data.justificados,1), 'var(--amarillo)', '', ' días')}
+      <div style="margin-top:var(--gap-sm);font-size:var(--text-xs);color:var(--texto-suave);font-weight:600;text-align:center">
+        Total registros: ${data.total||0}
+      </div>
+    `;
+  } catch (err) { UI.vacio(cont, 'Error: '+err.message, '⚠️'); }
+}
+
+async function cargarChartCobros() {
+  const cont = document.getElementById('chart-cobros');
+  try {
+    const [pend, venc, pag, anul] = await Promise.all([
+      API.get('/inscripciones/cobros/?estado=pendiente&page_size=1'),
+      API.get('/inscripciones/cobros/?estado=vencido&page_size=1'),
+      API.get('/inscripciones/cobros/?estado=pagado&page_size=1'),
+      API.get('/inscripciones/cobros/?estado=anulado&page_size=1'),
+    ]);
+    const vals = [pend.count||0, venc.count||0, pag.count||0, anul.count||0];
+    const max  = Math.max(...vals, 1);
+    cont.innerHTML = `
+      ${renderBarra('Pendientes', vals[0], max, 'var(--amarillo)')}
+      ${renderBarra('Vencidos',   vals[1], max, 'var(--coral)')}
+      ${renderBarra('Pagados',    vals[2], max, 'var(--verde)')}
+      ${renderBarra('Anulados',   vals[3], max, 'var(--gris-400)')}
+    `;
+  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+async function cargarChartNinosSala() {
+  const cont = document.getElementById('chart-ninos-sala');
+  try {
+    const salas = await API.get('/core/salas/?activa=true&page_size=20');
+    const lista = salas.results || salas;
+    if (!lista.length) { UI.vacio(cont,'Sin salas','🏠'); return; }
+
+    // Contar inscritos por sala
+    const conteos = await Promise.all(
+      lista.map(s => API.get(`/inscripciones/inscripciones/?sala=${s.id}&activa=true&page_size=1`))
+    );
+    const max = Math.max(...conteos.map(r=>r.count||0), 1);
+    const colores = ['var(--turquesa)','var(--verde)','var(--coral)','var(--violeta)','var(--naranja)'];
+    cont.innerHTML = lista.map((sala, i) => {
+      const count = conteos[i].count || 0;
+      const pct   = Math.round((count/sala.capacidad_maxima)*100);
+      return renderBarra(
+        sala.nombre.slice(0,12),
+        count, max,
+        colores[i % colores.length],
+        '', `/${sala.capacidad_maxima}`
+      ) + `<div style="font-size:.65rem;color:${pct>80?'var(--coral-d)':'var(--texto-suave)'};
+        text-align:right;margin-top:-6px;margin-bottom:4px;font-weight:700">
+        ${pct}% ocupación
+      </div>`;
+    }).join('');
+  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+async function cargarResumenFinanciero() {
+  const cont = document.getElementById('resumen-financiero');
+  const mes  = getMes();
+  try {
+    const [pagados, pendientes, vencidos] = await Promise.all([
+      API.get(`/inscripciones/cobros/?estado=pagado&page_size=500`),
+      API.get(`/inscripciones/cobros/?estado=pendiente&page_size=500`),
+      API.get(`/inscripciones/cobros/?estado=vencido&page_size=500`),
+    ]);
+
+    const filtrarMes = (lista) => (lista.results||lista).filter(c =>
+      (c.fecha_pago||c.fecha_emision||'').startsWith(mes)
+    );
+
+    const listaP  = filtrarMes(pagados);
+    const listaPend = filtrarMes(pendientes);
+    const listaV  = filtrarMes(vencidos);
+
+    const sumP    = listaP.reduce((s,c)=>s+parseFloat(c.monto_final),0);
+    const sumPend = listaPend.reduce((s,c)=>s+parseFloat(c.monto_final),0);
+    const sumV    = listaV.reduce((s,c)=>s+parseFloat(c.monto_final),0);
+    const total   = sumP + sumPend + sumV;
+
+    cont.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:var(--gap-md)">
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          padding:var(--gap-md);background:var(--verde-l);border-radius:var(--radio-lg);
+          border:1.5px solid var(--verde)">
+          <div>
+            <div style="font-size:var(--text-xs);font-weight:700;color:var(--verde-d);text-transform:uppercase">✅ Cobrado</div>
+            <div style="font-family:var(--font-display);font-size:var(--text-2xl);color:var(--verde-d)">${UI.moneda(sumP)}</div>
+          </div>
+          <div style="font-family:var(--font-display);font-size:var(--text-3xl);opacity:.3">💚</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          padding:var(--gap-md);background:var(--amarillo-l);border-radius:var(--radio-lg);
+          border:1.5px solid var(--amarillo)">
+          <div>
+            <div style="font-size:var(--text-xs);font-weight:700;color:#92400E;text-transform:uppercase">⏳ Pendiente</div>
+            <div style="font-family:var(--font-display);font-size:var(--text-2xl);color:#92400E">${UI.moneda(sumPend)}</div>
+          </div>
+          <div style="font-family:var(--font-display);font-size:var(--text-3xl);opacity:.3">💛</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          padding:var(--gap-md);background:var(--coral-l);border-radius:var(--radio-lg);
+          border:1.5px solid var(--coral)">
+          <div>
+            <div style="font-size:var(--text-xs);font-weight:700;color:var(--coral-d);text-transform:uppercase">🔴 Vencido sin pagar</div>
+            <div style="font-family:var(--font-display);font-size:var(--text-2xl);color:var(--coral-d)">${UI.moneda(sumV)}</div>
+          </div>
+          <div style="font-family:var(--font-display);font-size:var(--text-3xl);opacity:.3">❤️</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:.75rem var(--gap-md);
+          background:var(--gris-50);border-radius:var(--radio-lg);border:1.5px solid var(--gris-200)">
+          <span style="font-weight:700;color:var(--texto)">Total esperado</span>
+          <span style="font-family:var(--font-display);font-size:var(--text-xl)">${UI.moneda(total)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:.5rem var(--gap-md)">
+          <span style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:600">% Cobrado</span>
+          <span style="font-weight:700;color:${total>0&&(sumP/total)>.7?'var(--verde-d)':'var(--coral-d)'}">
+            ${total > 0 ? Math.round((sumP/total)*100) : 0}%
+          </span>
+        </div>
+      </div>
+    `;
+  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+// ── Exportaciones CSV ──
+async function exportarAsistenciaCSV() {
+  UI.toast('Preparando reporte de asistencia...', 'info');
+  try {
+    const mes = getMes();
+    const [año, mesN] = mes.split('-');
+    const data  = await API.get(`/asistencia/asistencia/?ordering=-fecha&page_size=1000`);
+    const lista = (data.results||data).filter(a => a.fecha?.startsWith(mes));
+
+    const filas = [
+      ['Niño','Sala','Turno','Fecha','Estado','Entrada','Salida','Motivo'].join(','),
+      ...lista.map(a => [
+        `"${a.nino_nombre}"`, `"${a.sala_nombre}"`, `"${a.turno_nombre}"`,
+        a.fecha, a.estado, a.hora_entrada||'', a.hora_salida||'',
+        `"${a.motivo_ausencia||''}"`
+      ].join(','))
+    ];
+    descargarCSV(filas, `asistencia_${mes}.csv`);
+    UI.toast(`✅ ${lista.length} registros exportados`, 'exito');
+  } catch (err) { UI.toast('Error: '+err.message, 'error'); }
+}
+
+async function exportarCobrosCSV() {
+  UI.toast('Preparando reporte de cobros...', 'info');
+  try {
+    const data  = await API.get('/inscripciones/cobros/?page_size=500&ordering=-fecha_emision');
+    const lista = data.results || data;
+    const filas = [
+      ['Niño','Tipo','Período','Monto base','Monto final','Vencimiento','Estado','Método pago','Fecha pago'].join(','),
+      ...lista.map(c => [
+        `"${c.nino_nombre}"`, c.tipo_display, c.periodo||'',
+        c.monto_base, c.monto_final, c.fecha_vencimiento,
+        c.estado, c.metodo_pago||'', c.fecha_pago||''
+      ].join(','))
+    ];
+    descargarCSV(filas, `cobros_${getMes()}.csv`);
+    UI.toast(`✅ ${lista.length} cobros exportados`, 'exito');
+  } catch (err) { UI.toast('Error: '+err.message, 'error'); }
+}
+
+async function exportarNinosCSV() {
+  UI.toast('Preparando listado de niños...', 'info');
+  try {
+    const data  = await API.get('/ninos/ninos/?activo=true&page_size=500');
+    const lista = data.results || data;
+    const filas = [
+      ['Nombres','Apellidos','Fecha nacimiento','Edad (meses)','Género','Alergias','Plan Misael'].join(','),
+      ...lista.map(n => [
+        `"${n.nombres}"`, `"${n.apellidos}"`, n.fecha_nacimiento,
+        n.edad_en_meses, n.genero, `"${n.alergias||''}"`,
+        n.tiene_plan_misael ? 'Sí' : 'No'
+      ].join(','))
+    ];
+    descargarCSV(filas, `ninos_${getMes()}.csv`);
+    UI.toast(`✅ ${lista.length} niños exportados`, 'exito');
+  } catch (err) { UI.toast('Error: '+err.message, 'error'); }
+}
+
+async function exportarStockCSV() {
+  UI.toast('Preparando reporte de inventario...', 'info');
+  try {
+    const data  = await API.get('/inventario/items/?activo=true&page_size=500');
+    const lista = data.results || data;
+    const filas = [
+      ['Sucursal','Nombre','Categoría','Unidad','Stock actual','Stock mínimo','Alerta stock'].join(','),
+      ...lista.map(i => [
+        `"${i.sucursal_nombre}"`, `"${i.nombre}"`, i.categoria_display,
+        i.unidad, i.stock_actual, i.stock_minimo,
+        i.alerta_stock_bajo ? 'SÍ' : 'No'
+      ].join(','))
+    ];
+    descargarCSV(filas, `inventario_${getMes()}.csv`);
+    UI.toast(`✅ ${lista.length} ítems exportados`, 'exito');
+  } catch (err) { UI.toast('Error: '+err.message, 'error'); }
+}
+
+function descargarCSV(filas, nombre) {
+  const BOM  = '\uFEFF'; // Para Excel con caracteres especiales
+  const blob = new Blob([BOM + filas.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), {href:url, download:nombre}).click();
+  URL.revokeObjectURL(url);
+}
+
+// Actualizar cuando cambia el filtro
+document.getElementById('filtro-mes-reporte').addEventListener('change', generarTodos);
+document.getElementById('filtro-suc-reporte').addEventListener('change', generarTodos);
+
+cargarSucursales();
+generarTodos();
+</script>
+</body>
+</html>

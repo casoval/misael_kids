@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Niños — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    .nino-avatar-m { background:linear-gradient(135deg,var(--turquesa),var(--violeta)); }
+    .nino-avatar-f { background:linear-gradient(135deg,var(--coral),var(--naranja)); }
+    .perfil-lateral {
+      position:fixed;right:0;top:0;bottom:0;width:400px;
+      background:var(--blanco);box-shadow:-4px 0 30px rgba(0,0,0,.12);
+      z-index:150;transform:translateX(100%);transition:transform var(--trans-base);
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .perfil-lateral.abierto { transform:translateX(0); }
+    .perfil-header {
+      background:linear-gradient(135deg,var(--turquesa-d),var(--verde-d));
+      padding:var(--gap-xl) var(--gap-lg) var(--gap-lg);color:white;position:relative;
+    }
+    .perfil-avatar-grande {
+      width:72px;height:72px;border-radius:50%;
+      background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;
+      font-size:2rem;font-weight:900;border:3px solid rgba(255,255,255,.4);margin-bottom:var(--gap-sm);
+    }
+    .perfil-nombre { font-family:var(--font-display);font-size:var(--text-2xl); }
+    .perfil-cerrar {
+      position:absolute;top:var(--gap-md);right:var(--gap-md);
+      background:rgba(255,255,255,.2);border:none;color:white;
+      width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .perfil-body { flex:1;overflow-y:auto;padding:var(--gap-lg); }
+    .perfil-seccion { margin-bottom:var(--gap-lg); }
+    .perfil-seccion h4 {
+      font-family:var(--font-display);font-size:var(--text-base);
+      color:var(--texto);margin-bottom:var(--gap-sm);display:flex;align-items:center;gap:var(--gap-sm);
+    }
+    .dato-fila {
+      display:flex;justify-content:space-between;padding:.45rem 0;
+      border-bottom:1px dashed var(--gris-100);font-size:var(--text-sm);
+    }
+    .dato-fila .clave { color:var(--texto-suave);font-weight:600; }
+    .dato-fila .valor { font-weight:700;text-align:right; }
+    .tutor-item {
+      display:flex;align-items:center;gap:var(--gap-sm);
+      padding:.6rem 0;border-bottom:1px dashed var(--gris-100);
+    }
+    .tutor-ava {
+      width:34px;height:34px;border-radius:50%;
+      background:var(--violeta-l);display:flex;align-items:center;justify-content:center;
+      font-weight:800;font-size:var(--text-xs);color:var(--violeta-d);
+    }
+    .autorizado-item {
+      display:flex;align-items:center;gap:var(--gap-sm);
+      padding:.5rem 0;border-bottom:1px dashed var(--gris-100);font-size:var(--text-sm);
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">👶 Niños</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-primary" onclick="abrirNuevo()">➕ Registrar niño/a</button>
+      </div>
+    </header>
+    <div class="pagina">
+
+      <!-- Filtros -->
+      <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;margin-bottom:var(--gap-lg);
+        background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+        box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
+        <div class="form-grupo" style="margin:0;flex:1;min-width:200px">
+          <label class="form-label">Buscar</label>
+          <input type="text" id="f-buscar" class="form-input" placeholder="Nombre o apellido...">
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:130px">
+          <label class="form-label">Género</label>
+          <select id="f-genero" class="form-select">
+            <option value="">Todos</option>
+            <option value="M">Masculino</option>
+            <option value="F">Femenino</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:150px">
+          <label class="form-label">Plan Misael</label>
+          <select id="f-plan" class="form-select">
+            <option value="">Todos</option>
+            <option value="true">Con plan</option>
+            <option value="false">Sin plan</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:130px">
+          <label class="form-label">Estado</label>
+          <select id="f-activo" class="form-select">
+            <option value="true">Activos</option>
+            <option value="false">Inactivos</option>
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:6px">
+          <button class="btn btn-primary" onclick="cargar()">Buscar</button>
+          <button class="btn btn-outline" onclick="limpiarFiltros()">✕</button>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-titulo">Lista de niños</h3>
+          <span id="total-ninos" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th>Niño/a</th><th>Edad</th><th>Género</th>
+              <th>Alergias</th><th>Plan Misael</th><th>Estado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-ninos"></tbody>
+          </table>
+        </div>
+        <div class="paginacion" id="paginacion"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Panel lateral de perfil -->
+<div class="perfil-lateral" id="perfil-lateral">
+  <div class="perfil-header">
+    <button class="perfil-cerrar" onclick="cerrarPerfil()">✕</button>
+    <div class="perfil-avatar-grande" id="perf-avatar">?</div>
+    <div class="perfil-nombre" id="perf-nombre">—</div>
+    <div id="perf-meta" style="opacity:.85;font-size:var(--text-sm);font-weight:600"></div>
+    <div style="display:flex;gap:var(--gap-sm);margin-top:var(--gap-md)">
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1.5px solid rgba(255,255,255,.4)"
+        onclick="editarDesadePerfil()">✏️ Editar</button>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1.5px solid rgba(255,255,255,.4)"
+        onclick="location.href='/panel/inscripciones/?nino='+ninoPerfilId">📝 Inscribir</button>
+    </div>
+  </div>
+  <div class="perfil-body" id="perf-body">
+    <div class="loader"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- Modal: Crear/Editar niño -->
+<div class="modal-overlay" id="modal-nino">
+  <div class="modal" style="max-width:660px">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-nino">Registrar niño/a</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="n-id">
+
+    <!-- Tabs dentro del modal -->
+    <div class="page-tabs" style="margin-bottom:var(--gap-lg)">
+      <button class="page-tab activo" onclick="cambiarTabModal('datos')" id="mtab-datos">📋 Datos personales</button>
+      <button class="page-tab" onclick="cambiarTabModal('salud')" id="mtab-salud">🏥 Salud</button>
+      <button class="page-tab" onclick="cambiarTabModal('autorizados')" id="mtab-autorizados">🔓 Autorizados</button>
+    </div>
+
+    <!-- Tab: Datos personales -->
+    <div id="mtab-datos-panel" class="tab-panel activo">
+      <div class="grid-2">
+        <div class="form-grupo">
+          <label class="form-label">Nombres *</label>
+          <input type="text" id="n-nombres" class="form-input" placeholder="Nombres del niño/a">
+          <span class="form-error" data-error="n-nombres"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Apellidos *</label>
+          <input type="text" id="n-apellidos" class="form-input" placeholder="Apellidos">
+          <span class="form-error" data-error="n-apellidos"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Fecha de nacimiento *</label>
+          <input type="date" id="n-fecha-nac" class="form-input">
+          <span class="form-error" data-error="n-fecha-nac"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Género *</label>
+          <select id="n-genero" class="form-select">
+            <option value="">Seleccionar...</option>
+            <option value="M">Masculino</option>
+            <option value="F">Femenino</option>
+            <option value="O">Otro</option>
+          </select>
+          <span class="form-error" data-error="n-genero"></span>
+        </div>
+        <div class="form-grupo" style="grid-column:1/-1">
+          <label class="form-label">Observaciones generales</label>
+          <textarea id="n-observaciones" class="form-textarea" style="min-height:60px"
+            placeholder="Cualquier nota adicional..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Salud -->
+    <div id="mtab-salud-panel" class="tab-panel">
+      <div class="form-grupo">
+        <label class="form-label">Alergias alimentarias o medicamentosas</label>
+        <textarea id="n-alergias" class="form-textarea" style="min-height:80px"
+          placeholder="Ej: Alergia a la penicilina, intolerancia a la lactosa, maní..."></textarea>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Condiciones médicas relevantes</label>
+        <textarea id="n-condiciones" class="form-textarea" style="min-height:80px"
+          placeholder="Ej: Asma, epilepsia, diabetes tipo 1, síndrome de Down..."></textarea>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Medicación habitual</label>
+        <textarea id="n-medicacion" class="form-textarea" style="min-height:60px"
+          placeholder="Medicamentos que toma regularmente con dosis y horario..."></textarea>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700">
+        <input type="checkbox" id="n-plan-misael" style="width:16px;height:16px">
+        🧠 Tiene plan de trabajo del Centro de Neurodesarrollo Misael
+      </label>
+    </div>
+
+    <!-- Tab: Autorizados -->
+    <div id="mtab-autorizados-panel" class="tab-panel">
+      <div id="lista-autorizados-modal">
+        <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)">
+          Personas autorizadas a retirar al niño/a además de los tutores principales.
+        </p>
+        <div id="autorizados-existentes"></div>
+      </div>
+      <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
+      <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
+        text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--gap-sm)">
+        Agregar persona autorizada
+      </p>
+      <div class="grid-2">
+        <div class="form-grupo">
+          <label class="form-label">Nombres *</label>
+          <input type="text" id="aut-nombres" class="form-input" placeholder="Nombres">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Apellidos *</label>
+          <input type="text" id="aut-apellidos" class="form-input" placeholder="Apellidos">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">CI *</label>
+          <input type="text" id="aut-ci" class="form-input" placeholder="Número de CI">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Teléfono *</label>
+          <input type="text" id="aut-telefono" class="form-input" placeholder="Teléfono">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Parentesco</label>
+          <input type="text" id="aut-parentesco" class="form-input" placeholder="Ej: Abuela, tío...">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Vigencia hasta (vacío = indefinida)</label>
+          <input type="date" id="aut-vigencia" class="form-input">
+        </div>
+      </div>
+      <button class="btn btn-outline" onclick="agregarAutorizado()">➕ Agregar autorizado</button>
+    </div>
+
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-nino')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarNino()">💾 Guardar niño/a</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('ninos');
+let editandoId   = null;
+let ninoPerfilId = null;
+let paginaActual = 1;
+const POR_PAGINA = 20;
+let autorizadosPendientes = [];
+
+function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);}}
+
+async function cargar() {
+  const tbody  = document.getElementById('tbody-ninos');
+  const buscar = document.getElementById('f-buscar').value.trim();
+  const genero = document.getElementById('f-genero').value;
+  const plan   = document.getElementById('f-plan').value;
+  const activo = document.getElementById('f-activo').value;
+  let url = '/ninos/ninos/?page='+paginaActual+'&page_size='+POR_PAGINA;
+  if (buscar) url += '&search='+encodeURIComponent(buscar);
+  if (genero) url += '&genero='+genero;
+  if (plan)   url += '&tiene_plan_misael='+plan;
+  if (activo) url += '&activo='+activo;
+  tbody.innerHTML = '<tr><td colspan="7"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  try {
+    const data  = await API.get(url);
+    const lista = data.results||data;
+    const total = data.count||lista.length;
+    document.getElementById('total-ninos').textContent = total+' niño(s)';
+    if (!lista.length) {
+      tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin resultados</td></tr>';
+      document.getElementById('paginacion').innerHTML=''; return;
+    }
+    tbody.innerHTML = lista.map(n => `
+      <tr style="cursor:pointer" onclick="verPerfil('${n.id}')">
+        <td>
+          <div style="display:flex;align-items:center;gap:var(--gap-sm)">
+            <div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;
+              justify-content:center;color:white;font-weight:800;font-size:var(--text-sm);flex-shrink:0"
+              class="${n.genero==='F'?'nino-avatar-f':'nino-avatar-m'}">
+              ${UI.iniciales(n.nombre_completo)}
+            </div>
+            <div>
+              <div style="font-weight:700">${n.nombre_completo}</div>
+              <div style="font-size:var(--text-xs);color:var(--texto-suave)">${UI.fecha(n.fecha_nacimiento)}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="chip chip-turquesa">🎂 ${n.edad_en_meses}m</span></td>
+        <td>${n.genero==='M'?'👦 Masc.':n.genero==='F'?'👧 Fem.':'⚧️ Otro'}</td>
+        <td>${n.alergias
+          ?'<span class="chip chip-coral" title="'+n.alergias+'">⚠️ Sí</span>'
+          :'<span class="chip chip-gris">No</span>'}</td>
+        <td>${n.tiene_plan_misael
+          ?'<span class="chip chip-violeta">🧠 Sí</span>'
+          :'<span class="chip chip-gris">No</span>'}</td>
+        <td>${n.activo
+          ?'<span class="chip chip-verde">✅ Activo</span>'
+          :'<span class="chip chip-coral">❌ Inactivo</span>'}</td>
+        <td>
+          <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
+            <button class="btn btn-outline btn-sm" onclick="verPerfil('${n.id}')">👁 Ver</button>
+            <button class="btn btn-outline btn-sm" onclick="editar('${n.id}')">✏️</button>
+            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminar('${n.id}','${n.nombre_completo}')">🗑️</button>
+          </div>
+        </td>
+      </tr>`).join('');
+    // Paginación
+    const totalPags = Math.ceil(total/POR_PAGINA);
+    const pag = document.getElementById('paginacion');
+    if (totalPags<=1) { pag.innerHTML=''; return; }
+    pag.innerHTML=`
+      <button class="pag-btn" ${paginaActual===1?'disabled':''} onclick="cambiarPag(${paginaActual-1})">←</button>
+      <span style="font-weight:700;font-size:var(--text-sm);color:var(--texto-suave)">
+        Pág. ${paginaActual} de ${totalPags}
+      </span>
+      <button class="pag-btn" ${paginaActual===totalPags?'disabled':''} onclick="cambiarPag(${paginaActual+1})">→</button>`;
+  } catch (err) {
+    tbody.innerHTML='<tr><td colspan="7"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+  }
+}
+
+function cambiarPag(p) { paginaActual=p; cargar(); window.scrollTo(0,0); }
+function limpiarFiltros() {
+  ['f-buscar','f-genero','f-plan'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-activo').value='true';
+  paginaActual=1; cargar();
+}
+
+// Búsqueda con debounce
+document.getElementById('f-buscar').addEventListener('input', debounce(()=>{paginaActual=1;cargar();},400));
+
+// ── Perfil lateral ──
+async function verPerfil(id) {
+  ninoPerfilId = id;
+  const panel = document.getElementById('perfil-lateral');
+  panel.classList.add('abierto');
+  document.getElementById('perf-avatar').textContent = '…';
+  document.getElementById('perf-nombre').textContent = 'Cargando...';
+  document.getElementById('perf-meta').textContent   = '';
+  document.getElementById('perf-body').innerHTML     = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    const n = await API.get('/ninos/ninos/'+id+'/');
+    document.getElementById('perf-avatar').textContent = n.genero==='F'?'👧':'👦';
+    document.getElementById('perf-nombre').textContent = n.nombre_completo;
+    document.getElementById('perf-meta').textContent   = '🎂 '+n.edad_en_meses+' meses · '+UI.fecha(n.fecha_nacimiento);
+    const body = document.getElementById('perf-body');
+    body.innerHTML = `
+      <div class="perfil-seccion">
+        <h4>📋 Datos personales</h4>
+        <div class="dato-fila"><span class="clave">Nacimiento</span><span class="valor">${UI.fecha(n.fecha_nacimiento)}</span></div>
+        <div class="dato-fila"><span class="clave">Edad</span><span class="valor">${n.edad_en_meses} meses</span></div>
+        <div class="dato-fila"><span class="clave">Género</span><span class="valor">${n.genero==='M'?'👦 Masculino':n.genero==='F'?'👧 Femenino':'⚧️ Otro'}</span></div>
+        <div class="dato-fila"><span class="clave">Plan Misael</span><span class="valor">${n.tiene_plan_misael?'🧠 Sí':'No'}</span></div>
+        <div class="dato-fila"><span class="clave">Estado</span><span class="valor">${n.activo?'✅ Activo':'❌ Inactivo'}</span></div>
+      </div>
+      ${n.alergias?`<div class="perfil-seccion">
+        <h4>⚠️ Alergias</h4>
+        <p style="font-size:var(--text-sm);color:var(--coral-d);font-weight:600;
+          background:var(--coral-l);padding:.6rem;border-radius:var(--radio-md)">${n.alergias}</p>
+      </div>`:''}
+      ${n.condiciones_medicas?`<div class="perfil-seccion">
+        <h4>🏥 Condiciones médicas</h4>
+        <p style="font-size:var(--text-sm);background:var(--amarillo-l);
+          padding:.6rem;border-radius:var(--radio-md);font-weight:600">${n.condiciones_medicas}</p>
+      </div>`:''}
+      ${n.medicacion_habitual?`<div class="perfil-seccion">
+        <h4>💊 Medicación habitual</h4>
+        <p style="font-size:var(--text-sm);background:var(--gris-50);
+          padding:.6rem;border-radius:var(--radio-md);font-weight:600">${n.medicacion_habitual}</p>
+      </div>`:''}
+      <div class="perfil-seccion">
+        <h4>👨‍👩‍👧 Tutores</h4>
+        ${n.tutores?.length?n.tutores.map(t=>`
+          <div class="tutor-item">
+            <div class="tutor-ava">${UI.iniciales(t.tutor_nombre)}</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:var(--text-sm)">${t.tutor_nombre}</div>
+              <div style="font-size:var(--text-xs);color:var(--texto-suave)">
+                ${t.es_principal?'⭐ Principal · ':''}${t.puede_retirar?'✅ Puede retirar':'❌ No puede retirar'}
+              </div>
+            </div>
+          </div>`).join(''):'<p style="font-size:var(--text-sm);color:var(--texto-suave)">Sin tutores registrados</p>'}
+      </div>
+      <div class="perfil-seccion">
+        <h4>🔓 Autorizados a retirar</h4>
+        ${n.autorizados?.filter(a=>a.activa).length
+          ?n.autorizados.filter(a=>a.activa).map(a=>`
+            <div class="autorizado-item">
+              <div class="tutor-ava" style="background:var(--verde-l);color:var(--verde-d)">${UI.iniciales(a.nombres+' '+a.apellidos)}</div>
+              <div>
+                <div style="font-weight:700">${a.nombres} ${a.apellidos}</div>
+                <div style="font-size:var(--text-xs);color:var(--texto-suave)">${a.parentesco} · CI: ${a.ci}</div>
+                ${a.vigencia_hasta?'<div style="font-size:var(--text-xs);color:var(--amarillo-d);font-weight:700">Hasta: '+UI.fecha(a.vigencia_hasta)+'</div>':''}
+              </div>
+            </div>`).join('')
+          :'<p style="font-size:var(--text-sm);color:var(--texto-suave)">Sin personas adicionales autorizadas</p>'}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--gap-sm)">
+        <a href="/panel/inscripciones/" class="btn btn-primary">📝 Ver inscripciones</a>
+        <a href="/panel/asistencia/" class="btn btn-outline">📋 Ver asistencia</a>
+        <a href="/panel/evaluacion/" class="btn btn-outline">🌱 Ver desarrollo</a>
+      </div>`;
+  } catch (err) {
+    document.getElementById('perf-body').innerHTML='<div class="alerta alerta-peligro">Error: '+err.message+'</div>';
+  }
+}
+
+function cerrarPerfil() { document.getElementById('perfil-lateral').classList.remove('abierto'); }
+function editarDesadePerfil() { if (ninoPerfilId) { cerrarPerfil(); editar(ninoPerfilId); } }
+
+// ── CRUD Modal ──
+function cambiarTabModal(tab) {
+  ['datos','salud','autorizados'].forEach(t => {
+    document.getElementById('mtab-'+t).classList.toggle('activo',t===tab);
+    document.getElementById('mtab-'+t+'-panel').classList.toggle('activo',t===tab);
+  });
+  if (tab==='autorizados' && editandoId) cargarAutorizadosExistentes();
+}
+
+function abrirNuevo() {
+  editandoId = null;
+  autorizadosPendientes = [];
+  document.getElementById('titulo-modal-nino').textContent = 'Registrar niño/a';
+  ['n-id','n-nombres','n-apellidos','n-observaciones','n-alergias','n-condiciones','n-medicacion'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('n-fecha-nac').value   = '';
+  document.getElementById('n-genero').value      = '';
+  document.getElementById('n-plan-misael').checked = false;
+  document.getElementById('autorizados-existentes').innerHTML = '';
+  ['aut-nombres','aut-apellidos','aut-ci','aut-telefono','aut-parentesco','aut-vigencia'].forEach(id=>document.getElementById(id).value='');
+  cambiarTabModal('datos');
+  document.querySelectorAll('#modal-nino .form-error').forEach(el=>el.textContent='');
+  document.querySelectorAll('#modal-nino .input-error').forEach(el=>el.classList.remove('input-error'));
+  UI.abrirModal('modal-nino');
+}
+
+async function editar(id) {
+  editandoId = id;
+  autorizadosPendientes = [];
+  document.getElementById('titulo-modal-nino').textContent = 'Editar niño/a';
+  try {
+    const n = await API.get('/ninos/ninos/'+id+'/');
+    document.getElementById('n-id').value            = id;
+    document.getElementById('n-nombres').value       = n.nombres;
+    document.getElementById('n-apellidos').value     = n.apellidos;
+    document.getElementById('n-fecha-nac').value     = n.fecha_nacimiento;
+    document.getElementById('n-genero').value        = n.genero;
+    document.getElementById('n-observaciones').value = n.observaciones||'';
+    document.getElementById('n-alergias').value      = n.alergias||'';
+    document.getElementById('n-condiciones').value   = n.condiciones_medicas||'';
+    document.getElementById('n-medicacion').value    = n.medicacion_habitual||'';
+    document.getElementById('n-plan-misael').checked = n.tiene_plan_misael;
+    cambiarTabModal('datos');
+    document.querySelectorAll('#modal-nino .form-error').forEach(el=>el.textContent='');
+    UI.abrirModal('modal-nino');
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function cargarAutorizadosExistentes() {
+  if (!editandoId) return;
+  const cont = document.getElementById('autorizados-existentes');
+  try {
+    const data  = await API.get('/ninos/autorizados/?nino='+editandoId+'&activa=true');
+    const lista = data.results||data;
+    if (!lista.length) { cont.innerHTML='<p style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)">Sin autorizados registrados</p>'; return; }
+    cont.innerHTML = lista.map(a=>`
+      <div class="autorizado-item">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:var(--text-sm)">${a.nombres} ${a.apellidos}</div>
+          <div style="font-size:var(--text-xs);color:var(--texto-suave)">${a.parentesco} · CI: ${a.ci} · Tel: ${a.telefono}</div>
+        </div>
+        <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+          onclick="eliminarAutorizado('${a.id}')">🗑️</button>
+      </div>`).join('');
+  } catch {}
+}
+
+async function eliminarAutorizado(id) {
+  if (!confirm('Eliminar esta persona autorizada?')) return;
+  try {
+    await API.patch('/ninos/autorizados/'+id+'/',{activa:false});
+    UI.toast('Autorizado eliminado','exito');
+    cargarAutorizadosExistentes();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+function agregarAutorizado() {
+  const nombres   = document.getElementById('aut-nombres').value.trim();
+  const apellidos = document.getElementById('aut-apellidos').value.trim();
+  const ci        = document.getElementById('aut-ci').value.trim();
+  const telefono  = document.getElementById('aut-telefono').value.trim();
+  if (!nombres||!apellidos||!ci||!telefono) { UI.toast('Completa nombres, apellidos, CI y teléfono','warn'); return; }
+  autorizadosPendientes.push({
+    nombres, apellidos, ci, telefono,
+    parentesco:    document.getElementById('aut-parentesco').value,
+    vigencia_desde:new Date().toISOString().split('T')[0],
+    vigencia_hasta:document.getElementById('aut-vigencia').value||null,
+    activa:true,
+  });
+  ['aut-nombres','aut-apellidos','aut-ci','aut-telefono','aut-parentesco','aut-vigencia'].forEach(id=>document.getElementById(id).value='');
+  UI.toast('Autorizado agregado (se guardará al guardar el niño)','info');
+}
+
+async function guardarNino() {
+  const errores = Validar.formulario({
+    'n-nombres':  [()=>Validar.requerido(document.getElementById('n-nombres').value,'Nombres')],
+    'n-apellidos':[()=>Validar.requerido(document.getElementById('n-apellidos').value,'Apellidos')],
+    'n-fecha-nac':[()=>Validar.fecha(document.getElementById('n-fecha-nac').value,'Fecha de nacimiento')],
+    'n-genero':   [()=>Validar.requerido(document.getElementById('n-genero').value,'Género')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-nino ')) return;
+  const datos = {
+    nombres:             document.getElementById('n-nombres').value.trim(),
+    apellidos:           document.getElementById('n-apellidos').value.trim(),
+    fecha_nacimiento:    document.getElementById('n-fecha-nac').value,
+    genero:              document.getElementById('n-genero').value,
+    observaciones:       document.getElementById('n-observaciones').value,
+    alergias:            document.getElementById('n-alergias').value,
+    condiciones_medicas: document.getElementById('n-condiciones').value,
+    medicacion_habitual: document.getElementById('n-medicacion').value,
+    tiene_plan_misael:   document.getElementById('n-plan-misael').checked,
+  };
+  try {
+    let ninoId = editandoId;
+    if (editandoId) {
+      await API.patch('/ninos/ninos/'+editandoId+'/',datos);
+      UI.toast('Niño/a actualizado correctamente','exito');
+    } else {
+      const nuevo = await API.post('/ninos/ninos/',datos);
+      ninoId = nuevo.id;
+      UI.toast('Niño/a registrado correctamente','exito');
+    }
+    // Guardar autorizados pendientes
+    for (const aut of autorizadosPendientes) {
+      await API.post('/ninos/autorizados/',{...aut, nino:ninoId});
+    }
+    UI.cerrarModal('modal-nino');
+    cargar();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+async function eliminar(id, nombre) {
+  if (!confirm('Eliminar a "'+nombre+'"?\nTodos sus datos (inscripciones, asistencia) serán desactivados.')) return;
+  try {
+    await API.patch('/ninos/ninos/'+id+'/',{activo:false});
+    UI.toast('Niño/a desactivado correctamente','exito');
+    cargar();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+// Agregar .pag-btn styles si no están
+const style = document.createElement('style');
+style.textContent='.paginacion{display:flex;align-items:center;justify-content:center;gap:var(--gap-sm);margin-top:var(--gap-lg)}.pag-btn{width:36px;height:36px;border-radius:var(--radio-md);border:2px solid var(--gris-200);background:var(--blanco);cursor:pointer;font-weight:700;font-size:var(--text-sm);display:flex;align-items:center;justify-content:center;transition:all var(--trans-fast)}.pag-btn:hover:not(:disabled){border-color:var(--turquesa);color:var(--turquesa-d)}.pag-btn:disabled{opacity:.4;cursor:not-allowed}';
+document.head.appendChild(style);
+
+cargar();
+</script>
+</body>
+</html>

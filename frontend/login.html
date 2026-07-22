@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Misael Kids — Ingresar</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #E0FDF4 0%, #F0FFF4 35%, #FFF9DB 65%, #FFE4E4 100%);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Burbujas decorativas ── */
+    .burbuja {
+      position: fixed;
+      border-radius: 50%;
+      opacity: .18;
+      animation: flotar linear infinite alternate;
+      pointer-events: none;
+    }
+    .b1 { width:280px; height:280px; background:var(--turquesa);  top:-80px;  left:-60px;  animation-duration:7s; }
+    .b2 { width:200px; height:200px; background:var(--coral);     bottom:-60px; right:-40px; animation-duration:9s; animation-delay:-3s; }
+    .b3 { width:140px; height:140px; background:var(--amarillo);  top:40%;    left:5%;     animation-duration:6s; animation-delay:-1s; }
+    .b4 { width:100px; height:100px; background:var(--verde);     top:20%;    right:8%;    animation-duration:8s; animation-delay:-5s; }
+    .b5 { width: 80px; height: 80px; background:var(--violeta);   bottom:25%; left:15%;    animation-duration:5s; animation-delay:-2s; }
+
+    @keyframes flotar {
+      from { transform: translate(0,0) rotate(0deg); }
+      to   { transform: translate(20px,15px) rotate(8deg); }
+    }
+
+    /* ── Elementos flotantes decorativos ── */
+    .estrellita {
+      position: fixed;
+      font-size: 1.8rem;
+      opacity: .4;
+      animation: girarFlot 10s linear infinite;
+      pointer-events: none;
+    }
+    .e1 { top:15%; left:10%; animation-delay:0s; }
+    .e2 { top:70%; left:6%;  animation-delay:-3s; font-size:1.2rem; }
+    .e3 { top:10%; right:12%; animation-delay:-5s; }
+    .e4 { top:55%; right:5%;  animation-delay:-2s; font-size:1.4rem; }
+    .e5 { bottom:15%; left:40%; animation-delay:-7s; font-size:1rem; }
+    @keyframes girarFlot {
+      0%   { transform: rotate(0deg) translateY(0); }
+      50%  { transform: rotate(180deg) translateY(-10px); }
+      100% { transform: rotate(360deg) translateY(0); }
+    }
+
+    /* ── Card de login ── */
+    .login-card {
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(20px);
+      border-radius: 2rem;
+      padding: 2.8rem 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow:
+        0 20px 60px rgba(0,0,0,.10),
+        0 0 0 1.5px rgba(255,255,255,.6);
+      position: relative;
+      z-index: 10;
+      animation: aparecer .6s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    @keyframes aparecer {
+      from { opacity:0; transform:translateY(40px) scale(.94); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+
+    /* ── Logo / header ── */
+    .login-logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .logo-icono {
+      width: 80px; height: 80px;
+      background: linear-gradient(135deg, var(--turquesa), var(--verde));
+      border-radius: 1.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      margin-bottom: 1rem;
+      box-shadow:
+        0 8px 24px rgba(45,212,191,.4),
+        0 0 0 4px rgba(45,212,191,.15);
+      animation: pulsar 3s ease-in-out infinite;
+    }
+    @keyframes pulsar {
+      0%,100% { box-shadow: 0 8px 24px rgba(45,212,191,.4), 0 0 0 4px rgba(45,212,191,.15); }
+      50%      { box-shadow: 0 8px 32px rgba(45,212,191,.6), 0 0 0 8px rgba(45,212,191,.10); }
+    }
+    .login-logo h1 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 2.2rem;
+      background: linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    .login-logo p {
+      font-size: .85rem;
+      color: var(--texto-suave);
+      font-weight: 600;
+      margin-top: .3rem;
+    }
+
+    /* ── Divisor de rol ── */
+    .rol-tabs {
+      display: flex;
+      gap: .5rem;
+      background: var(--gris-100);
+      padding: .35rem;
+      border-radius: 1rem;
+      margin-bottom: 1.6rem;
+    }
+    .rol-tab {
+      flex: 1;
+      padding: .55rem;
+      border: none;
+      border-radius: .7rem;
+      background: transparent;
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: .8rem;
+      color: var(--gris-500);
+      cursor: pointer;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .4rem;
+    }
+    .rol-tab.activo {
+      background: var(--blanco);
+      color: var(--turquesa-d);
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    /* ── Formulario ── */
+    .form-grupo { margin-bottom: 1.1rem; }
+    .form-label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--gris-600);
+      margin-bottom: .35rem;
+    }
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-icon {
+      position: absolute;
+      left: .9rem;
+      font-size: 1.1rem;
+      pointer-events: none;
+    }
+    .form-input {
+      width: 100%;
+      padding: .72rem 1rem .72rem 2.6rem;
+      border: 2px solid var(--gris-200);
+      border-radius: .85rem;
+      font-family: var(--font-body);
+      font-size: .9rem;
+      color: var(--texto);
+      background: var(--blanco);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--turquesa);
+      box-shadow: 0 0 0 3px rgba(45,212,191,.2);
+    }
+    .toggle-pass {
+      position: absolute;
+      right: .9rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      color: var(--gris-400);
+      padding: 0;
+    }
+
+    /* ── Botón de login ── */
+    .btn-login {
+      width: 100%;
+      padding: .85rem;
+      background: linear-gradient(135deg, var(--turquesa), var(--verde));
+      color: white;
+      border: none;
+      border-radius: var(--radio-full);
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all .25s;
+      box-shadow: 0 6px 20px rgba(45,212,191,.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      margin-top: .5rem;
+    }
+    .btn-login:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(45,212,191,.5);
+    }
+    .btn-login:active { transform: translateY(0); }
+    .btn-login:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+
+    /* ── Error ── */
+    .error-msg {
+      background: var(--coral-l);
+      color: var(--coral-d);
+      border: 1.5px solid var(--coral);
+      border-radius: .75rem;
+      padding: .7rem 1rem;
+      font-size: .84rem;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: .5rem;
+      margin-bottom: 1rem;
+    }
+    .error-msg.visible { display: flex; animation: sacudir .4s; }
+    @keyframes sacudir {
+      0%,100% { transform:translateX(0); }
+      20%,60%  { transform:translateX(-6px); }
+      40%,80%  { transform:translateX(6px); }
+    }
+
+    /* ── Footer ── */
+    .login-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: .78rem;
+      color: var(--gris-400);
+      font-weight: 600;
+    }
+    .login-footer span { color: var(--turquesa-d); }
+
+    /* ── Spinner dentro del botón ── */
+    .btn-spinner {
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: girar .6s linear infinite;
+    }
+    @keyframes girar { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <!-- Burbujas decorativas -->
+  <div class="burbuja b1"></div>
+  <div class="burbuja b2"></div>
+  <div class="burbuja b3"></div>
+  <div class="burbuja b4"></div>
+  <div class="burbuja b5"></div>
+
+  <!-- Elementos flotantes -->
+  <div class="estrellita e1">⭐</div>
+  <div class="estrellita e2">🌸</div>
+  <div class="estrellita e3">🦋</div>
+  <div class="estrellita e4">🌟</div>
+  <div class="estrellita e5">✨</div>
+
+  <!-- Card de login -->
+  <div class="login-card">
+    <!-- Logo -->
+    <div class="login-logo">
+      <div class="logo-icono">🌱</div>
+      <h1>Misael Kids</h1>
+      <p>Jardín Infantil — La Paz, Bolivia</p>
+    </div>
+
+    <!-- Tabs de rol -->
+    <div class="rol-tabs" role="tablist">
+      <button class="rol-tab activo" id="tab-personal" onclick="cambiarRol('personal')" role="tab">
+        👩‍🏫 Personal
+      </button>
+      <button class="rol-tab" id="tab-padre" onclick="cambiarRol('padre')" role="tab">
+        👨‍👩‍👧 Padres
+      </button>
+    </div>
+
+    <!-- Mensaje contextual -->
+    <p id="msg-contexto" style="font-size:.82rem;color:var(--texto-suave);margin-bottom:1rem;font-weight:600;text-align:center;">
+      Acceso para directoras, educadoras y administrativos
+    </p>
+
+    <!-- Error -->
+    <div class="error-msg" id="error-msg">
+      <span>⚠️</span>
+      <span id="error-texto">Credenciales incorrectas. Intenta de nuevo.</span>
+    </div>
+
+    <!-- Formulario -->
+    <form id="form-login" novalidate>
+      <!-- Email o usuario -->
+      <div class="form-grupo">
+        <label class="form-label" for="email">Correo electrónico o usuario</label>
+        <div class="input-wrap">
+          <span class="input-icon">📧</span>
+          <input
+            type="text"
+            id="email"
+            class="form-input"
+            placeholder="tu@correo.com o tu usuario"
+            autocomplete="username"
+            required
+          >
+        </div>
+      </div>
+
+      <!-- Contraseña -->
+      <div class="form-grupo">
+        <label class="form-label" for="password">Contraseña</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input
+            type="password"
+            id="password"
+            class="form-input"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          >
+          <button type="button" class="toggle-pass" id="toggle-pass" title="Mostrar / ocultar">
+            👁️
+          </button>
+        </div>
+      </div>
+
+      <!-- Botón -->
+      <button type="submit" class="btn-login" id="btn-login">
+        <span id="btn-texto">✨ Ingresar</span>
+      </button>
+    </form>
+
+    <!-- Footer -->
+    <div class="login-footer">
+      <p>¿Problemas para ingresar? Contacta a<br><span>administracion@misaelkids.com</span></p>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script>
+    // ── Si ya está logueado, redirigir ──
+    if (Auth.estaLogueado()) Auth.redirigirSegunRol();
+
+    let modoActual = 'personal';
+
+    // ── Cambiar tab de rol ──
+    function cambiarRol(modo) {
+      modoActual = modo;
+      document.getElementById('tab-personal').classList.toggle('activo', modo === 'personal');
+      document.getElementById('tab-padre').classList.toggle('activo', modo === 'padre');
+      document.getElementById('msg-contexto').textContent =
+        modo === 'personal'
+          ? 'Acceso para directoras, educadoras y administrativos'
+          : 'Acceso para padres y tutores del jardín';
+      ocultarError();
+    }
+
+    // ── Mostrar / ocultar contraseña ──
+    document.getElementById('toggle-pass').addEventListener('click', () => {
+      const input = document.getElementById('password');
+      const esPass = input.type === 'password';
+      input.type = esPass ? 'text' : 'password';
+      document.getElementById('toggle-pass').textContent = esPass ? '🙈' : '👁️';
+    });
+
+    // ── Helpers de error ──
+    function mostrarError(msg) {
+      document.getElementById('error-texto').textContent = msg;
+      const el = document.getElementById('error-msg');
+      el.classList.remove('visible');
+      void el.offsetWidth; // reflow para reiniciar animación
+      el.classList.add('visible');
+    }
+    function ocultarError() {
+      document.getElementById('error-msg').classList.remove('visible');
+    }
+
+    // ── Botón con estado de carga ──
+    function setLoading(loading) {
+      const btn  = document.getElementById('btn-login');
+      const txt  = document.getElementById('btn-texto');
+      btn.disabled = loading;
+      txt.innerHTML = loading
+        ? '<div class="btn-spinner"></div> Ingresando...'
+        : '✨ Ingresar';
+    }
+
+    // ── Submit del formulario ──
+    document.getElementById('form-login').addEventListener('submit', async e => {
+      e.preventDefault();
+      ocultarError();
+
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        mostrarError('Por favor completa todos los campos.');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await API.post('/auth/login/', { email, password });
+        Auth.guardar(data);
+
+        const rol = data.usuario?.rol;
+        const esPersonal = ['admin','directora','educadora','ayudante','administrativo','cocina'].includes(rol);
+        const esPadre    = rol === 'tutor';
+
+        // Verificar que el modo seleccionado corresponde al rol real
+        if (modoActual === 'padre' && !esPadre) {
+          mostrarError('Esta cuenta no es de un padre/tutor. Usa la pestaña "Personal".');
+          Auth.cerrar();
+          setLoading(false);
+          return;
+        }
+        if (modoActual === 'personal' && esPadre) {
+          mostrarError('Esta cuenta es de un padre/tutor. Usa la pestaña "Padres".');
+          Auth.cerrar();
+          setLoading(false);
+          return;
+        }
+
+        // Redirigir según rol
+        if (esPadre) {
+          window.location.href = '/portal/';
+        } else if (esPersonal) {
+          window.location.href = '/panel/dashboard/';
+        } else {
+          mostrarError('Rol no reconocido. Contacta al administrador.');
+          Auth.cerrar();
+          setLoading(false);
+        }
+
+      } catch (err) {
+        mostrarError(
+          err.message.includes('401') || err.message.includes('No active') || err.message.includes('Credenciales')
+            ? 'Email/usuario o contraseña incorrectos.'
+            : `Error: ${err.message}`
+        );
+        setLoading(false);
+      }
+    });
+
+    // ── Limpiar error al escribir ──
+    ['email','password'].forEach(id => {
+      document.getElementById(id).addEventListener('input', ocultarError);
+    });
+  </script>
+</body>
+</html>
