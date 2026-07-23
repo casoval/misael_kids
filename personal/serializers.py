@@ -6,14 +6,18 @@ from .models import Personal, AsignacionPersonal, AsistenciaPersonal
 
 
 class PersonalSerializer(serializers.ModelSerializer):
-    nombre_completo = serializers.CharField(source='usuario.nombre_completo', read_only=True)
-    email           = serializers.CharField(source='usuario.email', read_only=True)
-    rol_display     = serializers.CharField(source='get_rol_display', read_only=True)
+    nombre_completo  = serializers.CharField(source='usuario.nombre_completo', read_only=True)
+    email            = serializers.CharField(source='usuario.email', read_only=True)
+    usuario_nombres  = serializers.CharField(source='usuario.nombres', read_only=True)
+    usuario_apellidos= serializers.CharField(source='usuario.apellidos', read_only=True)
+    usuario_username = serializers.CharField(source='usuario.username', read_only=True)
+    rol_display      = serializers.CharField(source='get_rol_display', read_only=True)
 
     class Meta:
         model  = Personal
         fields = [
             'id', 'usuario', 'nombre_completo', 'email',
+            'usuario_nombres', 'usuario_apellidos', 'usuario_username',
             'ci', 'telefono', 'rol', 'rol_display',
             'especialidad', 'fecha_ingreso', 'activo',
             'created_at', 'updated_at',

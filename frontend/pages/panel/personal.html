@@ -98,13 +98,10 @@
       <button class="modal-cerrar">✕</button>
     </div>
     <input type="hidden" id="p-id">
-    <div id="aviso-nuevo" style="background:var(--turquesa-l);border-radius:var(--radio-lg);
-      padding:var(--gap-md);margin-bottom:var(--gap-md);font-size:var(--text-sm);
-      color:var(--turquesa-d);font-weight:600">
-      Se creará una cuenta con contraseña inicial: <strong>MisaelKids2025!</strong>
-    </div>
+    <input type="hidden" id="p-usuario-id">
+
     <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
-      text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">Cuenta de acceso</p>
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">Datos del personal</p>
     <div class="grid-2">
       <div class="form-grupo">
         <label class="form-label">Nombres *</label>
@@ -116,39 +113,13 @@
         <input type="text" id="p-apellidos" class="form-input" placeholder="Apellidos">
         <span class="form-error" data-error="p-apellidos"></span>
       </div>
-      <div class="form-grupo" style="grid-column:1/-1">
-        <label class="form-label">Email *</label>
-        <input type="email" id="p-email" class="form-input" placeholder="correo@misaelkids.com">
-        <span class="form-error" data-error="p-email"></span>
-      </div>
-      <div class="form-grupo">
-        <label class="form-label">Rol en el sistema *</label>
-        <select id="p-rol-usuario" class="form-select">
-          <option value="">Seleccionar...</option>
-          <option value="educadora">Educadora</option>
-          <option value="ayudante">Ayudante</option>
-          <option value="directora">Directora</option>
-          <option value="administrativo">Administrativo</option>
-          <option value="cocina">Cocina</option>
-        </select>
-        <span class="form-error" data-error="p-rol-usuario"></span>
-      </div>
-      <div class="form-grupo">
-        <label class="form-label">Teléfono</label>
-        <input type="text" id="p-telefono-usr" class="form-input" placeholder="Teléfono">
-      </div>
-    </div>
-    <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
-    <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
-      text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">Perfil de personal</p>
-    <div class="grid-2">
       <div class="form-grupo">
         <label class="form-label">CI / DNI *</label>
         <input type="text" id="p-ci" class="form-input" placeholder="Número de CI">
         <span class="form-error" data-error="p-ci"></span>
       </div>
       <div class="form-grupo">
-        <label class="form-label">Teléfono laboral</label>
+        <label class="form-label">Teléfono</label>
         <input type="text" id="p-telefono" class="form-input" placeholder="Teléfono">
       </div>
       <div class="form-grupo">
@@ -173,7 +144,38 @@
         <input type="text" id="p-especialidad" class="form-input"
           placeholder="Ej: Licenciada en Educación Parvularia">
       </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Email (opcional)</label>
+        <input type="email" id="p-email" class="form-input" placeholder="correo@ejemplo.com — déjalo vacío si no tiene">
+        <span class="form-error" data-error="p-email"></span>
+      </div>
     </div>
+
+    <div id="bloque-acceso">
+      <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
+      <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
+        text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">Acceso al sistema</p>
+      <div class="grid-2">
+        <div class="form-grupo">
+          <label class="form-label">Nombre de usuario *</label>
+          <input type="text" id="p-username" class="form-input" placeholder="Ej: su CI, sin espacios">
+          <span class="form-error" data-error="p-username"></span>
+          <span style="font-size:var(--text-xs);color:var(--texto-suave)">Se usará para iniciar sesión (también podrá usar el email si lo indicó arriba).</span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Contraseña inicial *</label>
+          <input type="text" id="p-password" class="form-input" value="MisaelKids2025!">
+          <span class="form-error" data-error="p-password"></span>
+          <span style="font-size:var(--text-xs);color:var(--texto-suave)">Podrá cambiarla luego desde su perfil.</span>
+        </div>
+      </div>
+    </div>
+    <div id="nota-acceso-editar" style="display:none;background:var(--gris-50);border-radius:var(--radio-lg);
+      padding:var(--gap-md);margin-bottom:var(--gap-md);font-size:var(--text-sm);color:var(--texto-suave)">
+      Para cambiar el nombre de usuario o restablecer la contraseña de acceso,
+      hazlo desde <a href="/panel/usuarios/" style="color:var(--turquesa-d);font-weight:700">Usuarios</a>.
+    </div>
+
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-md)">
       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-personal')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarPersonal()">Guardar</button>
@@ -324,9 +326,11 @@ function limpiarFiltros() {
 function abrirNuevo() {
   editandoId=null;
   document.getElementById('titulo-modal-personal').textContent='Nuevo personal';
-  document.getElementById('aviso-nuevo').style.display='';
-  ['p-id','p-nombres','p-apellidos','p-email','p-telefono-usr','p-telefono','p-ci','p-especialidad'].forEach(id=>document.getElementById(id).value='');
-  ['p-rol-usuario','p-rol'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('bloque-acceso').style.display='';
+  document.getElementById('nota-acceso-editar').style.display='none';
+  ['p-id','p-usuario-id','p-nombres','p-apellidos','p-email','p-telefono','p-ci','p-especialidad','p-username'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-rol').value='';
+  document.getElementById('p-password').value='MisaelKids2025!';
   document.getElementById('p-fecha-ingreso').value=hoy;
   document.querySelectorAll('#modal-personal .form-error').forEach(el=>el.textContent='');
   document.querySelectorAll('#modal-personal .input-error').forEach(el=>el.classList.remove('input-error'));
@@ -335,57 +339,79 @@ function abrirNuevo() {
 async function editar(id) {
   editandoId=id;
   document.getElementById('titulo-modal-personal').textContent='Editar personal';
-  document.getElementById('aviso-nuevo').style.display='none';
+  document.getElementById('bloque-acceso').style.display='none';
+  document.getElementById('nota-acceso-editar').style.display='';
   try {
     const p = await API.get('/personal/personal/'+id+'/');
     document.getElementById('p-id').value=id;
-    const parts = (p.nombre_completo||'').split(' ');
-    document.getElementById('p-nombres').value=parts[0]||'';
-    document.getElementById('p-apellidos').value=parts.slice(1).join(' ')||'';
+    document.getElementById('p-usuario-id').value=p.usuario;
+    document.getElementById('p-nombres').value=p.usuario_nombres||'';
+    document.getElementById('p-apellidos').value=p.usuario_apellidos||'';
     document.getElementById('p-email').value=p.email||'';
     document.getElementById('p-ci').value=p.ci||'';
     document.getElementById('p-telefono').value=p.telefono||'';
     document.getElementById('p-rol').value=p.rol||'';
-    document.getElementById('p-rol-usuario').value=p.rol||'';
     document.getElementById('p-fecha-ingreso').value=p.fecha_ingreso||hoy;
     document.getElementById('p-especialidad').value=p.especialidad||'';
+    document.querySelectorAll('#modal-personal .form-error').forEach(el=>el.textContent='');
+    document.querySelectorAll('#modal-personal .input-error').forEach(el=>el.classList.remove('input-error'));
     UI.abrirModal('modal-personal');
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
 }
 async function guardarPersonal() {
-  const errores = Validar.formulario({
-    'p-nombres':     [()=>Validar.requerido(document.getElementById('p-nombres').value,'Nombres')],
-    'p-apellidos':   [()=>Validar.requerido(document.getElementById('p-apellidos').value,'Apellidos')],
-    'p-email':       [()=>Validar.email(document.getElementById('p-email').value)],
-    'p-rol-usuario': [()=>Validar.requerido(document.getElementById('p-rol-usuario').value,'Rol del sistema')],
-    'p-ci':          [()=>Validar.requerido(document.getElementById('p-ci').value,'CI')],
-    'p-rol':         [()=>Validar.requerido(document.getElementById('p-rol').value,'Rol en el jardín')],
+  const reglas = {
+    'p-nombres':      [()=>Validar.requerido(document.getElementById('p-nombres').value,'Nombres')],
+    'p-apellidos':    [()=>Validar.requerido(document.getElementById('p-apellidos').value,'Apellidos')],
+    'p-ci':           [()=>Validar.requerido(document.getElementById('p-ci').value,'CI')],
+    'p-rol':          [()=>Validar.requerido(document.getElementById('p-rol').value,'Rol')],
     'p-fecha-ingreso':[()=>Validar.fecha(document.getElementById('p-fecha-ingreso').value,'Fecha de ingreso')],
-  });
+  };
+  const email = document.getElementById('p-email').value.trim();
+  if (email) reglas['p-email'] = [()=>Validar.email(email)];
+  if (!editandoId) {
+    reglas['p-username'] = [
+      ()=>Validar.requerido(document.getElementById('p-username').value,'Nombre de usuario'),
+      ()=>{
+        const v = document.getElementById('p-username').value;
+        if (v && !/^[a-zA-Z0-9_.-]+$/.test(v)) return 'Solo letras, números, puntos, guiones y guion bajo';
+        return null;
+      }
+    ];
+    reglas['p-password'] = [()=>Validar.minLength(document.getElementById('p-password').value,8,'La contraseña')];
+  }
+  const errores = Validar.formulario(reglas);
   if (!Validar.mostrarErrores(errores,'#modal-personal ')) return;
+
+  const nombres   = document.getElementById('p-nombres').value.trim();
+  const apellidos = document.getElementById('p-apellidos').value.trim();
+  const telefono  = document.getElementById('p-telefono').value.trim();
+  const rol       = document.getElementById('p-rol').value;
+
   try {
     if (!editandoId) {
       const usuario = await API.post('/auth/usuarios/', {
-        email:document.getElementById('p-email').value,
-        nombres:document.getElementById('p-nombres').value,
-        apellidos:document.getElementById('p-apellidos').value,
-        telefono:document.getElementById('p-telefono-usr').value,
-        rol:document.getElementById('p-rol-usuario').value,
-        password:'MisaelKids2025!', password2:'MisaelKids2025!',
+        nombres, apellidos, telefono, rol,
+        email: email || null,
+        username: document.getElementById('p-username').value.trim(),
+        password: document.getElementById('p-password').value,
+        password2: document.getElementById('p-password').value,
       });
       await API.post('/personal/personal/', {
         usuario:usuario.id, ci:document.getElementById('p-ci').value,
-        telefono:document.getElementById('p-telefono').value,
-        rol:document.getElementById('p-rol').value,
+        telefono, rol,
         fecha_ingreso:document.getElementById('p-fecha-ingreso').value,
         especialidad:document.getElementById('p-especialidad').value,
       });
       UI.toast('Personal creado correctamente','exito');
     } else {
+      const usuarioId = document.getElementById('p-usuario-id').value;
+      await API.patch('/auth/usuarios/'+usuarioId+'/', {
+        nombres, apellidos, telefono,
+        email: email || null,
+      });
       await API.patch('/personal/personal/'+editandoId+'/', {
         ci:document.getElementById('p-ci').value,
-        telefono:document.getElementById('p-telefono').value,
-        rol:document.getElementById('p-rol').value,
+        telefono, rol,
         fecha_ingreso:document.getElementById('p-fecha-ingreso').value,
         especialidad:document.getElementById('p-especialidad').value,
       });
