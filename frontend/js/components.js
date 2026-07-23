@@ -140,6 +140,18 @@ function renderSidebar(paginaActiva) {
   const usr = Auth.getUsuario();
   if (!usr) return;
 
+  // El rol 'profesional' (Centro Misael) solo trabaja con derivaciones y
+  // planes de trabajo: antes veía el menú completo con enlaces a páginas
+  // a las que no tenía acceso (y lo rebotaban).
+  if (usr.rol === 'profesional') {
+    const itemsProfesional = [
+      { seccion: 'Principal' },
+      { href: '/panel/dashboard/',   icon: '🏠', label: 'Inicio' },
+      { href: '/panel/misael-link/', icon: '🔗', label: 'Centro Misael' },
+    ];
+    return _pintarSidebar(itemsProfesional, paginaActiva, usr);
+  }
+
   const items = [
     { seccion: 'Principal' },
     { href: '/panel/dashboard/',    icon: '🏠', label: 'Inicio' },
@@ -163,7 +175,8 @@ function renderSidebar(paginaActiva) {
   if (['admin', 'directora'].includes(usr.rol)) {
     items.push(
       { seccion: 'Administración' },
-      { href: '/panel/sucursales/', icon: '🏢', label: 'Sucursales' },
+      { href: '/panel/sucursales/', icon: '🏢', label: 'Sucursales y salas' },
+      { href: '/panel/turnos/',     icon: '⏰', label: 'Turnos' },
       { href: '/panel/usuarios/',   icon: '🔐', label: 'Usuarios' },
       { href: '/panel/reportes/',   icon: '📊', label: 'Reportes' },
     );
@@ -173,6 +186,11 @@ function renderSidebar(paginaActiva) {
     items.push({ href: '/admin/', icon: '⚙️', label: 'Admin Django', externo: true });
   }
 
+  return _pintarSidebar(items, paginaActiva, usr);
+}
+
+/* Pinta el HTML del sidebar a partir de una lista de items ya filtrada por rol. */
+function _pintarSidebar(items, paginaActiva, usr) {
   const html = items.map(item => {
     if (item.seccion) return `<div class="nav-seccion">${item.seccion}</div>`;
     const activo = paginaActiva && item.href.includes(paginaActiva) ? 'activo' : '';

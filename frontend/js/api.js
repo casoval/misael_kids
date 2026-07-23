@@ -34,7 +34,7 @@ const Auth = {
   // Roles del panel interno
   esPersonalInterno() {
     const rol = this.getRol();
-    return ['admin','directora','educadora','ayudante','administrativo'].includes(rol);
+    return ['admin','directora','educadora','ayudante','administrativo','cocina','profesional'].includes(rol);
   },
 
   // Padres/tutores van al portal

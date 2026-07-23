@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
+from accounts.permissions import EsAdminODirectora
 from .models import Sucursal, Sala, Turno
 from .serializers import (
     SucursalSerializer, SucursalResumenSerializer,
@@ -23,7 +24,7 @@ class SucursalViewSet(viewsets.ModelViewSet):
     """
     queryset         = Sucursal.objects.all().order_by('nombre')
     serializer_class = SucursalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminODirectora]
     filter_backends  = [filters.SearchFilter, DjangoFilterBackend]
     search_fields    = ['nombre', 'ciudad', 'direccion']
     filterset_fields = ['activa', 'ciudad']
@@ -57,7 +58,7 @@ class SalaViewSet(viewsets.ModelViewSet):
     """
     queryset         = Sala.objects.select_related('sucursal').prefetch_related('turnos').all()
     serializer_class = SalaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminODirectora]
     filter_backends  = [filters.SearchFilter, DjangoFilterBackend]
     search_fields    = ['nombre']
     filterset_fields = ['sucursal', 'activa']
@@ -91,7 +92,7 @@ class TurnoViewSet(viewsets.ModelViewSet):
     """
     queryset         = Turno.objects.select_related('sala', 'sala__sucursal').all()
     serializer_class = TurnoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminODirectora]
     filter_backends  = [filters.SearchFilter, DjangoFilterBackend]
     search_fields    = ['nombre']
     filterset_fields = ['sala', 'tipo', 'activo']

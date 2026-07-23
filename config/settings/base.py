@@ -172,6 +172,10 @@ CENTRO_MISAEL_API_URL = env('CENTRO_MISAEL_API_URL', default='')
 CENTRO_MISAEL_API_KEY = env('CENTRO_MISAEL_API_KEY', default='')
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
+# La carpeta logs/ no siempre viene en el repo (está en .gitignore vía *.log).
+# La creamos automáticamente para que el proyecto nunca falle al arrancar por esto.
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

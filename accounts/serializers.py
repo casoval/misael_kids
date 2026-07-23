@@ -47,9 +47,10 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Usuario
         fields = [
-            'email', 'username', 'nombres', 'apellidos', 'telefono',
+            'id', 'email', 'username', 'nombres', 'apellidos', 'telefono',
             'rol', 'password', 'password2',
         ]
+        read_only_fields = ['id']
 
     def validate(self, data):
         if data['password'] != data['password2']:

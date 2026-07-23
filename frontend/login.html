@@ -425,7 +425,7 @@
         Auth.guardar(data);
 
         const rol = data.usuario?.rol;
-        const esPersonal = ['admin','directora','educadora','ayudante','administrativo','cocina'].includes(rol);
+        const esPersonal = ['admin','directora','educadora','ayudante','administrativo','cocina','profesional'].includes(rol);
         const esPadre    = rol === 'tutor';
 
         // Verificar que el modo seleccionado corresponde al rol real

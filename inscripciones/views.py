@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
+from accounts.permissions import EsAdminDirectoraOAdministrativo
 from .models import Inscripcion, Cobro
 from .serializers import (
     InscripcionSerializer, InscripcionResumenSerializer, CobroSerializer
@@ -18,7 +19,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
     queryset = Inscripcion.objects.select_related(
         'nino', 'sucursal', 'sala', 'turno'
     ).prefetch_related('cobros').all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminDirectoraOAdministrativo]
     filter_backends    = [filters.SearchFilter, DjangoFilterBackend]
     search_fields      = ['nino__nombres', 'nino__apellidos']
     filterset_fields   = ['sucursal', 'sala', 'turno', 'modalidad_pago', 'tipo_ajuste', 'activa']
@@ -74,7 +75,7 @@ class CobroViewSet(viewsets.ModelViewSet):
         'inscripcion__nino', 'inscripcion__sucursal', 'registrado_por'
     ).all()
     serializer_class   = CobroSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminDirectoraOAdministrativo]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields   = ['tipo', 'estado', 'metodo_pago',
                           'inscripcion__sucursal', 'inscripcion__sala']

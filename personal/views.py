@@ -4,6 +4,7 @@ personal/views.py
 from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from accounts.permissions import EsAdminODirectora
 from .models import Personal, AsignacionPersonal, AsistenciaPersonal
 from .serializers import (
     PersonalSerializer, AsignacionPersonalSerializer, AsistenciaPersonalSerializer
@@ -13,7 +14,7 @@ from .serializers import (
 class PersonalViewSet(viewsets.ModelViewSet):
     queryset = Personal.objects.select_related('usuario').all()
     serializer_class   = PersonalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminODirectora]
     filter_backends    = [filters.SearchFilter, DjangoFilterBackend]
     search_fields      = ['usuario__nombres', 'usuario__apellidos', 'ci']
     filterset_fields   = ['rol', 'activo']
@@ -24,7 +25,7 @@ class AsignacionPersonalViewSet(viewsets.ModelViewSet):
         'personal__usuario', 'sucursal', 'sala', 'turno'
     ).all()
     serializer_class   = AsignacionPersonalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminODirectora]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ['personal', 'sucursal', 'sala', 'turno', 'activa', 'es_titular']
 

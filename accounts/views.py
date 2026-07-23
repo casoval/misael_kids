@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Usuario
+from .permissions import puede_gestionar_usuarios
 from .serializers import (
     UsuarioSerializer, UsuarioCreateSerializer,
     CambiarPasswordSerializer, MiTokenObtainPairSerializer,
@@ -29,6 +30,44 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return UsuarioCreateSerializer
         return UsuarioSerializer
+
+    def create(self, request, *args, **kwargs):
+        """
+        Solo admin/directora pueden crear usuarios del sistema, y una
+        directora no puede crear otro 'admin'. Antes de este fix, cualquier
+        usuario autenticado (p.ej. una educadora) podía crear una cuenta
+        con rol 'admin' llamando directamente a este endpoint.
+        """
+        rol_solicitado = request.data.get('rol')
+        if not puede_gestionar_usuarios(request.user, rol_solicitado):
+            return Response(
+                {'detail': 'No tienes permiso para crear usuarios con ese rol.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        instancia = self.get_object()
+        # Cualquier usuario puede editar su propio perfil (nombres, teléfono, foto...)
+        if instancia.id == request.user.id:
+            request.data.pop('rol', None)  # no puede auto-ascenderse de rol
+            return super().update(request, *args, **kwargs)
+        rol_solicitado = request.data.get('rol', instancia.rol)
+        if not puede_gestionar_usuarios(request.user, rol_solicitado):
+            return Response(
+                {'detail': 'No tienes permiso para editar este usuario.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instancia = self.get_object()
+        if not puede_gestionar_usuarios(request.user, instancia.rol):
+            return Response(
+                {'detail': 'No tienes permiso para eliminar este usuario.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().destroy(request, *args, **kwargs)
 
     def get_queryset(self):
         qs      = super().get_queryset()

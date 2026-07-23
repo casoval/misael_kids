@@ -332,7 +332,7 @@
 <script src="/static/js/api.js"></script>
 <script src="/static/js/components.js"></script>
 <script>
-initPanel('misael-link');
+initPanel('misael-link', ['admin', 'directora', 'educadora', 'ayudante', 'administrativo', 'cocina', 'profesional']);
 const hoy = new Date().toISOString().split('T')[0];
 document.getElementById('pm-inicio').value = hoy;
 let editandoDerId = null, editandoPmId = null;

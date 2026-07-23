@@ -42,6 +42,7 @@ urlpatterns = [
     path('panel/evaluacion/',   TemplateView.as_view(template_name='pages/panel/evaluacion.html'),   name='panel-evaluacion'),
     path('panel/inscripciones/',TemplateView.as_view(template_name='pages/panel/inscripciones.html'),name='panel-inscripciones'),
     path('panel/sucursales/',   TemplateView.as_view(template_name='pages/panel/sucursales.html'),   name='panel-sucursales'),
+    path('panel/turnos/',       TemplateView.as_view(template_name='pages/panel/turnos.html'),       name='panel-turnos'),
     path('panel/reportes/',     TemplateView.as_view(template_name='pages/panel/reportes.html'),     name='panel-reportes'),
 
 

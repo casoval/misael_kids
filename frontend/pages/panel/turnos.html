@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turnos — Misael Kids</title>
+  <link rel="stylesheet" href="/static/css/variables.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <style>
+    .turno-tipo { padding:3px 10px;border-radius:var(--radio-full);font-size:var(--text-xs);font-weight:700; }
+    .tipo-manana   { background:var(--amarillo-l);color:#92400E; }
+    .tipo-tarde    { background:var(--turquesa-l);color:var(--turquesa-d); }
+    .tipo-completo { background:var(--verde-l);color:var(--verde-d); }
+    .tipo-especial { background:var(--violeta-l);color:var(--violeta-d); }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <h1 class="topbar-titulo">⏰ Turnos</h1>
+      <div class="topbar-acciones">
+        <button class="btn btn-primary" onclick="abrirNuevoTurno()">➕ Nuevo turno</button>
+      </div>
+    </header>
+    <div class="pagina">
+      <div class="grid-stats mb-lg">
+        <div class="stat-card"><div class="stat-icon turquesa">⏰</div>
+          <div class="stat-info"><div class="valor" id="stat-total">—</div><div class="etiqueta">Turnos totales</div></div></div>
+        <div class="stat-card"><div class="stat-icon verde">✅</div>
+          <div class="stat-info"><div class="valor" id="stat-activos">—</div><div class="etiqueta">Turnos activos</div></div></div>
+        <div class="stat-card"><div class="stat-icon amarillo">🏠</div>
+          <div class="stat-info"><div class="valor" id="stat-salas">—</div><div class="etiqueta">Salas con turnos</div></div></div>
+      </div>
+
+      <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;margin-bottom:var(--gap-lg);
+        background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+        box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
+        <div class="form-grupo" style="margin:0;flex:1;min-width:180px">
+          <label class="form-label">Sucursal</label>
+          <select id="f-sucursal" class="form-select" onchange="cambioFiltroSucursal()">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;flex:1;min-width:180px">
+          <label class="form-label">Sala</label>
+          <select id="f-sala" class="form-select" onchange="cargar()">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:160px">
+          <label class="form-label">Estado</label>
+          <select id="f-activo" class="form-select" onchange="cargar()">
+            <option value="">Todos</option>
+            <option value="true" selected>Activos</option>
+            <option value="false">Inactivos</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="background:var(--blanco);border-radius:var(--radio-xl);box-shadow:var(--sombra-sm);
+        border:1.5px solid var(--gris-100);overflow:hidden">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Turno</th>
+              <th>Sala / Sucursal</th>
+              <th>Tipo</th>
+              <th>Horario</th>
+              <th>Costo mensual</th>
+              <th>Costo diario</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body">
+            <tr><td colspan="8"><div class="loader"><div class="spinner"></div>
+              <p style="color:var(--texto-suave);font-weight:600">Cargando turnos...</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Turno -->
+<div class="modal-overlay" id="modal-turno">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-titulo" id="titulo-modal-turno">⏰ Nuevo turno</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="tu-id">
+    <div class="form-grupo">
+      <label class="form-label">Sala *</label>
+      <select id="tu-sala" class="form-select">
+        <option value="">Seleccionar sala...</option>
+      </select>
+      <span class="form-error" data-error="tu-sala"></span>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Nombre *</label>
+      <input type="text" id="tu-nombre" class="form-input" placeholder="Ej: Turno mañana">
+      <span class="form-error" data-error="tu-nombre"></span>
+    </div>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Tipo *</label>
+        <select id="tu-tipo" class="form-select">
+          <option value="manana">Mañana</option>
+          <option value="tarde">Tarde</option>
+          <option value="completo">Turno completo</option>
+          <option value="especial">Especial</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Hora inicio *</label>
+        <input type="time" id="tu-inicio" class="form-input" value="08:00">
+        <span class="form-error" data-error="tu-inicio"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Hora fin *</label>
+        <input type="time" id="tu-fin" class="form-input" value="12:30">
+        <span class="form-error" data-error="tu-fin"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Costo mensual (Bs.) *</label>
+        <input type="number" id="tu-mensual" class="form-input" placeholder="700.00" step="0.01">
+        <span class="form-error" data-error="tu-mensual"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Costo diario (Bs.) *</label>
+        <input type="number" id="tu-diario" class="form-input" placeholder="45.00" step="0.01">
+        <span class="form-error" data-error="tu-diario"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Descripción</label>
+        <textarea id="tu-desc" class="form-textarea" style="min-height:55px"></textarea>
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+      <input type="checkbox" id="tu-activo" checked style="width:16px;height:16px"> ✅ Turno activo
+    </label>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-turno')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTurno()">💾 Guardar turno</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/components.js"></script>
+<script>
+initPanel('turnos', ['admin', 'directora']);
+
+const _cache = { sucursales: {}, salas: {}, turnos: {} };
+let editandoTurnoId = null;
+
+async function cargarFiltros() {
+  const sucResp  = await API.get('/core/sucursales/?page_size=50&activa=true');
+  const sucursales = sucResp.results || sucResp;
+  sucursales.forEach(s => _cache.sucursales[s.id] = s);
+  UI.llenarSelect(document.getElementById('f-sucursal'), sucursales, 'id', s => s.nombre, 'Todas');
+
+  const salaResp = await API.get('/core/salas/?page_size=200');
+  const salas = salaResp.results || salaResp;
+  salas.forEach(s => _cache.salas[s.id] = s);
+}
+
+async function cambioFiltroSucursal() {
+  const sucId = document.getElementById('f-sucursal').value;
+  const selSala = document.getElementById('f-sala');
+  selSala.innerHTML = '<option value="">Todas</option>';
+  Object.values(_cache.salas)
+    .filter(s => !sucId || s.sucursal === sucId)
+    .forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.nombre;
+      selSala.appendChild(opt);
+    });
+  cargar();
+}
+
+async function cargar() {
+  const tbody = document.getElementById('tabla-body');
+  tbody.innerHTML = '<tr><td colspan="8"><div class="loader"><div class="spinner"></div><p style="color:var(--texto-suave);font-weight:600">Cargando turnos...</p></div></td></tr>';
+  try {
+    const params = new URLSearchParams({ page_size: '500' });
+    const salaId = document.getElementById('f-sala').value;
+    const sucId  = document.getElementById('f-sucursal').value;
+    const activo = document.getElementById('f-activo').value;
+    if (salaId) params.set('sala', salaId);
+    if (activo !== '') params.set('activo', activo);
+
+    const resp = await API.get('/core/turnos/?' + params.toString());
+    let turnos = resp.results || resp;
+    turnos.forEach(t => _cache.turnos[t.id] = t);
+
+    // Filtrar por sucursal en cliente (el endpoint filtra por sala, no por sucursal directamente)
+    if (sucId) turnos = turnos.filter(t => _cache.salas[t.sala]?.sucursal === sucId);
+
+    document.getElementById('stat-total').textContent   = turnos.length;
+    document.getElementById('stat-activos').textContent = turnos.filter(t => t.activo).length;
+    document.getElementById('stat-salas').textContent   = new Set(turnos.map(t => t.sala)).size;
+
+    if (!turnos.length) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="loader">
+        <div style="font-size:2.5rem">⏰</div>
+        <p style="color:var(--texto-suave);font-weight:600">No hay turnos con estos filtros</p>
+      </div></td></tr>`;
+      return;
+    }
+
+    const tipoLabel = { manana:'Mañana', tarde:'Tarde', completo:'Completo', especial:'Especial' };
+    tbody.innerHTML = turnos.map(t => {
+      const sala = _cache.salas[t.sala];
+      const suc  = sala ? _cache.sucursales[sala.sucursal] : null;
+      return `<tr>
+        <td><strong>${t.nombre}</strong></td>
+        <td>${sala ? sala.nombre : '—'}${suc ? ' · '+suc.nombre : ''}</td>
+        <td><span class="turno-tipo tipo-${t.tipo}">${tipoLabel[t.tipo]||t.tipo}</span></td>
+        <td>${(t.hora_inicio||'').slice(0,5)} – ${(t.hora_fin||'').slice(0,5)}</td>
+        <td>${UI.moneda(t.costo_mensual)}</td>
+        <td>${UI.moneda(t.costo_diario)}</td>
+        <td>${t.activo ? '<span class="chip chip-verde">✅ Activo</span>' : '<span class="chip chip-gris">Inactivo</span>'}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-icono" title="Editar" onclick="editarTurno('${t.id}')">✏️</button>
+          <button class="btn-icono" title="Eliminar" onclick="eliminarTurno('${t.id}')">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8"><p style="color:var(--coral-d);font-weight:600;padding:1rem">Error al cargar: ${err.message}</p></td></tr>`;
+  }
+}
+
+function llenarSelectSalas(selectEl) {
+  selectEl.innerHTML = '<option value="">Seleccionar sala...</option>';
+  Object.values(_cache.salas).forEach(s => {
+    const suc = _cache.sucursales[s.sucursal];
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.nombre + (suc ? ' — ' + suc.nombre : '');
+    selectEl.appendChild(opt);
+  });
+}
+
+function abrirNuevoTurno() {
+  editandoTurnoId = null;
+  document.getElementById('titulo-modal-turno').textContent = '⏰ Nuevo turno';
+  llenarSelectSalas(document.getElementById('tu-sala'));
+  const sala = document.getElementById('f-sala').value;
+  document.getElementById('tu-sala').value = sala || '';
+  ['tu-id','tu-mensual','tu-diario','tu-desc'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('tu-nombre').value = 'Turno mañana';
+  document.getElementById('tu-tipo').value   = 'manana';
+  document.getElementById('tu-inicio').value = '08:00';
+  document.getElementById('tu-fin').value    = '12:30';
+  document.getElementById('tu-activo').checked = true;
+  document.querySelectorAll('#modal-turno .form-error').forEach(el => el.textContent = '');
+  UI.abrirModal('modal-turno');
+}
+
+function editarTurno(id) {
+  const t = _cache.turnos[id];
+  if (!t) return UI.toast('Datos no disponibles', 'warn');
+  editandoTurnoId = id;
+  document.getElementById('titulo-modal-turno').textContent = '✏️ Editar turno — ' + t.nombre;
+  llenarSelectSalas(document.getElementById('tu-sala'));
+  document.getElementById('tu-id').value       = id;
+  document.getElementById('tu-sala').value     = t.sala;
+  document.getElementById('tu-nombre').value   = t.nombre;
+  document.getElementById('tu-tipo').value     = t.tipo;
+  document.getElementById('tu-inicio').value   = (t.hora_inicio||'').slice(0,5);
+  document.getElementById('tu-fin').value      = (t.hora_fin||'').slice(0,5);
+  document.getElementById('tu-mensual').value  = t.costo_mensual;
+  document.getElementById('tu-diario').value   = t.costo_diario;
+  document.getElementById('tu-desc').value     = t.descripcion || '';
+  document.getElementById('tu-activo').checked = t.activo;
+  document.querySelectorAll('#modal-turno .form-error').forEach(el => el.textContent = '');
+  UI.abrirModal('modal-turno');
+}
+
+async function guardarTurno() {
+  const errores = Validar.formulario({
+    'tu-sala':   [() => Validar.requerido(document.getElementById('tu-sala').value, 'Sala')],
+    'tu-nombre': [() => Validar.requerido(document.getElementById('tu-nombre').value, 'Nombre')],
+    'tu-inicio': [() => Validar.requerido(document.getElementById('tu-inicio').value, 'Hora inicio')],
+    'tu-fin':    [() => {
+      const ini = document.getElementById('tu-inicio').value;
+      const fin = document.getElementById('tu-fin').value;
+      const base = Validar.requerido(fin, 'Hora fin');
+      if (base) return base;
+      if (ini && fin && ini >= fin) return 'La hora fin debe ser posterior al inicio';
+      return null;
+    }],
+    'tu-mensual': [() => Validar.numero(document.getElementById('tu-mensual').value, 'Costo mensual')],
+    'tu-diario':  [() => Validar.numero(document.getElementById('tu-diario').value, 'Costo diario')],
+  });
+  if (!Validar.mostrarErrores(errores, '#modal-turno ')) return;
+
+  const datos = {
+    sala:          document.getElementById('tu-sala').value,
+    nombre:        document.getElementById('tu-nombre').value.trim(),
+    tipo:          document.getElementById('tu-tipo').value,
+    hora_inicio:   document.getElementById('tu-inicio').value,
+    hora_fin:      document.getElementById('tu-fin').value,
+    costo_mensual: document.getElementById('tu-mensual').value,
+    costo_diario:  document.getElementById('tu-diario').value,
+    descripcion:   document.getElementById('tu-desc').value.trim(),
+    activo:        document.getElementById('tu-activo').checked,
+  };
+  try {
+    if (editandoTurnoId) await API.patch('/core/turnos/' + editandoTurnoId + '/', datos);
+    else                 await API.post('/core/turnos/', datos);
+    UI.toast('✅ Turno guardado', 'exito');
+    UI.cerrarModal('modal-turno');
+    cargar();
+  } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+}
+
+async function eliminarTurno(id) {
+  const t = _cache.turnos[id];
+  if (!confirm('¿Eliminar el turno "' + (t?.nombre||'') + '"?')) return;
+  try {
+    await API.delete('/core/turnos/' + id + '/');
+    UI.toast('Turno eliminado', 'exito');
+    cargar();
+  } catch (err) { UI.toast('No se puede eliminar: ' + err.message, 'error'); }
+}
+
+(async function init() {
+  await cargarFiltros();
+  await cargar();
+})();
+</script>
+</body>
+</html>
