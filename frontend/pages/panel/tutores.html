@@ -61,7 +61,7 @@
     <div id="aviso-cuenta" style="background:var(--verde-l);border-radius:var(--radio-lg);
       padding:var(--gap-md);margin-bottom:var(--gap-md);font-size:var(--text-sm);
       color:var(--verde-d);font-weight:600">
-      Se creará un acceso al portal de padres. Contraseña inicial: <strong>MisaelKids2025!</strong>
+      Se creará un acceso al portal de padres con la contraseña que definas abajo.
     </div>
 
     <div class="grid-2">
@@ -113,10 +113,16 @@
           🆔 No tiene email — usar su CI como nombre de usuario para acceder al portal
         </label>
       </div>
-      <div class="form-grupo" style="grid-column:1/-1;display:none" id="campo-t-username">
+      <div class="form-grupo" style="grid-column:1/-1" id="campo-t-username">
         <label class="form-label">Nombre de usuario (acceso al portal) *</label>
         <input type="text" id="t-username" class="form-input" placeholder="Se sugiere el CI">
         <span class="form-error" data-error="t-username"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1" id="campo-t-password">
+        <label class="form-label">Contraseña inicial *</label>
+        <input type="text" id="t-password" class="form-input" value="MisaelKids2025!">
+        <span class="form-error" data-error="t-password"></span>
+        <span style="font-size:var(--text-xs);color:var(--texto-suave)">El tutor podrá cambiarla luego desde el portal.</span>
       </div>
     </div>
 
@@ -198,6 +204,11 @@ let editandoId = null;
 
 async function inicializar() {
   await Promise.all([cargar(), cargarNinosSelectores()]);
+  const ninoParam = new URLSearchParams(location.search).get('nino');
+  if (ninoParam) {
+    abrirNuevo();
+    document.getElementById('t-nino').value = ninoParam;
+  }
 }
 
 async function cargarNinosSelectores() {
@@ -277,6 +288,8 @@ function abrirNuevo() {
   document.getElementById('titulo-modal').textContent = 'Nuevo tutor';
   document.getElementById('aviso-cuenta').style.display = '';
   ['t-id','t-nombres','t-apellidos','t-ci','t-telefono','t-telefono-alt','t-email','t-username'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('t-password').value = 'MisaelKids2025!';
+  document.getElementById('campo-t-password').style.display = '';
   document.getElementById('t-sin-email').checked = false;
   document.getElementById('t-sin-email').parentElement.style.display = 'flex';
   toggleSinEmail();
@@ -296,6 +309,7 @@ async function editar(id) {
   // El tipo de acceso (email/usuario) no se modifica al editar — solo gestión de usuarios puede hacerlo
   document.getElementById('t-sin-email').parentElement.style.display = 'none';
   document.getElementById('campo-t-username').style.display = 'none';
+  document.getElementById('campo-t-password').style.display = 'none';
   document.getElementById('campo-t-email').style.display = '';
   try {
     const t = await API.get('/ninos/tutores/'+id+'/');
@@ -333,6 +347,7 @@ async function guardarTutor() {
     } else {
       reglas['t-email'] = [() => Validar.email(document.getElementById('t-email').value)];
     }
+    reglas['t-password'] = [() => Validar.minLength(document.getElementById('t-password').value, 8, 'La contraseña')];
   }
   const errores = Validar.formulario(reglas);
   if (!Validar.mostrarErrores(errores, '#modal-tutor ')) return;
@@ -353,7 +368,8 @@ async function guardarTutor() {
       // Crear usuario para acceso al portal (email o nombre de usuario)
       const datosUsuario = {
         nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor',
-        password: 'MisaelKids2025!', password2: 'MisaelKids2025!',
+        password: document.getElementById('t-password').value,
+        password2: document.getElementById('t-password').value,
       };
       if (sinEmail) datosUsuario.username = document.getElementById('t-username').value.trim();
       else datosUsuario.email = datos.email;

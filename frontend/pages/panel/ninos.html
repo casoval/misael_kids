@@ -160,8 +160,9 @@
     <!-- Tabs dentro del modal -->
     <div class="page-tabs" style="margin-bottom:var(--gap-lg)">
       <button class="page-tab activo" onclick="cambiarTabModal('datos')" id="mtab-datos">📋 Datos personales</button>
+      <button class="page-tab" onclick="cambiarTabModal('tutores')" id="mtab-tutores">👨‍👩‍👧 Tutores</button>
+      <button class="page-tab" onclick="cambiarTabModal('autorizados')" id="mtab-autorizados">🔓 Retiro autorizado</button>
       <button class="page-tab" onclick="cambiarTabModal('salud')" id="mtab-salud">🏥 Salud</button>
-      <button class="page-tab" onclick="cambiarTabModal('autorizados')" id="mtab-autorizados">🔓 Autorizados</button>
     </div>
 
     <!-- Tab: Datos personales -->
@@ -223,11 +224,56 @@
       </label>
     </div>
 
+    <!-- Tab: Tutores -->
+    <div id="mtab-tutores-panel" class="tab-panel">
+      <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)">
+        Los <strong>tutores</strong> son el padre/madre o responsable legal: tienen acceso al
+        portal de padres y reciben notificaciones. Si alguien solo necesita poder
+        <strong>retirar</strong> al niño/a sin acceso al portal, agrégalo en la pestaña
+        "🔓 Retiro autorizado" en vez de aquí.
+      </p>
+      <div id="tutores-vinculados"></div>
+      <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
+      <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
+        text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--gap-sm)">
+        Vincular tutor existente
+      </p>
+      <div class="grid-2">
+        <div class="form-grupo" style="grid-column:1/-1">
+          <label class="form-label">Tutor</label>
+          <select id="tv-tutor" class="form-select">
+            <option value="">Seleccionar tutor...</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+            <input type="checkbox" id="tv-principal" style="width:16px;height:16px">
+            Tutor principal (recibe notificaciones)
+          </label>
+        </div>
+        <div class="form-grupo">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+            <input type="checkbox" id="tv-retirar" checked style="width:16px;height:16px">
+            Autorizado a retirar al niño/a
+          </label>
+        </div>
+      </div>
+      <button class="btn btn-outline" onclick="agregarTutorVinculo()">➕ Vincular tutor</button>
+      <div style="margin-top:var(--gap-md);padding:var(--gap-md);background:var(--gris-50);
+        border-radius:var(--radio-lg);font-size:var(--text-sm);color:var(--texto-suave)">
+        ¿El tutor todavía no está registrado? <a href="#" onclick="irARegistrarTutor();return false"
+        style="color:var(--turquesa-d);font-weight:700">Regístralo desde Tutores</a>
+        y luego vuelve aquí para vincularlo.
+      </div>
+    </div>
+
     <!-- Tab: Autorizados -->
     <div id="mtab-autorizados-panel" class="tab-panel">
       <div id="lista-autorizados-modal">
         <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)">
-          Personas autorizadas a retirar al niño/a además de los tutores principales.
+          Personas que <strong>solo pueden retirar</strong> al niño/a (ej: abuela, tío, niñera) —
+          <strong>no</strong> son tutores legales, no tienen acceso al portal y no reciben notificaciones.
+          Para el padre/madre o responsable legal, usa la pestaña "👨‍👩‍👧 Tutores".
         </p>
         <div id="autorizados-existentes"></div>
       </div>
@@ -281,6 +327,7 @@ let ninoPerfilId = null;
 let paginaActual = 1;
 const POR_PAGINA = 20;
 let autorizadosPendientes = [];
+let tutoresPendientes = [];
 
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);}}
 
@@ -446,22 +493,25 @@ function editarDesadePerfil() { if (ninoPerfilId) { cerrarPerfil(); editar(ninoP
 
 // ── CRUD Modal ──
 function cambiarTabModal(tab) {
-  ['datos','salud','autorizados'].forEach(t => {
+  ['datos','tutores','autorizados','salud'].forEach(t => {
     document.getElementById('mtab-'+t).classList.toggle('activo',t===tab);
     document.getElementById('mtab-'+t+'-panel').classList.toggle('activo',t===tab);
   });
   if (tab==='autorizados' && editandoId) cargarAutorizadosExistentes();
+  if (tab==='tutores') { cargarTutoresSelector(); if (editandoId) cargarTutoresVinculados(); else pintarTutoresPendientes(); }
 }
 
 function abrirNuevo() {
   editandoId = null;
   autorizadosPendientes = [];
+  tutoresPendientes = [];
   document.getElementById('titulo-modal-nino').textContent = 'Registrar niño/a';
   ['n-id','n-nombres','n-apellidos','n-observaciones','n-alergias','n-condiciones','n-medicacion'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('n-fecha-nac').value   = '';
   document.getElementById('n-genero').value      = '';
   document.getElementById('n-plan-misael').checked = false;
   document.getElementById('autorizados-existentes').innerHTML = '';
+  document.getElementById('tutores-vinculados').innerHTML = '';
   ['aut-nombres','aut-apellidos','aut-ci','aut-telefono','aut-parentesco','aut-vigencia'].forEach(id=>document.getElementById(id).value='');
   cambiarTabModal('datos');
   document.querySelectorAll('#modal-nino .form-error').forEach(el=>el.textContent='');
@@ -472,6 +522,7 @@ function abrirNuevo() {
 async function editar(id) {
   editandoId = id;
   autorizadosPendientes = [];
+  tutoresPendientes = [];
   document.getElementById('titulo-modal-nino').textContent = 'Editar niño/a';
   try {
     const n = await API.get('/ninos/ninos/'+id+'/');
@@ -516,6 +567,118 @@ async function eliminarAutorizado(id) {
     await API.patch('/ninos/autorizados/'+id+'/',{activa:false});
     UI.toast('Autorizado eliminado','exito');
     cargarAutorizadosExistentes();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+// ── Tab Tutores: vincular tutor existente ──
+let _tutoresDisponibles = [];
+async function cargarTutoresSelector() {
+  try {
+    const data = await API.get('/ninos/tutores/?page_size=500');
+    _tutoresDisponibles = data.results||data;
+    const yaVinculados = editandoId
+      ? Array.from(document.querySelectorAll('#tutores-vinculados [data-tutor-id]')).map(el=>el.dataset.tutorId)
+      : tutoresPendientes.map(t=>t.tutor);
+    const sel = document.getElementById('tv-tutor');
+    sel.innerHTML = '<option value="">Seleccionar tutor...</option>';
+    _tutoresDisponibles
+      .filter(t => !yaVinculados.includes(t.id))
+      .forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.nombres+' '+t.apellidos+' ('+(t.parentesco_display||t.parentesco)+')';
+        sel.appendChild(opt);
+      });
+  } catch {}
+}
+
+function irARegistrarTutor() {
+  window.location.href = editandoId ? '/panel/tutores/?nino='+editandoId : '/panel/tutores/';
+}
+
+async function agregarTutorVinculo() {
+  const tutorId = document.getElementById('tv-tutor').value;
+  if (!tutorId) { UI.toast('Selecciona un tutor','warn'); return; }
+  const tutor = _tutoresDisponibles.find(t=>t.id===tutorId);
+  const vinculo = {
+    tutor: tutorId,
+    tutor_nombre: tutor ? tutor.nombres+' '+tutor.apellidos : '',
+    es_principal:  document.getElementById('tv-principal').checked,
+    puede_retirar: document.getElementById('tv-retirar').checked,
+  };
+  document.getElementById('tv-principal').checked = false;
+  document.getElementById('tv-retirar').checked   = true;
+
+  if (editandoId) {
+    try {
+      await API.post('/ninos/tutores-nino/', {nino:editandoId, ...vinculo, tutor:tutorId});
+      UI.toast('Tutor vinculado','exito');
+      await cargarTutoresVinculados();
+      await cargarTutoresSelector();
+    } catch (err) { UI.toast('Error: '+err.message,'error'); }
+  } else {
+    tutoresPendientes.push(vinculo);
+    pintarTutoresPendientes();
+    cargarTutoresSelector();
+    UI.toast('Tutor agregado (se vinculará al guardar el niño/a)','info');
+  }
+}
+
+function pintarTutoresPendientes() {
+  const cont = document.getElementById('tutores-vinculados');
+  if (!tutoresPendientes.length) {
+    cont.innerHTML = '<p style="font-size:var(--text-sm);color:var(--texto-suave)">Aún no vinculaste ningún tutor a este niño/a</p>';
+    return;
+  }
+  cont.innerHTML = tutoresPendientes.map((t,i)=>`
+    <div class="tutor-item">
+      <div class="tutor-ava">${UI.iniciales(t.tutor_nombre)}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:var(--text-sm)">${t.tutor_nombre}</div>
+        <div style="font-size:var(--text-xs);color:var(--texto-suave)">
+          ${t.es_principal?'⭐ Principal · ':''}${t.puede_retirar?'✅ Puede retirar':'❌ No puede retirar'}
+        </div>
+      </div>
+      <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+        onclick="quitarTutorPendiente(${i})">🗑️</button>
+    </div>`).join('');
+}
+
+function quitarTutorPendiente(i) {
+  tutoresPendientes.splice(i,1);
+  pintarTutoresPendientes();
+  cargarTutoresSelector();
+}
+
+async function cargarTutoresVinculados() {
+  if (!editandoId) return;
+  const cont = document.getElementById('tutores-vinculados');
+  try {
+    const data = await API.get('/ninos/tutores-nino/?nino='+editandoId);
+    const lista = data.results||data;
+    if (!lista.length) { cont.innerHTML = '<p style="font-size:var(--text-sm);color:var(--texto-suave)">Sin tutores vinculados todavía</p>'; return; }
+    cont.innerHTML = lista.map(t=>`
+      <div class="tutor-item" data-tutor-id="${t.tutor}">
+        <div class="tutor-ava">${UI.iniciales(t.tutor_nombre)}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:var(--text-sm)">${t.tutor_nombre}</div>
+          <div style="font-size:var(--text-xs);color:var(--texto-suave)">
+            ${t.es_principal?'⭐ Principal · ':''}${t.puede_retirar?'✅ Puede retirar':'❌ No puede retirar'}
+          </div>
+        </div>
+        <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+          onclick="quitarVinculoTutor('${t.id}')">🗑️</button>
+      </div>`).join('');
+  } catch { cont.innerHTML = ''; }
+}
+
+async function quitarVinculoTutor(vinculoId) {
+  if (!confirm('¿Quitar el vínculo con este tutor? (el tutor no se elimina, solo se desvincula de este niño/a)')) return;
+  try {
+    await API.delete('/ninos/tutores-nino/'+vinculoId+'/');
+    UI.toast('Vínculo eliminado','exito');
+    await cargarTutoresVinculados();
+    await cargarTutoresSelector();
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
 }
 
@@ -568,6 +731,13 @@ async function guardarNino() {
     // Guardar autorizados pendientes
     for (const aut of autorizadosPendientes) {
       await API.post('/ninos/autorizados/',{...aut, nino:ninoId});
+    }
+    // Guardar tutores pendientes (solo aplica si el niño era nuevo)
+    for (const t of tutoresPendientes) {
+      await API.post('/ninos/tutores-nino/',{
+        nino:ninoId, tutor:t.tutor,
+        es_principal:t.es_principal, puede_retirar:t.puede_retirar,
+      });
     }
     UI.cerrarModal('modal-nino');
     cargar();

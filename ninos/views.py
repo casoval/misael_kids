@@ -1,6 +1,7 @@
 """
 ninos/views.py
 """
+from django.db import models
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -59,6 +60,20 @@ class TutorViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends    = [filters.SearchFilter]
     search_fields      = ['nombres', 'apellidos', 'ci', 'email']
+
+
+class NinoTutorViewSet(viewsets.ModelViewSet):
+    """
+    Vínculo entre un niño y un tutor (quién puede retirarlo, quién es el
+    contacto principal). Antes esta relación no tenía ViewSet ni ruta
+    propia, por lo que /ninos/tutores-nino/ (usado por tutores.html para
+    vincular) no existía y toda vinculación fallaba con 404.
+    """
+    queryset           = NinoTutor.objects.select_related('nino', 'tutor').all()
+    serializer_class   = NinoTutorSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends    = [DjangoFilterBackend]
+    filterset_fields   = ['nino', 'tutor']
 
 
 class PersonaAutorizadaViewSet(viewsets.ModelViewSet):
