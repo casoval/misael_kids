@@ -377,20 +377,33 @@ function abrirNuevaSucursal() {
   UI.abrirModal('modal-sucursal');
 }
 
-function editarSucursalPorId(id) {
-  const suc = _cache.sucursales[id];
-  if (!suc) return UI.toast('Datos no disponibles','warn');
+async function editarSucursalPorId(id) {
+  const cacheado = _cache.sucursales[id];
+  if (!cacheado) return UI.toast('Datos no disponibles','warn');
   editandoSucId = id;
   document.getElementById('titulo-modal-suc').textContent = '✏️ Editar sucursal';
   document.getElementById('suc-id').value       = id;
-  document.getElementById('suc-nombre').value   = suc.nombre;
-  document.getElementById('suc-ciudad').value   = suc.ciudad;
-  document.getElementById('suc-telefono').value = suc.telefono||'';
-  document.getElementById('suc-direccion').value= suc.direccion||'';
-  document.getElementById('suc-desc').value     = suc.descripcion||'';
-  document.getElementById('suc-activa').checked = suc.activa;
+  document.getElementById('suc-nombre').value   = cacheado.nombre;
+  document.getElementById('suc-ciudad').value   = cacheado.ciudad;
+  document.getElementById('suc-activa').checked = cacheado.activa;
+  document.getElementById('suc-telefono').value = '';
+  document.getElementById('suc-direccion').value= '';
+  document.getElementById('suc-desc').value     = '';
   document.querySelectorAll('#modal-sucursal .form-error').forEach(el=>el.textContent='');
   UI.abrirModal('modal-sucursal');
+  try {
+    // El listado trae una versión resumida (sin teléfono/dirección/descripción):
+    // pedimos el detalle completo para no pisarlos con vacío al guardar.
+    const suc = await API.get('/core/sucursales/'+id+'/');
+    _cache.sucursales[id] = suc;
+    if (editandoSucId !== id) return; // el usuario cambió de sucursal mientras cargaba
+    document.getElementById('suc-nombre').value   = suc.nombre;
+    document.getElementById('suc-ciudad').value   = suc.ciudad;
+    document.getElementById('suc-telefono').value = suc.telefono||'';
+    document.getElementById('suc-direccion').value= suc.direccion||'';
+    document.getElementById('suc-desc').value     = suc.descripcion||'';
+    document.getElementById('suc-activa').checked = suc.activa;
+  } catch (err) { UI.toast('No se pudieron cargar todos los datos: '+err.message,'error'); }
 }
 
 async function guardarSucursal() {
