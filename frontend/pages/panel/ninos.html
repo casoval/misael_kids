@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Niños — Misael Kids</title>
-  <link rel="stylesheet" href="/static/css/variables.css">
-  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <style>
     .nino-avatar-m { background:linear-gradient(135deg,var(--turquesa),var(--violeta)); }
     .nino-avatar-f { background:linear-gradient(135deg,var(--coral),var(--naranja)); }
@@ -117,7 +118,7 @@
         <div class="tabla-wrap">
           <table>
             <thead><tr>
-              <th>Niño/a</th><th>Edad</th><th>Género</th>
+              <th>Niño/a</th><th>Edad</th><th>Género</th><th>Tutores</th>
               <th>Alergias</th><th>Plan Misael</th><th>Estado</th><th>Acciones</th>
             </tr></thead>
             <tbody id="tbody-ninos"></tbody>
@@ -318,8 +319,8 @@
   </div>
 </div>
 
-<script src="/static/js/api.js"></script>
-<script src="/static/js/components.js"></script>
+<script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/components.js' %}"></script>
 <script>
 initPanel('ninos');
 let editandoId   = null;
@@ -342,14 +343,14 @@ async function cargar() {
   if (genero) url += '&genero='+genero;
   if (plan)   url += '&tiene_plan_misael='+plan;
   if (activo) url += '&activo='+activo;
-  tbody.innerHTML = '<tr><td colspan="7"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8"><div class="loader"><div class="spinner"></div></div></td></tr>';
   try {
     const data  = await API.get(url);
     const lista = data.results||data;
     const total = data.count||lista.length;
     document.getElementById('total-ninos').textContent = total+' niño(s)';
     if (!lista.length) {
-      tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin resultados</td></tr>';
+      tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin resultados</td></tr>';
       document.getElementById('paginacion').innerHTML=''; return;
     }
     tbody.innerHTML = lista.map(n => `
@@ -369,6 +370,11 @@ async function cargar() {
         </td>
         <td><span class="chip chip-turquesa">🎂 ${n.edad_en_meses}m</span></td>
         <td>${n.genero==='M'?'👦 Masc.':n.genero==='F'?'👧 Fem.':'⚧️ Otro'}</td>
+        <td onclick="event.stopPropagation()">
+          ${(n.tutores_resumen||[]).length
+            ? n.tutores_resumen.map(t=>`<span class="chip ${t.es_principal?'chip-violeta':'chip-gris'}" style="margin:1px" title="${t.es_principal?'Tutor principal':'Tutor'}">${t.es_principal?'⭐ ':''}${t.nombre}</span>`).join(' ')
+            : '<span class="chip chip-coral" title="Este niño/a no tiene ningún tutor vinculado">⚠️ Sin tutor</span>'}
+        </td>
         <td>${n.alergias
           ?'<span class="chip chip-coral" title="'+n.alergias+'">⚠️ Sí</span>'
           :'<span class="chip chip-gris">No</span>'}</td>
@@ -398,7 +404,7 @@ async function cargar() {
       </span>
       <button class="pag-btn" ${paginaActual===totalPags?'disabled':''} onclick="cambiarPag(${paginaActual+1})">→</button>`;
   } catch (err) {
-    tbody.innerHTML='<tr><td colspan="7"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+    tbody.innerHTML='<tr><td colspan="8"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
   }
 }
 

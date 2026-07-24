@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tutores — Misael Kids</title>
-  <link rel="stylesheet" href="/static/css/variables.css">
-  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
 </head>
 <body>
 <div class="app-layout">
@@ -184,8 +185,8 @@
   </div>
 </div>
 
-<script src="/static/js/api.js"></script>
-<script src="/static/js/components.js"></script>
+<script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/components.js' %}"></script>
 <script>
 initPanel('tutores');
 let editandoId = null;
@@ -243,9 +244,12 @@ async function cargar() {
         <td style="font-weight:600">${t.ci}</td>
         <td><span class="chip chip-turquesa">${t.parentesco_display}</span></td>
         <td>${t.telefono}</td>
-        <td>
-          <button class="btn btn-outline btn-sm" onclick="abrirVincular('${t.id}','${t.nombres} ${t.apellidos}')">
-            + Vincular niño
+        <td onclick="event.stopPropagation()">
+          ${(t.ninos_resumen||[]).length
+            ? t.ninos_resumen.map(n=>`<span class="chip ${n.es_principal?'chip-violeta':'chip-gris'}" style="margin:1px" title="${n.es_principal?'Tutor principal · ':''}${n.puede_retirar?'Puede retirar':'No puede retirar'}">${n.es_principal?'⭐ ':''}${n.nombre}</span>`).join(' ')
+            : '<span class="chip chip-coral" title="Este tutor no tiene ningún niño vinculado">⚠️ Sin niños</span>'}
+          <button class="btn btn-outline btn-sm" style="margin-top:4px" onclick="abrirVincular('${t.id}','${t.nombres} ${t.apellidos}')">
+            + Vincular
           </button>
         </td>
         <td>

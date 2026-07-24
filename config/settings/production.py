@@ -17,4 +17,16 @@ CSRF_COOKIE_SECURE = True
 
 # Whitenoise para archivos estáticos
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# En Django 4.2+ el storage se configura con STORAGES (no con la antigua
+# STATICFILES_STORAGE, que Django ya no lee — quedaba configurada pero
+# sin efecto real, así que WhiteNoise nunca comprimía ni le ponía hash
+# a los archivos, y por lo tanto no había cache-busting automático).
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}

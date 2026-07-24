@@ -7,6 +7,7 @@ from .models import Nino, Tutor, NinoTutor, PersonaAutorizada, Documento
 
 class TutorSerializer(serializers.ModelSerializer):
     parentesco_display = serializers.CharField(source='get_parentesco_display', read_only=True)
+    ninos_resumen       = serializers.SerializerMethodField()
 
     class Meta:
         model  = Tutor
@@ -14,9 +15,21 @@ class TutorSerializer(serializers.ModelSerializer):
             'id', 'usuario', 'nombres', 'apellidos', 'ci',
             'telefono', 'telefono_alt', 'email',
             'parentesco', 'parentesco_display', 'activo',
+            'ninos_resumen',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_ninos_resumen(self, obj):
+        return [
+            {
+                'nino_id': nt.nino_id,
+                'nombre': nt.nino.nombre_completo,
+                'es_principal': nt.es_principal,
+                'puede_retirar': nt.puede_retirar,
+            }
+            for nt in obj.ninos.all()
+        ]
 
 
 class PersonaAutorizadaSerializer(serializers.ModelSerializer):
@@ -86,13 +99,29 @@ class NinoSerializer(serializers.ModelSerializer):
 
 
 class NinoResumenSerializer(serializers.ModelSerializer):
-    """Versión compacta para listas."""
+    """Versión compacta para listas — pero con los datos que el listado
+    realmente necesita mostrar (antes le faltaban 'genero' y 'alergias',
+    por lo que la tabla de niños mostraba género y alergias incorrectos
+    para TODOS los registros, ya que esos campos llegaban undefined)."""
     edad_en_meses   = serializers.IntegerField(read_only=True)
     nombre_completo = serializers.CharField(read_only=True)
+    genero_display  = serializers.CharField(source='get_genero_display', read_only=True)
+    tutores_resumen = serializers.SerializerMethodField()
 
     class Meta:
         model  = Nino
         fields = [
             'id', 'nombre_completo', 'fecha_nacimiento',
-            'edad_en_meses', 'foto', 'tiene_plan_misael', 'activo',
+            'edad_en_meses', 'genero', 'genero_display', 'foto',
+            'alergias', 'tiene_plan_misael', 'activo', 'tutores_resumen',
+        ]
+
+    def get_tutores_resumen(self, obj):
+        return [
+            {
+                'tutor_id': nt.tutor_id,
+                'nombre': str(nt.tutor),
+                'es_principal': nt.es_principal,
+            }
+            for nt in obj.tutores.all()
         ]

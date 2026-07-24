@@ -1,11 +1,12 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — Misael Kids</title>
-  <link rel="stylesheet" href="/static/css/variables.css">
-  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <style>
     /* ── Bienvenida ── */
     .bienvenida {
@@ -355,8 +356,8 @@
   </main>
 </div><!-- /app-layout -->
 
-<script src="/static/js/api.js"></script>
-<script src="/static/js/components.js"></script>
+<script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/components.js' %}"></script>
 <script>
 // ── Inicializar sidebar dinámico y verificar autenticación ──
 initPanel('dashboard', ['admin', 'directora', 'educadora', 'ayudante', 'administrativo', 'cocina', 'profesional']);

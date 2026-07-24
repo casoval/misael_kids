@@ -55,7 +55,7 @@ class NinoViewSet(viewsets.ModelViewSet):
 
 
 class TutorViewSet(viewsets.ModelViewSet):
-    queryset           = Tutor.objects.select_related('usuario').all()
+    queryset           = Tutor.objects.select_related('usuario').prefetch_related('ninos__nino').all()
     serializer_class   = TutorSerializer
     permission_classes = [IsAuthenticated]
     filter_backends    = [filters.SearchFilter]

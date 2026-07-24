@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Asistencia — Misael Kids</title>
-  <link rel="stylesheet" href="/static/css/variables.css">
-  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <style>
     .nino-card {
       background:var(--blanco);border:2px solid var(--gris-100);border-radius:var(--radio-xl);
@@ -218,8 +219,8 @@
   </div>
 </div>
 
-<script src="/static/js/api.js"></script>
-<script src="/static/js/components.js"></script>
+<script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/components.js' %}"></script>
 <script>
 initPanel('asistencia');
 

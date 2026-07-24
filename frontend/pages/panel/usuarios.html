@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Usuarios — Misael Kids</title>
-  <link rel="stylesheet" href="/static/css/variables.css">
-  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <style>
     .rol-badge { padding:3px 10px;border-radius:var(--radio-full);font-size:var(--text-xs);font-weight:700; }
     .rol-admin          { background:var(--coral-l);color:var(--coral-d); }
@@ -206,8 +207,8 @@
   </div>
 </div>
 
-<script src="/static/js/api.js"></script>
-<script src="/static/js/components.js"></script>
+<script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/components.js' %}"></script>
 <script>
 initPanel('usuarios', ['admin','directora']);
 
