@@ -83,8 +83,8 @@
   --sombra-color: 0 8px 20px rgba(45,212,191,.25);
 
   /* ── Sidebar ── */
-  --sidebar-w: 260px;
-  --topbar-h:  64px;
+  --sidebar-w: 208px;
+  --topbar-h:  52px;
 
   /* ── Transiciones ── */
   --trans-fast:   150ms ease;

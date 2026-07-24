@@ -4,7 +4,7 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 16px; scroll-behavior: smooth; }
+html { font-size: 80%; scroll-behavior: smooth; }
 
 body {
   font-family: var(--font-body);
@@ -28,12 +28,12 @@ body {
   animation: flotar 8s ease-in-out infinite alternate;
 }
 .bg-burbujas::before {
-  width: 400px; height: 400px;
+  width: 320px; height: 320px;
   background: var(--turquesa);
   top: -100px; left: -100px;
 }
 .bg-burbujas::after {
-  width: 300px; height: 300px;
+  width: 240px; height: 240px;
   background: var(--coral);
   bottom: -80px; right: -80px;
   animation-delay: -4s;
@@ -183,7 +183,7 @@ body {
   background: var(--gris-50);
 }
 .usuario-avatar {
-  width: 38px; height: 38px;
+  width: 30px; height: 30px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--violeta), var(--turquesa));
   display: flex; align-items: center; justify-content: center;
@@ -289,7 +289,7 @@ body {
   box-shadow: var(--sombra-lg);
 }
 .stat-icon {
-  width: 56px; height: 56px;
+  width: 45px; height: 45px;
   border-radius: var(--radio-lg);
   display: flex; align-items: center; justify-content: center;
   font-size: 1.6rem;

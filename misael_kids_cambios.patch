@@ -1,0 +1,262 @@
+diff --git a/frontend/css/base.css b/frontend/css/base.css
+index 9e4ef29..31691fa 100644
+--- a/frontend/css/base.css
++++ b/frontend/css/base.css
+@@ -4,7 +4,7 @@
+ 
+ *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+-html { font-size: 16px; scroll-behavior: smooth; }
++html { font-size: 80%; scroll-behavior: smooth; }
+ 
+ body {
+   font-family: var(--font-body);
+@@ -28,12 +28,12 @@ body {
+   animation: flotar 8s ease-in-out infinite alternate;
+ }
+ .bg-burbujas::before {
+-  width: 400px; height: 400px;
++  width: 320px; height: 320px;
+   background: var(--turquesa);
+   top: -100px; left: -100px;
+ }
+ .bg-burbujas::after {
+-  width: 300px; height: 300px;
++  width: 240px; height: 240px;
+   background: var(--coral);
+   bottom: -80px; right: -80px;
+   animation-delay: -4s;
+@@ -183,7 +183,7 @@ body {
+   background: var(--gris-50);
+ }
+ .usuario-avatar {
+-  width: 38px; height: 38px;
++  width: 30px; height: 30px;
+   border-radius: 50%;
+   background: linear-gradient(135deg, var(--violeta), var(--turquesa));
+   display: flex; align-items: center; justify-content: center;
+@@ -289,7 +289,7 @@ body {
+   box-shadow: var(--sombra-lg);
+ }
+ .stat-icon {
+-  width: 56px; height: 56px;
++  width: 45px; height: 45px;
+   border-radius: var(--radio-lg);
+   display: flex; align-items: center; justify-content: center;
+   font-size: 1.6rem;
+diff --git a/frontend/css/variables.css b/frontend/css/variables.css
+index be6e543..f74d9bb 100644
+--- a/frontend/css/variables.css
++++ b/frontend/css/variables.css
+@@ -83,8 +83,8 @@
+   --sombra-color: 0 8px 20px rgba(45,212,191,.25);
+ 
+   /* ── Sidebar ── */
+-  --sidebar-w: 260px;
+-  --topbar-h:  64px;
++  --sidebar-w: 208px;
++  --topbar-h:  52px;
+ 
+   /* ── Transiciones ── */
+   --trans-fast:   150ms ease;
+diff --git a/frontend/pages/panel/agenda.html b/frontend/pages/panel/agenda.html
+index 7a66a75..231d4ed 100644
+--- a/frontend/pages/panel/agenda.html
++++ b/frontend/pages/panel/agenda.html
+@@ -167,7 +167,7 @@
+         placeholder="Algo especial que ocurrió hoy en el grupo..."></textarea>
+     </div>
+     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+-      <input type="checkbox" id="pl-visible" checked style="width:16px;height:16px">
++      <input type="checkbox" id="pl-visible" checked style="width:13px;height:13px">
+       👁 Visible para padres en el portal
+     </label>
+     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+diff --git a/frontend/pages/panel/comunicacion.html b/frontend/pages/panel/comunicacion.html
+index aabc350..5ab1d68 100644
+--- a/frontend/pages/panel/comunicacion.html
++++ b/frontend/pages/panel/comunicacion.html
+@@ -127,7 +127,7 @@
+       </div>
+       <div class="form-grupo" style="display:flex;align-items:flex-end;padding-bottom:.35rem">
+         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700">
+-          <input type="checkbox" id="av-importante" style="width:18px;height:18px">
++          <input type="checkbox" id="av-importante" style="width:14px;height:14px">
+           🔴 Marcar como importante
+         </label>
+       </div>
+diff --git a/frontend/pages/panel/evaluacion.html b/frontend/pages/panel/evaluacion.html
+index 747d6e0..4a73fe8 100644
+--- a/frontend/pages/panel/evaluacion.html
++++ b/frontend/pages/panel/evaluacion.html
+@@ -184,7 +184,7 @@
+       </div>
+       <div class="form-grupo" style="grid-column:1/-1">
+         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700">
+-          <input type="checkbox" id="eval-alerta" style="width:16px;height:16px">
++          <input type="checkbox" id="eval-alerta" style="width:13px;height:13px">
+           ⚠️ Marcar como alerta de rezago (recomienda derivación al Centro Misael)
+         </label>
+       </div>
+diff --git a/frontend/pages/panel/misael-link.html b/frontend/pages/panel/misael-link.html
+index f48a19e..a93ef20 100644
+--- a/frontend/pages/panel/misael-link.html
++++ b/frontend/pages/panel/misael-link.html
+@@ -249,7 +249,7 @@
+       font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md);
+       background:var(--verde-l);padding:var(--gap-md);border-radius:var(--radio-lg);
+       border:1.5px solid var(--verde)">
+-      <input type="checkbox" id="der-consentimiento" style="width:18px;height:18px">
++      <input type="checkbox" id="der-consentimiento" style="width:14px;height:14px">
+       ✅ El tutor otorgó consentimiento para compartir información con el Centro Misael
+     </label>
+     <span class="form-error" data-error="der-consentimiento" style="display:block;margin-top:-10px;margin-bottom:10px"></span>
+@@ -319,7 +319,7 @@
+     </div>
+     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
+       font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+-      <input type="checkbox" id="pm-consentimiento" checked style="width:16px;height:16px">
++      <input type="checkbox" id="pm-consentimiento" checked style="width:13px;height:13px">
+       ✅ Tutor autorizó compartir información entre jardín y Centro Misael
+     </label>
+     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+diff --git a/frontend/pages/panel/ninos.html b/frontend/pages/panel/ninos.html
+index 3ffc4af..97e99c9 100644
+--- a/frontend/pages/panel/ninos.html
++++ b/frontend/pages/panel/ninos.html
+@@ -219,7 +219,7 @@
+           placeholder="Medicamentos que toma regularmente con dosis y horario..."></textarea>
+       </div>
+       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700">
+-        <input type="checkbox" id="n-plan-misael" style="width:16px;height:16px">
++        <input type="checkbox" id="n-plan-misael" style="width:13px;height:13px">
+         🧠 Tiene plan de trabajo del Centro de Neurodesarrollo Misael
+       </label>
+     </div>
+@@ -247,13 +247,13 @@
+         </div>
+         <div class="form-grupo">
+           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+-            <input type="checkbox" id="tv-principal" style="width:16px;height:16px">
++            <input type="checkbox" id="tv-principal" style="width:13px;height:13px">
+             Tutor principal (recibe notificaciones)
+           </label>
+         </div>
+         <div class="form-grupo">
+           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+-            <input type="checkbox" id="tv-retirar" checked style="width:16px;height:16px">
++            <input type="checkbox" id="tv-retirar" checked style="width:13px;height:13px">
+             Autorizado a retirar al niño/a
+           </label>
+         </div>
+diff --git a/frontend/pages/panel/salud.html b/frontend/pages/panel/salud.html
+index 2a6dda6..4663dff 100644
+--- a/frontend/pages/panel/salud.html
++++ b/frontend/pages/panel/salud.html
+@@ -170,7 +170,7 @@
+ 
+     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:var(--gap-md)">
+       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+-        <input type="checkbox" id="inc-notificado" style="width:16px;height:16px">
++        <input type="checkbox" id="inc-notificado" style="width:13px;height:13px">
+         ✅ El tutor fue notificado
+       </label>
+       <div id="campo-hora-notif" style="display:none;margin-left:24px">
+@@ -178,7 +178,7 @@
+         <input type="time" id="inc-hora-notif" class="form-input" style="max-width:160px">
+       </div>
+       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+-        <input type="checkbox" id="inc-medico" style="width:16px;height:16px">
++        <input type="checkbox" id="inc-medico" style="width:13px;height:13px">
+         🏥 Requirió atención médica externa
+       </label>
+     </div>
+diff --git a/frontend/pages/panel/sucursales.html b/frontend/pages/panel/sucursales.html
+index 66e10f4..5c72f3e 100644
+--- a/frontend/pages/panel/sucursales.html
++++ b/frontend/pages/panel/sucursales.html
+@@ -110,7 +110,7 @@
+       <textarea id="suc-desc" class="form-textarea" style="min-height:60px"></textarea>
+     </div>
+     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+-      <input type="checkbox" id="suc-activa" checked style="width:16px;height:16px"> ✅ Sucursal activa
++      <input type="checkbox" id="suc-activa" checked style="width:13px;height:13px"> ✅ Sucursal activa
+     </label>
+     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-sucursal')">Cancelar</button>
+@@ -155,7 +155,7 @@
+       </div>
+     </div>
+     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+-      <input type="checkbox" id="sa-activa" checked style="width:16px;height:16px"> ✅ Sala activa
++      <input type="checkbox" id="sa-activa" checked style="width:13px;height:13px"> ✅ Sala activa
+     </label>
+     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-sala')">Cancelar</button>
+@@ -214,7 +214,7 @@
+       </div>
+     </div>
+     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+-      <input type="checkbox" id="tu-activo" checked style="width:16px;height:16px"> ✅ Turno activo
++      <input type="checkbox" id="tu-activo" checked style="width:13px;height:13px"> ✅ Turno activo
+     </label>
+     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-turno')">Cancelar</button>
+diff --git a/frontend/pages/panel/turnos.html b/frontend/pages/panel/turnos.html
+index a3a4f82..aee4846 100644
+--- a/frontend/pages/panel/turnos.html
++++ b/frontend/pages/panel/turnos.html
+@@ -139,7 +139,7 @@
+       </div>
+     </div>
+     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+-      <input type="checkbox" id="tu-activo" checked style="width:16px;height:16px"> ✅ Turno activo
++      <input type="checkbox" id="tu-activo" checked style="width:13px;height:13px"> ✅ Turno activo
+     </label>
+     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-turno')">Cancelar</button>
+diff --git a/frontend/pages/panel/tutores.html b/frontend/pages/panel/tutores.html
+index 56fbb0f..1992e83 100644
+--- a/frontend/pages/panel/tutores.html
++++ b/frontend/pages/panel/tutores.html
+@@ -130,11 +130,11 @@
+         <label class="form-label">Rol en la familia</label>
+         <div style="display:flex;flex-direction:column;gap:6px;padding-top:.3rem">
+           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+-            <input type="checkbox" id="t-es-principal" style="width:16px;height:16px">
++            <input type="checkbox" id="t-es-principal" style="width:13px;height:13px">
+             Tutor principal (recibe notificaciones)
+           </label>
+           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+-            <input type="checkbox" id="t-puede-retirar" checked style="width:16px;height:16px">
++            <input type="checkbox" id="t-puede-retirar" checked style="width:13px;height:13px">
+             Autorizado a retirar al niño/a
+           </label>
+         </div>
+@@ -169,11 +169,11 @@
+     </div>
+     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:var(--gap-md)">
+       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+-        <input type="checkbox" id="v-es-principal" style="width:16px;height:16px">
++        <input type="checkbox" id="v-es-principal" style="width:13px;height:13px">
+         Tutor principal del niño/a
+       </label>
+       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+-        <input type="checkbox" id="v-puede-retirar" checked style="width:16px;height:16px">
++        <input type="checkbox" id="v-puede-retirar" checked style="width:13px;height:13px">
+         Autorizado a retirar
+       </label>
+     </div>
+diff --git a/frontend/pages/panel/usuarios.html b/frontend/pages/panel/usuarios.html
+index 032e75d..581a4c9 100644
+--- a/frontend/pages/panel/usuarios.html
++++ b/frontend/pages/panel/usuarios.html
+@@ -171,7 +171,7 @@
+     </div>
+ 
+     <label id="campo-activo" style="display:none;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+-      <input type="checkbox" id="u-activo" checked style="width:16px;height:16px">
++      <input type="checkbox" id="u-activo" checked style="width:13px;height:13px">
+       ✅ Cuenta activa (puede iniciar sesión)
+     </label>
+ 
