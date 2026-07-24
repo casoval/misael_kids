@@ -46,9 +46,9 @@
     <div class="pagina">
 
       <div class="alerta alerta-info mb-md">
-        ℹ️ Aquí puedes crear cuentas de acceso para <strong>tutores, profesionales y personal</strong> que no
-        tengan correo electrónico, usando un <strong>nombre de usuario</strong> en su lugar
-        (por ejemplo, su número de CI). También puedes restablecer contraseñas y activar/desactivar cuentas.
+        ℹ️ Aquí puedes crear cuentas de acceso para <strong>tutores, profesionales y personal</strong>
+        usando un <strong>nombre de usuario</strong> y contraseña.
+        También puedes restablecer contraseñas y activar/desactivar cuentas.
       </div>
 
       <!-- Filtros -->
@@ -57,7 +57,7 @@
         box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
         <div class="form-grupo" style="margin:0;flex:1;min-width:200px">
           <label class="form-label">Buscar</label>
-          <input type="text" id="f-buscar" class="form-input" placeholder="Nombre, email o usuario...">
+          <input type="text" id="f-buscar" class="form-input" placeholder="Nombre o usuario...">
         </div>
         <div class="form-grupo" style="margin:0;min-width:180px">
           <label class="form-label">Rol</label>
@@ -149,27 +149,15 @@
     <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
     <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
       text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">
-      Forma de acceso al sistema
+      Acceso al sistema
     </p>
 
-    <!-- Toggle: email vs username (solo al crear) -->
-    <div class="toggle-id" id="toggle-tipo-acceso">
-      <button type="button" class="activo" onclick="setTipoAcceso('email')" id="btn-tipo-email">📧 Tiene email</button>
-      <button type="button" onclick="setTipoAcceso('username')" id="btn-tipo-username">🆔 Sin email (usar usuario)</button>
-    </div>
-
-    <div class="form-grupo" id="campo-email">
-      <label class="form-label">Email *</label>
-      <input type="email" id="u-email" class="form-input" placeholder="correo@ejemplo.com">
-      <span class="form-error" data-error="u-email"></span>
-    </div>
-
-    <div class="form-grupo" id="campo-username" style="display:none">
+    <div class="form-grupo" id="campo-username">
       <label class="form-label">Nombre de usuario *</label>
-      <input type="text" id="u-username" class="form-input" placeholder="Ej: su número de CI, sin espacios">
+      <input type="text" id="u-username" class="form-input" placeholder="Nombre de usuario">
       <span class="form-error" data-error="u-username"></span>
       <span style="font-size:var(--text-xs);color:var(--texto-suave)">
-        Solo letras, números, puntos y guiones. Esto se usará para iniciar sesión en lugar de un email.
+        Se usará para iniciar sesión.
       </span>
     </div>
 
@@ -224,15 +212,6 @@
 initPanel('usuarios', ['admin','directora']);
 
 let editandoId = null;
-let tipoAcceso = 'email';
-
-function setTipoAcceso(tipo) {
-  tipoAcceso = tipo;
-  document.getElementById('btn-tipo-email').classList.toggle('activo', tipo==='email');
-  document.getElementById('btn-tipo-username').classList.toggle('activo', tipo==='username');
-  document.getElementById('campo-email').style.display    = tipo==='email'?'':'none';
-  document.getElementById('campo-username').style.display = tipo==='username'?'':'none';
-}
 
 async function cargar() {
   const tbody  = document.getElementById('tbody-usr');
@@ -295,13 +274,11 @@ function limpiarFiltros() {
 function abrirNuevo() {
   editandoId = null;
   document.getElementById('titulo-modal-usr').textContent = 'Nuevo usuario';
-  ['u-id','u-nombres','u-apellidos','u-telefono','u-email','u-username'].forEach(id=>document.getElementById(id).value='');
+  ['u-id','u-nombres','u-apellidos','u-telefono','u-username'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('u-rol').value = '';
   document.getElementById('u-password').value = 'MisaelKids2025!';
-  document.getElementById('toggle-tipo-acceso').style.display = '';
-  document.getElementById('campo-password').style.display     = '';
-  document.getElementById('campo-activo').style.display       = 'none';
-  setTipoAcceso('email');
+  document.getElementById('campo-password').style.display = '';
+  document.getElementById('campo-activo').style.display   = 'none';
   document.querySelectorAll('#modal-usr .form-error').forEach(el=>el.textContent='');
   document.querySelectorAll('#modal-usr .input-error').forEach(el=>el.classList.remove('input-error'));
   UI.abrirModal('modal-usr');
@@ -318,29 +295,10 @@ async function editar(id) {
     document.getElementById('u-telefono').value  = u.telefono||'';
     document.getElementById('u-rol').value       = u.rol;
     document.getElementById('u-activo').checked  = u.activo;
+    document.getElementById('u-username').value  = u.username||'';
 
-    // Al editar: mostrar el identificador actual como editable
-    document.getElementById('toggle-tipo-acceso').style.display = 'none';
-    document.getElementById('campo-password').style.display     = 'none';
-    document.getElementById('campo-activo').style.display       = 'flex';
-
-    // Mostrar el campo de acceso actual como editable
-    if (u.email) {
-      setTipoAcceso('email');
-      document.getElementById('u-email').value    = u.email;
-      document.getElementById('campo-email').style.display    = '';
-      document.getElementById('campo-username').style.display = 'none';
-    } else {
-      setTipoAcceso('username');
-      document.getElementById('u-username').value = u.username||'';
-      document.getElementById('campo-email').style.display    = 'none';
-      document.getElementById('campo-username').style.display = '';
-    }
-
-    // Mostrar botón para cambiar tipo de acceso al editar
-    const cambiarAcceso = document.getElementById('toggle-tipo-acceso');
-    cambiarAcceso.style.display = '';
-    cambiarAcceso.style.marginTop = 'var(--gap-sm)';
+    document.getElementById('campo-password').style.display = 'none';
+    document.getElementById('campo-activo').style.display   = 'flex';
     document.querySelectorAll('#modal-usr .form-error').forEach(el=>el.textContent='');
     document.querySelectorAll('#modal-usr .input-error').forEach(el=>el.classList.remove('input-error'));
     UI.abrirModal('modal-usr');
@@ -352,20 +310,9 @@ async function guardarUsuario() {
     'u-nombres':   [()=>Validar.requerido(document.getElementById('u-nombres').value,'Nombres')],
     'u-apellidos': [()=>Validar.requerido(document.getElementById('u-apellidos').value,'Apellidos')],
     'u-rol':       [()=>Validar.requerido(document.getElementById('u-rol').value,'Rol')],
+    'u-username':  [()=>Validar.requerido(document.getElementById('u-username').value,'Nombre de usuario')],
   };
   if (!editandoId) {
-    if (tipoAcceso === 'email') {
-      reglas['u-email'] = [()=>Validar.email(document.getElementById('u-email').value)];
-    } else {
-      reglas['u-username'] = [
-        ()=>Validar.requerido(document.getElementById('u-username').value,'Nombre de usuario'),
-        ()=>{
-          const v = document.getElementById('u-username').value;
-          if (v && !/^[a-zA-Z0-9_.-]+$/.test(v)) return 'Solo letras, números, puntos, guiones y guion bajo';
-          return null;
-        }
-      ];
-    }
     reglas['u-password'] = [()=>Validar.minLength(document.getElementById('u-password').value,8,'La contraseña')];
   }
   const errores = Validar.formulario(reglas);
@@ -379,15 +326,8 @@ async function guardarUsuario() {
         telefono:  document.getElementById('u-telefono').value.trim(),
         rol:       document.getElementById('u-rol').value,
         activo:    document.getElementById('u-activo').checked,
+        username:  document.getElementById('u-username').value.trim(),
       };
-      // Incluir el identificador actualizado
-      if (tipoAcceso === 'email') {
-        datosEdicion.email    = document.getElementById('u-email').value.trim() || null;
-        datosEdicion.username = null;
-      } else {
-        datosEdicion.username = document.getElementById('u-username').value.trim() || null;
-        datosEdicion.email    = null;
-      }
       await API.patch('/auth/usuarios/'+editandoId+'/', datosEdicion);
       UI.toast('✅ Usuario actualizado correctamente','exito');
     } else {
@@ -398,9 +338,8 @@ async function guardarUsuario() {
         rol:       document.getElementById('u-rol').value,
         password:  document.getElementById('u-password').value,
         password2: document.getElementById('u-password').value,
+        username:  document.getElementById('u-username').value.trim(),
       };
-      if (tipoAcceso === 'email') datos.email = document.getElementById('u-email').value.trim();
-      else datos.username = document.getElementById('u-username').value.trim();
       await API.post('/auth/usuarios/', datos);
       UI.toast('✅ Usuario creado correctamente','exito');
     }

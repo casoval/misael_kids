@@ -22,7 +22,7 @@
         box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100)">
         <div class="form-grupo" style="margin:0;flex:1;min-width:200px">
           <label class="form-label">Buscar</label>
-          <input type="text" id="f-buscar" class="form-input" placeholder="Nombre, CI o email...">
+          <input type="text" id="f-buscar" class="form-input" placeholder="Nombre o CI...">
         </div>
         <div style="display:flex;align-items:flex-end;gap:6px">
           <button class="btn btn-primary" onclick="cargar()">Buscar</button>
@@ -39,7 +39,7 @@
           <table>
             <thead><tr>
               <th>Tutor/a</th><th>CI</th><th>Parentesco</th>
-              <th>Teléfono</th><th>Email</th><th>Niños</th><th>Acciones</th>
+              <th>Teléfono</th><th>Niños</th><th>Acciones</th>
             </tr></thead>
             <tbody id="tbody-tutores"></tbody>
           </table>
@@ -76,9 +76,8 @@
         <span class="form-error" data-error="t-apellidos"></span>
       </div>
       <div class="form-grupo">
-        <label class="form-label">CI / DNI *</label>
-        <input type="text" id="t-ci" class="form-input" placeholder="Número de CI"
-          oninput="if(document.getElementById('t-sin-email').checked) document.getElementById('t-username').value=this.value.trim()">
+        <label class="form-label">CI *</label>
+        <input type="text" id="t-ci" class="form-input" placeholder="Número de CI">
         <span class="form-error" data-error="t-ci"></span>
       </div>
       <div class="form-grupo">
@@ -102,20 +101,9 @@
         <label class="form-label">Teléfono alternativo</label>
         <input type="text" id="t-telefono-alt" class="form-input" placeholder="Opcional">
       </div>
-      <div class="form-grupo" style="grid-column:1/-1" id="campo-t-email">
-        <label class="form-label">Email (para acceso al portal) *</label>
-        <input type="email" id="t-email" class="form-input" placeholder="correo@ejemplo.com">
-        <span class="form-error" data-error="t-email"></span>
-      </div>
-      <div class="form-grupo" style="grid-column:1/-1">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:700">
-          <input type="checkbox" id="t-sin-email" onchange="toggleSinEmail()" style="width:16px;height:16px">
-          🆔 No tiene email — usar su CI como nombre de usuario para acceder al portal
-        </label>
-      </div>
       <div class="form-grupo" style="grid-column:1/-1" id="campo-t-username">
         <label class="form-label">Nombre de usuario (acceso al portal) *</label>
-        <input type="text" id="t-username" class="form-input" placeholder="Se sugiere el CI">
+        <input type="text" id="t-username" class="form-input" placeholder="Nombre de usuario">
         <span class="form-error" data-error="t-username"></span>
       </div>
       <div class="form-grupo" style="grid-column:1/-1" id="campo-t-password">
@@ -226,13 +214,13 @@ async function cargar() {
   const buscar = document.getElementById('f-buscar').value.trim();
   let url = '/ninos/tutores/?page_size=100';
   if (buscar) url += '&search=' + encodeURIComponent(buscar);
-  tbody.innerHTML = '<tr><td colspan="7"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6"><div class="loader"><div class="spinner"></div></div></td></tr>';
   try {
     const data  = await API.get(url);
     const lista = data.results||data;
     document.getElementById('total-tutores').textContent = lista.length + ' tutor(es)';
     if (!lista.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin tutores registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin tutores registrados</td></tr>';
       return;
     }
     // Para cada tutor, contar cuántos niños tiene
@@ -248,14 +236,13 @@ async function cargar() {
             </div>
             <div>
               <div style="font-weight:700">${t.nombres} ${t.apellidos}</div>
-              <div style="font-size:var(--text-xs);color:var(--texto-suave)">${t.email||'Sin email'}</div>
+              <div style="font-size:var(--text-xs);color:var(--texto-suave)">CI: ${t.ci}</div>
             </div>
           </div>
         </td>
         <td style="font-weight:600">${t.ci}</td>
         <td><span class="chip chip-turquesa">${t.parentesco_display}</span></td>
         <td>${t.telefono}</td>
-        <td>${t.email||'—'}</td>
         <td>
           <button class="btn btn-outline btn-sm" onclick="abrirVincular('${t.id}','${t.nombres} ${t.apellidos}')">
             + Vincular niño
@@ -270,16 +257,7 @@ async function cargar() {
         </td>
       </tr>`).join('');
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
-  }
-}
-
-function toggleSinEmail() {
-  const sinEmail = document.getElementById('t-sin-email').checked;
-  document.getElementById('campo-t-email').style.display    = sinEmail?'none':'';
-  document.getElementById('campo-t-username').style.display = sinEmail?'':'none';
-  if (sinEmail && !document.getElementById('t-username').value) {
-    document.getElementById('t-username').value = document.getElementById('t-ci').value.trim();
+    tbody.innerHTML = '<tr><td colspan="6"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
   }
 }
 
@@ -287,12 +265,10 @@ function abrirNuevo() {
   editandoId = null;
   document.getElementById('titulo-modal').textContent = 'Nuevo tutor';
   document.getElementById('aviso-cuenta').style.display = '';
-  ['t-id','t-nombres','t-apellidos','t-ci','t-telefono','t-telefono-alt','t-email','t-username'].forEach(id => document.getElementById(id).value='');
+  ['t-id','t-nombres','t-apellidos','t-ci','t-telefono','t-telefono-alt','t-username'].forEach(id => document.getElementById(id).value='');
   document.getElementById('t-password').value = 'MisaelKids2025!';
+  document.getElementById('campo-t-username').style.display = '';
   document.getElementById('campo-t-password').style.display = '';
-  document.getElementById('t-sin-email').checked = false;
-  document.getElementById('t-sin-email').parentElement.style.display = 'flex';
-  toggleSinEmail();
   document.getElementById('t-parentesco').value = '';
   document.getElementById('t-nino').value       = '';
   document.getElementById('t-es-principal').checked  = false;
@@ -306,11 +282,9 @@ async function editar(id) {
   editandoId = id;
   document.getElementById('titulo-modal').textContent = 'Editar tutor';
   document.getElementById('aviso-cuenta').style.display = 'none';
-  // El tipo de acceso (email/usuario) no se modifica al editar — solo gestión de usuarios puede hacerlo
-  document.getElementById('t-sin-email').parentElement.style.display = 'none';
+  // El nombre de usuario de acceso no se modifica aquí — solo desde Usuarios
   document.getElementById('campo-t-username').style.display = 'none';
   document.getElementById('campo-t-password').style.display = 'none';
-  document.getElementById('campo-t-email').style.display = '';
   try {
     const t = await API.get('/ninos/tutores/'+id+'/');
     document.getElementById('t-id').value           = id;
@@ -319,14 +293,14 @@ async function editar(id) {
     document.getElementById('t-ci').value           = t.ci;
     document.getElementById('t-telefono').value     = t.telefono;
     document.getElementById('t-telefono-alt').value = t.telefono_alt||'';
-    document.getElementById('t-email').value        = t.email||'';
     document.getElementById('t-parentesco').value   = t.parentesco;
+    document.querySelectorAll('#modal-tutor .form-error').forEach(el => el.textContent='');
+    document.querySelectorAll('#modal-tutor .input-error').forEach(el => el.classList.remove('input-error'));
     UI.abrirModal('modal-tutor');
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
 }
 
 async function guardarTutor() {
-  const sinEmail = document.getElementById('t-sin-email').checked;
   const reglas = {
     't-nombres':    [() => Validar.requerido(document.getElementById('t-nombres').value, 'Nombres')],
     't-apellidos':  [() => Validar.requerido(document.getElementById('t-apellidos').value, 'Apellidos')],
@@ -335,18 +309,7 @@ async function guardarTutor() {
     't-telefono':   [() => Validar.requerido(document.getElementById('t-telefono').value, 'Teléfono')],
   };
   if (!editandoId) {
-    if (sinEmail) {
-      reglas['t-username'] = [
-        () => Validar.requerido(document.getElementById('t-username').value, 'Nombre de usuario'),
-        () => {
-          const v = document.getElementById('t-username').value;
-          if (v && !/^[a-zA-Z0-9_.-]+$/.test(v)) return 'Solo letras, números, puntos, guiones y guion bajo';
-          return null;
-        }
-      ];
-    } else {
-      reglas['t-email'] = [() => Validar.email(document.getElementById('t-email').value)];
-    }
+    reglas['t-username'] = [() => Validar.requerido(document.getElementById('t-username').value, 'Nombre de usuario')];
     reglas['t-password'] = [() => Validar.minLength(document.getElementById('t-password').value, 8, 'La contraseña')];
   }
   const errores = Validar.formulario(reglas);
@@ -359,26 +322,21 @@ async function guardarTutor() {
     parentesco:   document.getElementById('t-parentesco').value,
     telefono:     document.getElementById('t-telefono').value.trim(),
     telefono_alt: document.getElementById('t-telefono-alt').value.trim(),
-    email:        sinEmail ? '' : document.getElementById('t-email').value.trim(),
   };
 
   try {
     let tutorId = editandoId;
     if (!editandoId) {
-      // Crear usuario para acceso al portal (email o nombre de usuario)
-      const datosUsuario = {
+      const usuario = await API.post('/auth/usuarios/', {
         nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor',
+        username: document.getElementById('t-username').value.trim(),
         password: document.getElementById('t-password').value,
         password2: document.getElementById('t-password').value,
-      };
-      if (sinEmail) datosUsuario.username = document.getElementById('t-username').value.trim();
-      else datosUsuario.email = datos.email;
-
-      const usuario = await API.post('/auth/usuarios/', datosUsuario);
+      });
       datos.usuario = usuario.id;
       const tutor = await API.post('/ninos/tutores/', datos);
       tutorId = tutor.id;
-      UI.toast('Tutor creado correctamente'+(sinEmail?' — usuario: '+datosUsuario.username:''), 'exito');
+      UI.toast('Tutor creado correctamente', 'exito');
 
       // Vincular al niño si seleccionó uno
       const ninoId = document.getElementById('t-nino').value;

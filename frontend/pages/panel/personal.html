@@ -114,7 +114,7 @@
         <span class="form-error" data-error="p-apellidos"></span>
       </div>
       <div class="form-grupo">
-        <label class="form-label">CI / DNI *</label>
+        <label class="form-label">CI *</label>
         <input type="text" id="p-ci" class="form-input" placeholder="Número de CI">
         <span class="form-error" data-error="p-ci"></span>
       </div>
@@ -144,11 +144,6 @@
         <input type="text" id="p-especialidad" class="form-input"
           placeholder="Ej: Licenciada en Educación Parvularia">
       </div>
-      <div class="form-grupo" style="grid-column:1/-1">
-        <label class="form-label">Email (opcional)</label>
-        <input type="email" id="p-email" class="form-input" placeholder="correo@ejemplo.com — déjalo vacío si no tiene">
-        <span class="form-error" data-error="p-email"></span>
-      </div>
     </div>
 
     <div id="bloque-acceso">
@@ -158,9 +153,9 @@
       <div class="grid-2">
         <div class="form-grupo">
           <label class="form-label">Nombre de usuario *</label>
-          <input type="text" id="p-username" class="form-input" placeholder="Ej: su CI, sin espacios">
+          <input type="text" id="p-username" class="form-input" placeholder="Nombre de usuario">
           <span class="form-error" data-error="p-username"></span>
-          <span style="font-size:var(--text-xs);color:var(--texto-suave)">Se usará para iniciar sesión (también podrá usar el email si lo indicó arriba).</span>
+          <span style="font-size:var(--text-xs);color:var(--texto-suave)">Se usará para iniciar sesión.</span>
         </div>
         <div class="form-grupo">
           <label class="form-label">Contraseña inicial *</label>
@@ -283,7 +278,7 @@ async function cargar() {
       <td><div style="display:flex;align-items:center;gap:var(--gap-sm)">
         <div class="avatar-personal">${UI.iniciales(p.nombre_completo)}</div>
         <div><div style="font-weight:700">${p.nombre_completo}</div>
-        <div style="font-size:var(--text-xs);color:var(--texto-suave)">${p.email||''}</div></div>
+        <div style="font-size:var(--text-xs);color:var(--texto-suave)">CI: ${p.ci}</div></div>
       </div></td>
       <td style="font-weight:600">${p.ci}</td>
       <td><span class="rol-badge rol-${p.rol}">${p.rol_display}</span></td>
@@ -328,7 +323,7 @@ function abrirNuevo() {
   document.getElementById('titulo-modal-personal').textContent='Nuevo personal';
   document.getElementById('bloque-acceso').style.display='';
   document.getElementById('nota-acceso-editar').style.display='none';
-  ['p-id','p-usuario-id','p-nombres','p-apellidos','p-email','p-telefono','p-ci','p-especialidad','p-username'].forEach(id=>document.getElementById(id).value='');
+  ['p-id','p-usuario-id','p-nombres','p-apellidos','p-telefono','p-ci','p-especialidad','p-username'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('p-rol').value='';
   document.getElementById('p-password').value='MisaelKids2025!';
   document.getElementById('p-fecha-ingreso').value=hoy;
@@ -347,7 +342,6 @@ async function editar(id) {
     document.getElementById('p-usuario-id').value=p.usuario;
     document.getElementById('p-nombres').value=p.usuario_nombres||'';
     document.getElementById('p-apellidos').value=p.usuario_apellidos||'';
-    document.getElementById('p-email').value=p.email||'';
     document.getElementById('p-ci').value=p.ci||'';
     document.getElementById('p-telefono').value=p.telefono||'';
     document.getElementById('p-rol').value=p.rol||'';
@@ -366,17 +360,8 @@ async function guardarPersonal() {
     'p-rol':          [()=>Validar.requerido(document.getElementById('p-rol').value,'Rol')],
     'p-fecha-ingreso':[()=>Validar.fecha(document.getElementById('p-fecha-ingreso').value,'Fecha de ingreso')],
   };
-  const email = document.getElementById('p-email').value.trim();
-  if (email) reglas['p-email'] = [()=>Validar.email(email)];
   if (!editandoId) {
-    reglas['p-username'] = [
-      ()=>Validar.requerido(document.getElementById('p-username').value,'Nombre de usuario'),
-      ()=>{
-        const v = document.getElementById('p-username').value;
-        if (v && !/^[a-zA-Z0-9_.-]+$/.test(v)) return 'Solo letras, números, puntos, guiones y guion bajo';
-        return null;
-      }
-    ];
+    reglas['p-username'] = [()=>Validar.requerido(document.getElementById('p-username').value,'Nombre de usuario')];
     reglas['p-password'] = [()=>Validar.minLength(document.getElementById('p-password').value,8,'La contraseña')];
   }
   const errores = Validar.formulario(reglas);
@@ -391,7 +376,6 @@ async function guardarPersonal() {
     if (!editandoId) {
       const usuario = await API.post('/auth/usuarios/', {
         nombres, apellidos, telefono, rol,
-        email: email || null,
         username: document.getElementById('p-username').value.trim(),
         password: document.getElementById('p-password').value,
         password2: document.getElementById('p-password').value,
@@ -407,7 +391,6 @@ async function guardarPersonal() {
       const usuarioId = document.getElementById('p-usuario-id').value;
       await API.patch('/auth/usuarios/'+usuarioId+'/', {
         nombres, apellidos, telefono,
-        email: email || null,
       });
       await API.patch('/personal/personal/'+editandoId+'/', {
         ci:document.getElementById('p-ci').value,

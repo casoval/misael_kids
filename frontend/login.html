@@ -310,16 +310,16 @@
 
     <!-- Formulario -->
     <form id="form-login" novalidate>
-      <!-- Email o usuario -->
+      <!-- Nombre de usuario -->
       <div class="form-grupo">
-        <label class="form-label" for="email">Correo electrónico o usuario</label>
+        <label class="form-label" for="email">Nombre de usuario</label>
         <div class="input-wrap">
-          <span class="input-icon">📧</span>
+          <span class="input-icon">🆔</span>
           <input
             type="text"
             id="email"
             class="form-input"
-            placeholder="tu@correo.com o tu usuario"
+            placeholder="Tu nombre de usuario"
             autocomplete="username"
             required
           >
@@ -456,7 +456,7 @@
       } catch (err) {
         mostrarError(
           err.message.includes('401') || err.message.includes('No active') || err.message.includes('Credenciales')
-            ? 'Email/usuario o contraseña incorrectos.'
+            ? 'Usuario o contraseña incorrectos.'
             : `Error: ${err.message}`
         );
         setLoading(false);

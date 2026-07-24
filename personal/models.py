@@ -28,7 +28,7 @@ class Personal(ModeloBase):
     usuario       = models.OneToOneField(
         'accounts.Usuario', on_delete=models.CASCADE, related_name='perfil_personal'
     )
-    ci            = models.CharField(max_length=20, unique=True, verbose_name='CI/DNI')
+    ci            = models.CharField(max_length=20, unique=True, verbose_name='CI')
     telefono      = models.CharField(max_length=20, blank=True)
     rol           = models.CharField(max_length=20, choices=ROLES)
     especialidad  = models.CharField(max_length=200, blank=True)

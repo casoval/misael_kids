@@ -76,7 +76,7 @@ class Tutor(ModeloBase):
     )
     nombres     = models.CharField(max_length=100)
     apellidos   = models.CharField(max_length=100)
-    ci          = models.CharField(max_length=20, verbose_name='CI/DNI')
+    ci          = models.CharField(max_length=20, verbose_name='CI')
     telefono    = models.CharField(max_length=20)
     telefono_alt = models.CharField(max_length=20, blank=True)
     email       = models.EmailField(blank=True)

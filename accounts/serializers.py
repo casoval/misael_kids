@@ -61,16 +61,11 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
 
         if not email and not username:
             raise serializers.ValidationError(
-                {'username': 'Debes indicar un email o un nombre de usuario.'})
+                {'username': 'Debes indicar un nombre de usuario.'})
 
-        if username:
-            import re
-            if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
-                raise serializers.ValidationError(
-                    {'username': 'Solo se permiten letras, números, puntos, guiones y guion bajo.'})
-            if Usuario.objects.filter(username__iexact=username).exists():
-                raise serializers.ValidationError(
-                    {'username': 'Ese nombre de usuario ya está en uso.'})
+        if username and Usuario.objects.filter(username__iexact=username).exists():
+            raise serializers.ValidationError(
+                {'username': 'Ese nombre de usuario ya está en uso.'})
 
         if email and Usuario.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError({'email': 'Ese email ya está registrado.'})
