@@ -166,6 +166,9 @@
     </div>
     <input type="hidden" id="da-inscripcion-id">
     <input type="hidden" id="da-asistencia-id">
+    <div id="da-personas-autorizadas" style="background:var(--turquesa-l);border-radius:var(--radio-lg);
+      padding:var(--gap-sm) var(--gap-md);margin-bottom:var(--gap-md);font-size:var(--text-xs);
+      color:var(--turquesa-d);font-weight:600;display:none"></div>
     <div class="grid-2">
       <div class="form-grupo">
         <label class="form-label">Estado</label>
@@ -181,7 +184,7 @@
       </div>
       <div class="form-grupo">
         <label class="form-label">Quién entregó al niño</label>
-        <input type="text" id="da-entregado" class="form-input" placeholder="Nombre de quien trajo al niño">
+        <input type="text" id="da-entregado" class="form-input" list="dl-personas" placeholder="Nombre de quien trajo al niño">
       </div>
       <div class="form-grupo">
         <label class="form-label">Hora de entrada</label>
@@ -189,8 +192,9 @@
       </div>
       <div class="form-grupo">
         <label class="form-label">Quién retiró al niño</label>
-        <input type="text" id="da-retirado" class="form-input" placeholder="Nombre de quien retiró">
+        <input type="text" id="da-retirado" class="form-input" list="dl-personas" placeholder="Nombre de quien retiró">
       </div>
+      <datalist id="dl-personas"></datalist>
       <div class="form-grupo">
         <label class="form-label">Hora de salida</label>
         <input type="time" id="da-hora-salida" class="form-input">
@@ -225,7 +229,7 @@
 initPanel('asistencia');
 
 const hoyDate = new Date();
-const hoyISO  = hoyDate.toISOString().split('T')[0];
+const hoyISO  = UI.fechaHoyISO(hoyDate);
 const ahoraT  = hoyDate.toTimeString().slice(0,5);
 document.getElementById('f-fecha').value = hoyISO;
 document.getElementById('fecha-display').textContent = hoyDate.toLocaleDateString('es-BO',{
@@ -301,7 +305,7 @@ async function cargarAsistencia() {
     ninosCargados.forEach(i => {
       const ex = asistenciasExistentes[i.id];
       registros[i.id] = {
-        inscripcion: i.id, nino_nombre: i.nino_nombre,
+        inscripcion: i.id, nino: i.nino, nino_nombre: i.nino_nombre,
         sala_nombre: i.sala_nombre, turno_nombre: i.turno_nombre,
         fecha, estado: ex?.estado||null,
         hora_entrada: ex?.hora_entrada?.slice(0,5)||'',
@@ -436,6 +440,32 @@ function abrirDetalle(inscId) {
   document.getElementById('da-motivo').value       = r.motivo_ausencia||'';
   document.getElementById('da-obs-entrada').value  = r.obs_entrada||'';
   UI.abrirModal('modal-detalle-asist');
+  cargarPersonasAutorizadas(r.nino);
+}
+
+async function cargarPersonasAutorizadas(ninoId) {
+  const aviso = document.getElementById('da-personas-autorizadas');
+  const dl    = document.getElementById('dl-personas');
+  dl.innerHTML = '';
+  aviso.style.display = 'none';
+  if (!ninoId) return;
+  try {
+    const nino = await API.get('/ninos/ninos/'+ninoId+'/');
+    const personas = [
+      ...(nino.tutores||[]).filter(t=>t.puede_retirar!==false).map(t=>t.tutor_nombre),
+      ...(nino.autorizados||[]).filter(a=>a.activa!==false).map(a=>a.nombres+' '+a.apellidos),
+    ];
+    dl.innerHTML = personas.map(p=>'<option value="'+p.replace(/"/g,'')+'">').join('');
+    if (personas.length) {
+      aviso.style.display = 'block';
+      aviso.innerHTML = '✅ Autorizados a retirar: ' + personas.join(', ');
+    } else {
+      aviso.style.display = 'block';
+      aviso.style.background = 'var(--coral-l)';
+      aviso.style.color = 'var(--coral-d)';
+      aviso.innerHTML = '⚠️ Este niño/a no tiene tutores ni personas autorizadas registradas.';
+    }
+  } catch {}
 }
 
 function guardarDetalleModal() {

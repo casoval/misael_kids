@@ -10,7 +10,7 @@ class PlanificacionGrupal(ModeloBase):
     """Registro diario de actividades para toda la sala/turno."""
     sala           = models.ForeignKey('core.Sala', on_delete=models.CASCADE)
     turno          = models.ForeignKey('core.Turno', on_delete=models.CASCADE)
-    educadora      = models.ForeignKey('personal.Personal', on_delete=models.CASCADE)
+    educadora      = models.ForeignKey('personal.Personal', on_delete=models.SET_NULL, null=True, blank=True)
     fecha          = models.DateField()
     actividades    = models.TextField()
     areas_trabajadas = models.CharField(max_length=500, blank=True, help_text='Áreas de desarrollo abordadas')
@@ -36,7 +36,7 @@ class PlanIndividual(ModeloBase):
     ]
 
     nino         = models.ForeignKey('ninos.Nino', on_delete=models.CASCADE, related_name='planes_individuales')
-    creado_por   = models.ForeignKey('personal.Personal', on_delete=models.CASCADE)
+    creado_por   = models.ForeignKey('personal.Personal', on_delete=models.SET_NULL, null=True, blank=True)
     origen       = models.CharField(max_length=20, choices=ORIGENES, default=ORIGEN_EDUCADORA)
     descripcion  = models.TextField()
     fecha_inicio = models.DateField()
@@ -102,7 +102,7 @@ class RegistroObjetivo(ModeloBase):
     ]
 
     objetivo     = models.ForeignKey(ObjetivoIndividual, on_delete=models.CASCADE, related_name='registros')
-    educadora    = models.ForeignKey('personal.Personal', on_delete=models.CASCADE)
+    educadora    = models.ForeignKey('personal.Personal', on_delete=models.SET_NULL, null=True, blank=True)
     fecha        = models.DateField()
     resultado    = models.CharField(max_length=20, choices=RESULTADOS)
     observacion  = models.TextField(blank=True)

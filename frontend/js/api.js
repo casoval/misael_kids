@@ -211,6 +211,16 @@ const UI = {
     return nombre.split(' ').slice(0,2).map(p => p[0]?.toUpperCase() || '').join('');
   },
 
+  // Fecha de HOY como "YYYY-MM-DD" en hora LOCAL (no usar `new Date().toISOString()`
+  // para esto: convierte a UTC, y en Bolivia (UTC-4) eso muestra la fecha de MAÑANA
+  // en cualquier momento después de las 20:00 hora local).
+  fechaHoyISO(d = new Date()) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dia = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dia}`;
+  },
+
   // Formatear fecha
   fecha(iso) {
     if (!iso) return '—';
