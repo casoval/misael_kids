@@ -263,6 +263,74 @@
   </div>
 </div>
 
+<!-- Modal transferir -->
+<div class="modal-overlay" id="modal-transferir">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-titulo">🔁 Transferir inscripción</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <input type="hidden" id="t-id">
+    <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)">
+      <span id="t-info" style="font-weight:700"></span> — la inscripción actual se cerrará
+      automáticamente y se creará una nueva con el destino que elijas. El historial de cobros
+      anteriores no se pierde, queda en la inscripción anterior.
+    </p>
+
+    <div id="t-aviso-pendientes" style="display:none;margin-bottom:var(--gap-md);
+      background:var(--amarillo-l,#fff8e1);border:1.5px solid var(--amarillo,#f5c344);
+      border-radius:var(--radio-md);padding:.65rem .85rem;font-size:var(--text-sm);font-weight:600;
+      color:var(--texto-fuerte,#5a4a10)"></div>
+
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Nueva sucursal *</label>
+        <select id="t-sucursal" class="form-select" onchange="cargarSalasTransferir()">
+          <option value="">Seleccionar...</option>
+        </select>
+        <span class="form-error" data-error="t-sucursal"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Nueva sala *</label>
+        <select id="t-sala" class="form-select" onchange="cargarTurnosTransferir()">
+          <option value="">Primero elige sucursal</option>
+        </select>
+        <span class="form-error" data-error="t-sala"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Nuevo turno *</label>
+        <select id="t-turno" class="form-select">
+          <option value="">Primero elige sala</option>
+        </select>
+        <span class="form-error" data-error="t-turno"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Modalidad de pago</label>
+        <select id="t-modalidad" class="form-select">
+          <option value="">Mantener la misma</option>
+          <option value="mensual">Mensualidad fija</option>
+          <option value="diaria">Pago por día</option>
+        </select>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Fecha de la transferencia *</label>
+        <input type="date" id="t-fecha" class="form-input">
+        <span class="form-error" data-error="t-fecha"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Motivo (opcional)</label>
+        <textarea id="t-motivo" class="form-textarea" style="min-height:60px"
+          placeholder="Ej: Cambio de sucursal por mudanza de la familia..."></textarea>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-transferir')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTransferencia()">Confirmar transferencia</button>
+    </div>
+  </div>
+</div>
+
 <script src="{% static 'js/api.js' %}"></script>
 <script src="{% static 'js/components.js' %}"></script>
 <script>
@@ -347,8 +415,10 @@ async function cargar() {
         <td>${UI.fecha(i.fecha_inicio)}</td>
         <td>${i.activa?'<span class="chip chip-verde">Activa</span>':'<span class="chip chip-coral">Inactiva</span>'}</td>
         <td>
-          <div style="display:flex;gap:6px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn btn-outline btn-sm" onclick="editar('${i.id}')">Editar</button>
+            ${i.activa ? `<button class="btn btn-sm" style="background:var(--turquesa-l);color:var(--turquesa-d);border:1.5px solid var(--turquesa)"
+              onclick="abrirTransferir('${i.id}','${i.nino_nombre}','${i.sucursal_nombre}')">🔁 Transferir</button>` : ''}
             <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
               onclick="eliminar('${i.id}','${i.nino_nombre}')">Eliminar</button>
           </div>
@@ -377,6 +447,7 @@ function abrirNuevo() {
   ['i-costo-mensual','i-costo-diario','i-pct-ajuste','i-monto-ajuste'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('aviso-edad').style.display = 'none';
   document.getElementById('preview-costos').style.display = 'none';
+  actualizarVistaCostos();
   mostrarCamposAjuste();
   document.querySelectorAll('#modal-insc .form-error').forEach(el=>el.textContent='');
   document.querySelectorAll('#modal-insc .input-error').forEach(el=>el.classList.remove('input-error'));
@@ -404,6 +475,7 @@ async function editar(id) {
     document.getElementById('i-pct-ajuste').value     = i.porcentaje_ajuste||'';
     document.getElementById('i-monto-ajuste').value   = i.monto_ajuste||'';
     document.getElementById('i-motivo-ajuste').value  = i.motivo_ajuste||'';
+    actualizarVistaCostos();
     mostrarCamposAjuste();
     calcularCostoFinal();
     UI.abrirModal('modal-insc');
@@ -455,6 +527,18 @@ async function cargarCostosBase() {
     document.getElementById('i-costo-diario').value  = turno.costo_diario;
     calcularCostoFinal();
   } catch {}
+}
+
+function actualizarVistaCostos() {
+  const modalidad = document.getElementById('i-modalidad').value;
+  const esMensual = modalidad === 'mensual';
+  // Solo se muestra el campo de costo que corresponde a la modalidad elegida.
+  // El otro sigue guardándose (se autocompleta desde el turno) por si el niño
+  // asiste algún día extra, pero no se muestra para no confundir.
+  document.getElementById('i-costo-mensual').closest('.form-grupo').style.display = esMensual ? '' : 'none';
+  document.getElementById('i-costo-diario').closest('.form-grupo').style.display  = esMensual ? 'none' : '';
+  document.getElementById('prev-final-diario').closest('.costo-fila').style.display = esMensual ? 'none' : '';
+  calcularCostoFinal();
 }
 
 function mostrarCamposAjuste() {
@@ -525,6 +609,101 @@ async function guardarInscripcion() {
     else await API.post('/inscripciones/inscripciones/',datos);
     UI.toast('Inscripción guardada correctamente','exito');
     UI.cerrarModal('modal-insc');
+    cargar(); cargarStats();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+let pendientesTransferir = [];
+
+async function abrirTransferir(id, nombreNino, sucursalActual) {
+  document.getElementById('t-id').value  = id;
+  document.getElementById('t-info').textContent = `${nombreNino} (actualmente en ${sucursalActual})`;
+  document.getElementById('t-sucursal').value  = '';
+  document.getElementById('t-sala').innerHTML  = '<option value="">Primero elige sucursal</option>';
+  document.getElementById('t-turno').innerHTML = '<option value="">Primero elige sala</option>';
+  document.getElementById('t-modalidad').value = '';
+  document.getElementById('t-fecha').value     = hoy;
+  document.getElementById('t-motivo').value    = '';
+  document.querySelectorAll('#modal-transferir .form-error').forEach(el=>el.textContent='');
+  document.querySelectorAll('#modal-transferir .input-error').forEach(el=>el.classList.remove('input-error'));
+
+  const aviso = document.getElementById('t-aviso-pendientes');
+  aviso.style.display = 'none';
+  pendientesTransferir = [];
+  UI.abrirModal('modal-transferir');
+
+  // Consultar si tiene cobros pendientes/vencidos antes de transferir
+  try {
+    const data = await API.get('/inscripciones/inscripciones/'+id+'/cobros-pendientes/');
+    pendientesTransferir = data || [];
+    if (pendientesTransferir.length) {
+      const total = pendientesTransferir.reduce((s,c)=>s+parseFloat(c.monto_final),0);
+      aviso.style.display = '';
+      aviso.innerHTML = `⚠️ Este niño/a tiene <strong>${pendientesTransferir.length} cobro(s) pendiente(s)</strong>
+        por un total de <strong>${UI.moneda(total)}</strong> en la sala/turno actual.
+        No se cancelan ni se transfieren automáticamente — quedan como deuda pendiente
+        de la inscripción anterior. Confirma que quieres continuar.`;
+    }
+  } catch {}
+}
+
+async function cargarSalasTransferir() {
+  const sucId = document.getElementById('t-sucursal').value;
+  const sel   = document.getElementById('t-sala');
+  sel.innerHTML = '<option value="">Seleccionar sala...</option>';
+  document.getElementById('t-turno').innerHTML = '<option value="">Primero elige sala</option>';
+  if (!sucId) return;
+  try {
+    const data = await API.get('/core/salas/?sucursal='+sucId+'&activa=true');
+    UI.llenarSelect(sel, data.results||data, 'id', s=>s.nombre+' ('+s.rango_edad+') — Cap: '+s.capacidad_maxima);
+  } catch {}
+}
+
+async function cargarTurnosTransferir() {
+  const salaId = document.getElementById('t-sala').value;
+  const sel    = document.getElementById('t-turno');
+  sel.innerHTML = '<option value="">Seleccionar turno...</option>';
+  if (!salaId) return;
+  try {
+    const data = await API.get('/core/turnos/?sala='+salaId+'&activo=true');
+    UI.llenarSelect(sel, data.results||data, 'id', t=>t.nombre+' ('+t.hora_inicio?.slice(0,5)+'-'+t.hora_fin?.slice(0,5)+')');
+  } catch {}
+}
+
+async function guardarTransferencia() {
+  const errores = Validar.formulario({
+    't-sucursal': [()=>Validar.requerido(document.getElementById('t-sucursal').value,'Sucursal')],
+    't-sala':     [()=>Validar.requerido(document.getElementById('t-sala').value,'Sala')],
+    't-turno':    [()=>Validar.requerido(document.getElementById('t-turno').value,'Turno')],
+    't-fecha':    [()=>Validar.fecha(document.getElementById('t-fecha').value,'Fecha de transferencia')],
+  });
+  if (!Validar.mostrarErrores(errores,'#modal-transferir ')) return;
+
+  if (pendientesTransferir.length) {
+    const total = pendientesTransferir.reduce((s,c)=>s+parseFloat(c.monto_final),0);
+    const ok = confirm(
+      `Este niño/a tiene ${pendientesTransferir.length} cobro(s) pendiente(s) por ${UI.moneda(total)} `+
+      `en la inscripción actual. Esa deuda NO se transfiere, queda registrada ahí.\n\n`+
+      `¿Confirmas que quieres continuar con la transferencia de todas formas?`
+    );
+    if (!ok) return;
+  }
+
+  const id    = document.getElementById('t-id').value;
+  const datos = {
+    sucursal:             document.getElementById('t-sucursal').value,
+    sala:                 document.getElementById('t-sala').value,
+    turno:                document.getElementById('t-turno').value,
+    fecha_transferencia:  document.getElementById('t-fecha').value,
+    motivo_transferencia: document.getElementById('t-motivo').value,
+  };
+  const modalidad = document.getElementById('t-modalidad').value;
+  if (modalidad) datos.modalidad_pago = modalidad;
+
+  try {
+    await API.post('/inscripciones/inscripciones/'+id+'/transferir/', datos);
+    UI.toast('Transferencia realizada correctamente','exito');
+    UI.cerrarModal('modal-transferir');
     cargar(); cargarStats();
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
 }

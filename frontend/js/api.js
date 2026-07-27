@@ -239,6 +239,7 @@ const UI = {
   chipEstadoCobro(estado) {
     const mapa = {
       pendiente: '<span class="chip chip-amarillo">⏳ Pendiente</span>',
+      parcial:   '<span class="chip chip-violeta">🟡 Pago parcial</span>',
       pagado:    '<span class="chip chip-verde">✅ Pagado</span>',
       vencido:   '<span class="chip chip-coral">🔴 Vencido</span>',
       anulado:   '<span class="chip chip-gris">🚫 Anulado</span>',

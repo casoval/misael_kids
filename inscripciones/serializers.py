@@ -2,7 +2,20 @@
 inscripciones/serializers.py
 """
 from rest_framework import serializers
-from .models import Inscripcion, Cobro
+from .models import Inscripcion, Cobro, Pago
+
+
+class PagoSerializer(serializers.ModelSerializer):
+    metodo_pago_display = serializers.CharField(source='get_metodo_pago_display', read_only=True)
+
+    class Meta:
+        model  = Pago
+        fields = [
+            'id', 'cobro', 'monto', 'fecha_pago',
+            'metodo_pago', 'metodo_pago_display', 'comprobante',
+            'registrado_por', 'observacion', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
 
 
 class CobroSerializer(serializers.ModelSerializer):
@@ -11,17 +24,21 @@ class CobroSerializer(serializers.ModelSerializer):
     nino_nombre    = serializers.CharField(
         source='inscripcion.nino.nombre_completo', read_only=True
     )
+    monto_pagado     = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
+    saldo_pendiente  = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
+    pagos            = PagoSerializer(many=True, read_only=True)
 
     class Meta:
         model  = Cobro
         fields = [
             'id', 'inscripcion', 'nino_nombre',
-            'tipo', 'tipo_display', 'periodo',
-            'monto_base', 'monto_final',
+            'tipo', 'tipo_display', 'periodo', 'periodo_inicio', 'periodo_fin',
+            'monto_base', 'monto_final', 'monto_pagado', 'saldo_pendiente',
             'fecha_emision', 'fecha_vencimiento',
             'estado', 'estado_display',
             'fecha_pago', 'metodo_pago', 'comprobante',
-            'registrado_por', 'observacion',
+            'monto_condonado', 'motivo_condonacion',
+            'registrado_por', 'observacion', 'pagos',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'fecha_emision', 'created_at', 'updated_at']
@@ -51,12 +68,29 @@ class InscripcionSerializer(serializers.ModelSerializer):
             'tipo_ajuste', 'tipo_ajuste_display',
             'porcentaje_ajuste', 'monto_ajuste', 'motivo_ajuste',
             'costo_mensual_final', 'costo_diario_final',
-            'activa', 'cobros',
+            'activa', 'inscripcion_origen', 'cobros',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def validate(self, data):
+        # Un niño solo puede tener UNA inscripción activa en todo el sistema.
+        # Para cambiarlo de sala/turno/sucursal se debe usar el endpoint
+        # de transferencia (POST /inscripciones/{id}/transferir/), no crear
+        # una segunda inscripción.
+        nino   = data.get('nino', getattr(self.instance, 'nino', None))
+        activa = data.get('activa', getattr(self.instance, 'activa', True))
+        if nino and activa:
+            ya_tiene_activa = Inscripcion.objects.filter(
+                nino=nino, activa=True
+            ).exclude(id=self.instance.id if self.instance else None).exists()
+            if ya_tiene_activa:
+                raise serializers.ValidationError(
+                    {'nino': 'Este niño/a ya tiene una inscripción activa. '
+                              'Usa la opción "Transferir" para cambiarlo de sala, turno o sucursal '
+                              'en lugar de crear una nueva inscripción.'}
+                )
+
         # Sala debe pertenecer a la sucursal
         sala     = data.get('sala')
         sucursal = data.get('sucursal')
@@ -94,15 +128,17 @@ class InscripcionSerializer(serializers.ModelSerializer):
 class InscripcionResumenSerializer(serializers.ModelSerializer):
     """Versión compacta para listas."""
     nino_nombre         = serializers.CharField(source='nino.nombre_completo', read_only=True)
+    sucursal_nombre     = serializers.CharField(source='sucursal.nombre', read_only=True)
     sala_nombre         = serializers.CharField(source='sala.nombre', read_only=True)
     turno_nombre        = serializers.CharField(source='turno.nombre', read_only=True)
+    modalidad_display   = serializers.CharField(source='get_modalidad_pago_display', read_only=True)
     costo_mensual_final = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
 
     class Meta:
         model  = Inscripcion
         fields = [
             'id', 'nino', 'nino_nombre',
-            'sala_nombre', 'turno_nombre',
-            'modalidad_pago', 'tipo_ajuste',
+            'sucursal_nombre', 'sala_nombre', 'turno_nombre',
+            'modalidad_pago', 'modalidad_display', 'tipo_ajuste',
             'costo_mensual_final', 'activa', 'fecha_inicio',
         ]
