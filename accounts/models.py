@@ -52,7 +52,10 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     ]
 
     id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email      = models.EmailField(unique=True, null=True, blank=True)
+    email      = models.EmailField(
+        'email o usuario', unique=True, null=True, blank=True,
+        help_text='El login (incluido /admin/) acepta email O nombre de usuario indistintamente.'
+    )
     username   = models.CharField(max_length=50, unique=True, null=True, blank=True,
                      help_text='Nombre de usuario alternativo para personas sin email (tutores, profesionales, etc.)')
     nombres    = models.CharField(max_length=100)

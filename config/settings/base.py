@@ -103,6 +103,14 @@ DATABASES = {
 # ─── Modelo de usuario personalizado ─────────────────────────────────────────
 AUTH_USER_MODEL = 'accounts.Usuario'
 
+# Permite loguearse (incluido el /admin/ de Django) con email O con
+# nombre de usuario indistintamente. Se mantiene también el ModelBackend
+# estándar como respaldo.
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailOUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 # ─── Internacionalización ─────────────────────────────────────────────────────
 LANGUAGE_CODE = 'es-bo'
 TIME_ZONE = 'America/La_Paz'
