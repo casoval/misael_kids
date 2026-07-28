@@ -15,6 +15,7 @@ from .models import Inscripcion, Cobro, Pago
 from .serializers import (
     InscripcionSerializer, InscripcionResumenSerializer, CobroSerializer, PagoSerializer
 )
+from .services import generar_ciclo_mensual
 
 
 class InscripcionViewSet(viewsets.ModelViewSet):
@@ -31,55 +32,44 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             return InscripcionResumenSerializer
         return InscripcionSerializer
 
+    def perform_create(self, serializer):
+        """
+        Al crear una inscripción con modalidad mensual, se genera de una
+        vez el primer cobro (el del mes/ciclo en que se está inscribiendo),
+        para no obligar a un paso manual aparte. La modalidad diaria no
+        necesita esto: su cobro se genera solo al marcar asistencia.
+        """
+        inscripcion = serializer.save()
+        if inscripcion.activa and inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
+            generar_ciclo_mensual(inscripcion, ciclo_num=0, usuario=self.request.user)
+
     @action(detail=True, methods=['post'], url_path='generar-cobro-mensual')
     def generar_cobro_mensual(self, request, pk=None):
         """
-        Genera el siguiente cobro de mensualidad de esta inscripción.
+        Genera el siguiente cobro de mensualidad de esta inscripción
+        (normalmente para renovar el ciclo del mes siguiente; el primer
+        ciclo ya se genera solo al crear la inscripción).
 
-        El ciclo de facturación NO sigue el mes calendario: sigue la fecha
-        de inicio de la inscripción. Si el niño se inscribió el 20, cada
-        mensualidad cubre del día 20 al día 20 del mes siguiente, y ese es
-        el rango que se factura y vence (no el día 10 fijo de antes).
-
-        Por defecto genera el siguiente ciclo pendiente (el que sigue al
-        último cobro de mensualidad ya emitido). Opcionalmente se puede
-        pasar `ciclo` (entero, 0 = primer mes desde fecha_inicio) para
-        generar un ciclo específico.
+        Opcionalmente se puede pasar `ciclo` (entero, 0 = primer mes desde
+        fecha_inicio) para generar un ciclo específico o regenerar uno que
+        se haya anulado por error.
         """
         inscripcion = self.get_object()
 
         ciclo_param = request.data.get('ciclo')
+        ciclo_num = None
         if ciclo_param is not None:
             try:
                 ciclo_num = int(ciclo_param)
             except (TypeError, ValueError):
                 return Response({'error': 'El ciclo debe ser un número entero.'}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            ciclo_num = Cobro.objects.filter(inscripcion=inscripcion, tipo=Cobro.TIPO_MENSUALIDAD).count()
 
-        periodo_inicio = inscripcion.fecha_inicio + relativedelta(months=ciclo_num)
-        periodo_fin    = inscripcion.fecha_inicio + relativedelta(months=ciclo_num + 1)
-
-        # Verificar que no exista ya un cobro para ese ciclo exacto
-        if Cobro.objects.filter(
-            inscripcion=inscripcion, tipo=Cobro.TIPO_MENSUALIDAD, periodo_inicio=periodo_inicio
-        ).exists():
+        cobro = generar_ciclo_mensual(inscripcion, ciclo_num=ciclo_num, usuario=request.user)
+        if cobro is None:
             return Response(
-                {'error': f'Ya existe un cobro de mensualidad para el ciclo {periodo_inicio} – {periodo_fin}.'},
+                {'error': 'Ya existe un cobro de mensualidad para ese ciclo.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        cobro = Cobro.objects.create(
-            inscripcion       = inscripcion,
-            tipo              = Cobro.TIPO_MENSUALIDAD,
-            periodo           = f'{periodo_inicio.isoformat()} a {periodo_fin.isoformat()}',
-            periodo_inicio    = periodo_inicio,
-            periodo_fin       = periodo_fin,
-            monto_base        = inscripcion.costo_mensual,
-            monto_final       = inscripcion.costo_mensual_final,
-            fecha_vencimiento = periodo_fin,
-            registrado_por    = request.user,
-        )
         return Response(CobroSerializer(cobro).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'], url_path='transferir')
@@ -167,6 +157,8 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             activa              = True,
             inscripcion_origen  = inscripcion_actual,
         )
+        if nueva.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
+            generar_ciclo_mensual(nueva, ciclo_num=0, usuario=request.user)
         return Response(InscripcionSerializer(nueva).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get'], url_path='cobros-pendientes')

@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import HitoDesarrollo, EvaluacionNino
 from .serializers import HitoDesarrolloSerializer, EvaluacionNinoSerializer
+from accounts.permissions import filtrar_por_tutor
 
 class HitoDesarrolloViewSet(viewsets.ModelViewSet):
     queryset           = HitoDesarrollo.objects.filter(activo=True).order_by("edad_min_meses","area")
@@ -30,8 +31,15 @@ class EvaluacionNinoViewSet(viewsets.ModelViewSet):
     filterset_fields   = ["nino","hito","estado","alerta_rezago","educadora"]
     ordering           = ["-fecha"]
 
+    def get_queryset(self):
+        # Un tutor solo debe ver las evaluaciones de desarrollo de SU hijo,
+        # no las de cualquier niño (antes bastaba con cambiar ?nino=<id>
+        # en la URL para ver la evaluación de otro niño, incluida la
+        # bandera de alerta de rezago).
+        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+
     @action(detail=False, methods=["get"], url_path="alertas-rezago")
     def alertas_rezago(self, request):
-        evaluaciones = self.queryset.filter(alerta_rezago=True)
+        evaluaciones = self.get_queryset().filter(alerta_rezago=True)
         serializer   = EvaluacionNinoSerializer(evaluaciones, many=True, context={"request": request})
         return Response(serializer.data)

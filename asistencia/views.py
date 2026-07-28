@@ -8,7 +8,9 @@ from django.db.models import Q
 
 from .models import Asistencia
 from .serializers import AsistenciaSerializer
-from inscripciones.models import Cobro
+from inscripciones.models import Cobro, Inscripcion
+from inscripciones.services import generar_ciclo_mensual
+from accounts.permissions import filtrar_por_tutor
 
 
 class AsistenciaViewSet(viewsets.ModelViewSet):
@@ -25,13 +27,19 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
     ]
     ordering = ['-fecha']
 
+    def get_queryset(self):
+        # Sin esto, un tutor podía consultar la asistencia diaria de
+        # cualquier niño de cualquier sala, no solo la de su propio hijo.
+        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'inscripcion__nino')
+
     def perform_create(self, serializer):
-        asistencia = serializer.save(registrado_por=self.request.user)
-        # Si la inscripción es de modalidad diaria y el niño está presente,
-        # generar cobro automáticamente
+        asistencia  = serializer.save(registrado_por=self.request.user)
         inscripcion = asistencia.inscripcion
-        if (asistencia.estado == Asistencia.ESTADO_PRESENTE and
-                inscripcion.modalidad_pago == 'diaria'):
+        if asistencia.estado != Asistencia.ESTADO_PRESENTE:
+            return
+
+        if inscripcion.modalidad_pago == Inscripcion.MODALIDAD_DIARIA:
+            # Cobro diario: uno por cada día que asiste (comportamiento existente)
             periodo = asistencia.fecha.strftime('%Y-%m-%d')
             if not Cobro.objects.filter(
                 inscripcion=inscripcion,
@@ -48,13 +56,31 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
                     registrado_por    = self.request.user,
                 )
 
+        elif inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
+            # Mensualidad: la primera vez que el niño asiste dentro de un
+            # ciclo que todavía no tiene cobro generado, se genera solo —
+            # es la confirmación real de que continúa, no una suposición
+            # por calendario. Si el papá/mamá ya avisó antes que continúa,
+            # el cobro se puede generar manualmente desde "Cobros" o el
+            # botón "Generar mensualidades" en cualquier otro momento; en
+            # ese caso esta asistencia simplemente cae dentro del ciclo
+            # que ya existe y no duplica nada.
+            cubierto = Cobro.objects.filter(
+                inscripcion    = inscripcion,
+                tipo           = Cobro.TIPO_MENSUALIDAD,
+                periodo_inicio__lte = asistencia.fecha,
+                periodo_fin__gt     = asistencia.fecha,
+            ).exists()
+            if not cubierto:
+                generar_ciclo_mensual(inscripcion, usuario=self.request.user)
+
     @action(detail=False, methods=['get'], url_path='hoy')
     def hoy(self, request):
         """Lista la asistencia de hoy filtrable por sala y turno."""
         hoy  = date.today()
         sala  = request.query_params.get('sala')
         turno = request.query_params.get('turno')
-        qs    = self.queryset.filter(fecha=hoy)
+        qs    = self.get_queryset().filter(fecha=hoy)
         if sala:
             qs = qs.filter(inscripcion__sala=sala)
         if turno:
@@ -68,7 +94,7 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         año   = int(request.query_params.get('año', date.today().year))
         mes   = int(request.query_params.get('mes', date.today().month))
         sala  = request.query_params.get('sala')
-        qs    = self.queryset.filter(fecha__year=año, fecha__month=mes)
+        qs    = self.get_queryset().filter(fecha__year=año, fecha__month=mes)
         if sala:
             qs = qs.filter(inscripcion__sala=sala)
         total     = qs.count()

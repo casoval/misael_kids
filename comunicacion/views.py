@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Mensaje, Aviso
 from .serializers import MensajeSerializer, AvisoSerializer
+from accounts.permissions import NoEsTutor
 
 class MensajeViewSet(viewsets.ModelViewSet):
     serializer_class   = MensajeSerializer
@@ -36,7 +37,7 @@ class MensajeViewSet(viewsets.ModelViewSet):
 class AvisoViewSet(viewsets.ModelViewSet):
     queryset = Aviso.objects.select_related("autor","sucursal","sala","turno").all()
     serializer_class   = AvisoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [NoEsTutor]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields   = ["sucursal","sala","importante"]
     ordering           = ["-publicado_en"]

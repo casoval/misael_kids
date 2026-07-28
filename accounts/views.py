@@ -110,7 +110,15 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         usuario = self.get_object()
-        nueva = request.data.get('password') or 'MisaelKids2025!'
+        nueva = request.data.get('password')
+        if not nueva:
+            # Antes, si no se especificaba una contraseña, se usaba SIEMPRE
+            # el mismo valor fijo ('MisaelKids2025!') para cualquier cuenta
+            # — una contraseña adivinable y compartida por todos los
+            # resets. Ahora se genera una aleatoria distinta cada vez.
+            import secrets, string
+            alfabeto = string.ascii_letters + string.digits
+            nueva = ''.join(secrets.choice(alfabeto) for _ in range(12))
         if len(nueva) < 8:
             return Response(
                 {'detail': 'La contraseña debe tener al menos 8 caracteres.'},

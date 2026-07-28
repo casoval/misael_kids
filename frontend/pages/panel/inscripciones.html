@@ -605,9 +605,15 @@ async function guardarInscripcion() {
     activa:           true,
   };
   try {
+    let creando = !editandoId;
     if (editandoId) await API.patch('/inscripciones/inscripciones/'+editandoId+'/',datos);
     else await API.post('/inscripciones/inscripciones/',datos);
-    UI.toast('Inscripción guardada correctamente','exito');
+    UI.toast(
+      creando && datos.modalidad_pago === 'mensual'
+        ? '✅ Inscripción creada — ya se generó su primera mensualidad, solo falta registrar el pago'
+        : 'Inscripción guardada correctamente',
+      'exito'
+    );
     UI.cerrarModal('modal-insc');
     cargar(); cargarStats();
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
@@ -702,7 +708,10 @@ async function guardarTransferencia() {
 
   try {
     await API.post('/inscripciones/inscripciones/'+id+'/transferir/', datos);
-    UI.toast('Transferencia realizada correctamente','exito');
+    UI.toast(
+      '✅ Transferencia realizada. Si la modalidad es mensual, ya se generó la mensualidad del nuevo ciclo.',
+      'exito'
+    );
     UI.cerrarModal('modal-transferir');
     cargar(); cargarStats();
   } catch (err) { UI.toast('Error: '+err.message,'error'); }

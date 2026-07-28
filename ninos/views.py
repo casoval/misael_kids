@@ -13,6 +13,7 @@ from .serializers import (
     NinoSerializer, NinoResumenSerializer, TutorSerializer,
     NinoTutorSerializer, PersonaAutorizadaSerializer, DocumentoSerializer,
 )
+from accounts.permissions import filtrar_por_tutor
 
 
 class NinoViewSet(viewsets.ModelViewSet):
@@ -83,6 +84,9 @@ class PersonaAutorizadaViewSet(viewsets.ModelViewSet):
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ['nino', 'activa']
 
+    def get_queryset(self):
+        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+
 
 class DocumentoViewSet(viewsets.ModelViewSet):
     queryset           = Documento.objects.select_related('nino').all()
@@ -90,3 +94,6 @@ class DocumentoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ['nino', 'tipo', 'verificado']
+
+    def get_queryset(self):
+        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
