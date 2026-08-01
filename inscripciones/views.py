@@ -11,11 +11,15 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
 from accounts.permissions import EsAdminDirectoraOAdministrativo
-from .models import Inscripcion, Cobro, Pago
+from .models import Inscripcion, Cobro, Pago, Devolucion
 from .serializers import (
-    InscripcionSerializer, InscripcionResumenSerializer, CobroSerializer, PagoSerializer
+    InscripcionSerializer, InscripcionResumenSerializer, CobroSerializer,
+    PagoSerializer, DevolucionSerializer,
 )
-from .services import generar_ciclo_mensual, calendario_pagos_mensual, calendario_pagos_diario
+from .services import (
+    generar_ciclo_mensual, calendario_pagos_mensual, calendario_pagos_diario,
+    cobro_anterior_pendiente, etiqueta_periodo, asignar_numero_recibo,
+)
 
 
 class InscripcionViewSet(viewsets.ModelViewSet):
@@ -246,6 +250,13 @@ class CobroViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Este cobro ya está cubierto por completo.'},
                              status=status.HTTP_400_BAD_REQUEST)
 
+        anterior = cobro_anterior_pendiente(cobro)
+        if anterior:
+            return Response({
+                'error': f'Primero hay que cerrar {etiqueta_periodo(anterior)}, que sigue abierto. '
+                         'Los cobros se cierran en orden.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         monto_raw = request.data.get('monto')
         if monto_raw in (None, ''):
             monto = cobro.saldo_pendiente  # comportamiento anterior: pagar todo lo que falta
@@ -271,6 +282,7 @@ class CobroViewSet(viewsets.ModelViewSet):
             observacion    = request.data.get('observacion', ''),
             registrado_por = request.user,
         )
+        asignar_numero_recibo(pago)
 
         # Reflejar el último pago también en el propio Cobro (compatibilidad con reportes)
         cobro.fecha_pago  = pago.fecha_pago
@@ -295,6 +307,13 @@ class CobroViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Este cobro ya está cerrado (pagado o anulado).'},
                              status=status.HTTP_400_BAD_REQUEST)
 
+        anterior = cobro_anterior_pendiente(cobro)
+        if anterior:
+            return Response({
+                'error': f'Primero hay que cerrar {etiqueta_periodo(anterior)}, que sigue abierto. '
+                         'Los cobros se cierran en orden.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         motivo = request.data.get('motivo', '').strip()
         if not motivo:
             return Response({'error': 'Debes indicar el motivo para cerrar el cobro con lo pagado.'},
@@ -308,3 +327,52 @@ class CobroViewSet(viewsets.ModelViewSet):
         cobro.refresh_from_db()
 
         return Response(CobroSerializer(cobro).data)
+
+    @action(detail=True, methods=['post'], url_path='registrar-devolucion')
+    def registrar_devolucion(self, request, pk=None):
+        """
+        Registra una devolución de dinero sobre este cobro (ej. se cobró de
+        más, la familia se dio de baja y hay saldo a favor, un error de
+        cobro). Resta de lo pagado: si el cobro estaba "pagado" y se
+        devuelve una parte, recalcular_estado() lo reabre solo — y a partir
+        de ahí vuelve a aplicar la regla de "cerrar en orden" con los
+        cobros posteriores, como corresponde.
+
+        No se puede devolver más de lo que efectivamente se pagó (lo
+        condonado nunca fue dinero real, no hay nada que devolver de eso).
+        Requiere `motivo`.
+        """
+        cobro = self.get_object()
+
+        monto_raw = request.data.get('monto')
+        try:
+            monto = Decimal(str(monto_raw))
+        except (InvalidOperation, TypeError):
+            return Response({'error': 'El monto no es un número válido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if monto <= 0:
+            return Response({'error': 'El monto a devolver debe ser mayor a cero.'}, status=status.HTTP_400_BAD_REQUEST)
+        if monto > cobro.monto_pagado:
+            return Response(
+                {'error': f'No se puede devolver más de lo pagado ({cobro.monto_pagado} Bs.).'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        motivo = request.data.get('motivo', '').strip()
+        if not motivo:
+            return Response({'error': 'Debes indicar el motivo de la devolución.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        devolucion = Devolucion.objects.create(
+            cobro          = cobro,
+            monto          = monto,
+            fecha          = request.data.get('fecha') or date.today(),
+            metodo_pago    = request.data.get('metodo_pago', Cobro.METODO_EFECTIVO),
+            motivo         = motivo,
+            registrado_por = request.user,
+        )
+        asignar_numero_recibo(devolucion)
+
+        cobro.recalcular_estado()
+        cobro.refresh_from_db()
+
+        return Response(CobroSerializer(cobro).data, status=status.HTTP_201_CREATED)

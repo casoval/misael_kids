@@ -200,9 +200,10 @@ class Cobro(ModeloBase):
 
     @property
     def monto_pagado(self):
-        """Suma de todos los pagos/cuotas registrados para este cobro."""
-        total = self.pagos.aggregate(models.Sum('monto'))['monto__sum']
-        return total or 0
+        """Suma de todos los pagos/cuotas registrados, menos lo devuelto."""
+        total_pagos = self.pagos.aggregate(models.Sum('monto'))['monto__sum'] or 0
+        total_devuelto = self.devoluciones.aggregate(models.Sum('monto'))['monto__sum'] or 0
+        return total_pagos - total_devuelto
 
     @property
     def saldo_pendiente(self):
@@ -247,6 +248,9 @@ class Pago(ModeloBase):
         'accounts.Usuario', on_delete=models.SET_NULL, null=True, blank=True
     )
     observacion    = models.TextField(blank=True)
+    # Número correlativo para el recibo imprimible (se asigna solo, al guardar
+    # el pago por primera vez — ver services.asignar_numero_recibo).
+    numero_recibo  = models.PositiveIntegerField(unique=True, null=True, blank=True)
 
     class Meta:
         verbose_name        = 'Pago'
@@ -255,3 +259,33 @@ class Pago(ModeloBase):
 
     def __str__(self):
         return f'Pago {self.monto} Bs. — {self.cobro}'
+
+
+class Devolucion(ModeloBase):
+    """
+    Devolución de dinero sobre un Cobro que ya recibió uno o más Pagos.
+    Ej: se cobró de más, la familia se da de baja y se le devuelve el saldo
+    a favor, un error de cobro, etc.
+
+    Resta de `Cobro.monto_pagado`, así que si el cobro estaba "pagado" y se
+    devuelve una parte, `recalcular_estado()` lo vuelve a abrir solo —
+    consistente con la regla de "cerrar en orden": ese mes bloqueará de
+    nuevo a los siguientes hasta que se resuelva otra vez.
+    """
+    cobro          = models.ForeignKey(Cobro, on_delete=models.CASCADE, related_name='devoluciones')
+    monto          = models.DecimalField(max_digits=8, decimal_places=2)
+    fecha          = models.DateField(default=date.today)
+    metodo_pago    = models.CharField(max_length=20, choices=Cobro.METODOS_PAGO, default=Cobro.METODO_EFECTIVO)
+    motivo         = models.TextField()
+    registrado_por = models.ForeignKey(
+        'accounts.Usuario', on_delete=models.SET_NULL, null=True, blank=True
+    )
+    numero_recibo  = models.PositiveIntegerField(unique=True, null=True, blank=True)
+
+    class Meta:
+        verbose_name        = 'Devolución'
+        verbose_name_plural = 'Devoluciones'
+        ordering            = ['-fecha', '-created_at']
+
+    def __str__(self):
+        return f'Devolución {self.monto} Bs. — {self.cobro}'

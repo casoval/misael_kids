@@ -2,7 +2,7 @@
 inscripciones/serializers.py
 """
 from rest_framework import serializers
-from .models import Inscripcion, Cobro, Pago
+from .models import Inscripcion, Cobro, Pago, Devolucion
 
 
 class PagoSerializer(serializers.ModelSerializer):
@@ -13,9 +13,22 @@ class PagoSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'cobro', 'monto', 'fecha_pago',
             'metodo_pago', 'metodo_pago_display', 'comprobante',
-            'registrado_por', 'observacion', 'created_at',
+            'registrado_por', 'observacion', 'numero_recibo', 'created_at',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'numero_recibo', 'created_at']
+
+
+class DevolucionSerializer(serializers.ModelSerializer):
+    metodo_pago_display = serializers.CharField(source='get_metodo_pago_display', read_only=True)
+
+    class Meta:
+        model  = Devolucion
+        fields = [
+            'id', 'cobro', 'monto', 'fecha',
+            'metodo_pago', 'metodo_pago_display', 'motivo',
+            'registrado_por', 'numero_recibo', 'created_at',
+        ]
+        read_only_fields = ['id', 'numero_recibo', 'created_at']
 
 
 class CobroSerializer(serializers.ModelSerializer):
@@ -27,6 +40,7 @@ class CobroSerializer(serializers.ModelSerializer):
     monto_pagado     = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     saldo_pendiente  = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     pagos            = PagoSerializer(many=True, read_only=True)
+    devoluciones     = DevolucionSerializer(many=True, read_only=True)
 
     class Meta:
         model  = Cobro
@@ -38,7 +52,7 @@ class CobroSerializer(serializers.ModelSerializer):
             'estado', 'estado_display',
             'fecha_pago', 'metodo_pago', 'comprobante',
             'monto_condonado', 'motivo_condonacion',
-            'registrado_por', 'observacion', 'pagos',
+            'registrado_por', 'observacion', 'pagos', 'devoluciones',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'fecha_emision', 'created_at', 'updated_at']
