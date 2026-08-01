@@ -176,6 +176,24 @@ class Cobro(ModeloBase):
         verbose_name        = 'Cobro'
         verbose_name_plural = 'Cobros'
         ordering            = ['-fecha_emision']
+        constraints = [
+            # Una mensualidad es única por inscripción + ciclo (periodo_inicio).
+            # Esto es lo que de verdad impide el duplicado, sin importar si se
+            # generó desde el servicio, desde asistencia o a mano por la API.
+            models.UniqueConstraint(
+                fields=['inscripcion', 'tipo', 'periodo_inicio'],
+                condition=models.Q(tipo='mensualidad'),
+                name='uniq_cobro_mensualidad_por_ciclo',
+            ),
+            # Un cobro diario es único por inscripción + día (periodo, ej "2026-07-31").
+            models.UniqueConstraint(
+                fields=['inscripcion', 'tipo', 'periodo'],
+                condition=models.Q(tipo='diario'),
+                name='uniq_cobro_diario_por_dia',
+            ),
+            # tipo=extra queda deliberadamente fuera: un cobro extra (ej. un
+            # paseo, material) sí puede repetirse el mismo día sin ser un bug.
+        ]
 
     def __str__(self):
         return f'{self.inscripcion.nino} — {self.get_tipo_display()} {self.periodo} ({self.get_estado_display()})'

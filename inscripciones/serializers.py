@@ -43,6 +43,25 @@ class CobroSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'fecha_emision', 'created_at', 'updated_at']
 
+    def validate(self, data):
+        # La creación directa por este endpoint solo está permitida para
+        # cobros "extra" (paseos, materiales, etc.). Las mensualidades y los
+        # cobros diarios SIEMPRE deben salir del flujo controlado
+        # (generar_ciclo_mensual / asistencia), que es el único lugar que
+        # garantiza no duplicar un periodo ya cobrado. Si se permitiera crear
+        # estos tipos aquí también, existiría un tercer camino sin ese
+        # control, aunque el constraint de BD igual evitaría el duplicado
+        # exacto (lo haría con un error 500 feo en vez de uno claro).
+        if self.instance is None:
+            tipo = data.get('tipo')
+            if tipo in (Cobro.TIPO_MENSUALIDAD, Cobro.TIPO_DIARIO):
+                raise serializers.ValidationError({
+                    'tipo': 'Los cobros de mensualidad o diario no se crean aquí directamente: '
+                            'usa "Generar mensualidad" en la inscripción, o deja que se genere '
+                            'solo al marcar asistencia. Este formulario es solo para cobros extra.'
+                })
+        return data
+
 
 class InscripcionSerializer(serializers.ModelSerializer):
     nino_nombre       = serializers.CharField(source='nino.nombre_completo', read_only=True)

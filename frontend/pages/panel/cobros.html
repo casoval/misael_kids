@@ -84,7 +84,7 @@
           ⚡ Generar mensualidades
         </button>
         <button class="btn btn-primary" onclick="UI.abrirModal('modal-cobro-manual')">
-          ➕ Cobro manual
+          ➕ Cobro extra
         </button>
       </div>
     </header>
@@ -272,27 +272,24 @@
 <div class="modal-overlay" id="modal-cobro-manual">
   <div class="modal">
     <div class="modal-header">
-      <h3 class="modal-titulo">➕ Cobro manual</h3>
+      <h3 class="modal-titulo">➕ Cobro extra</h3>
       <button class="modal-cerrar">✕</button>
     </div>
+    <p style="font-size:var(--text-sm);color:var(--texto-suave);margin:-4px 0 12px">
+      Para paseos, materiales u otros cobros puntuales. Las mensualidades y cobros por día
+      se generan solo desde la inscripción o al marcar asistencia, no desde aquí.
+    </p>
     <div class="form-grupo">
       <label class="form-label">Inscripción (niño) *</label>
       <select id="cm-inscripcion" class="form-select">
         <option value="">Seleccionar niño...</option>
       </select>
     </div>
+    <input type="hidden" id="cm-tipo" value="extra">
     <div class="grid-2">
       <div class="form-grupo">
-        <label class="form-label">Tipo de cobro *</label>
-        <select id="cm-tipo" class="form-select">
-          <option value="mensualidad">Mensualidad</option>
-          <option value="diario">Por día</option>
-          <option value="extra">Extra</option>
-        </select>
-      </div>
-      <div class="form-grupo">
-        <label class="form-label">Período</label>
-        <input type="text" id="cm-periodo" class="form-input" placeholder="YYYY-MM o YYYY-MM-DD">
+        <label class="form-label">Descripción / período</label>
+        <input type="text" id="cm-periodo" class="form-input" placeholder="Ej: Paseo al zoológico">
       </div>
       <div class="form-grupo">
         <label class="form-label">Monto base *</label>
@@ -409,15 +406,22 @@ async function cargarStats() {
     const sumPendiente = (pendientes.results||pendientes).reduce((s,c)=>s+parseFloat(c.monto_final),0);
     const sumVencido   = (vencidos.results||vencidos).reduce((s,c)=>s+parseFloat(c.monto_final),0);
     // Solo del mes actual
-    const pagadosMes   = (pagados.results||pagados).filter(c => c.fecha_pago?.startsWith(mesISO));
-    const sumPagado    = pagadosMes.reduce((s,c)=>s+parseFloat(c.monto_final),0);
+    const pagadosMes    = (pagados.results||pagados).filter(c => c.fecha_pago?.startsWith(mesISO));
+    // OJO: se suma monto_pagado (lo que realmente entró a caja), NO monto_final.
+    // Un cobro puede quedar "pagado" habiendo cobrado solo una parte y
+    // condonado el resto (botón "Cerrar con lo pagado"); sumar monto_final
+    // ahí infla el recaudado con dinero que nunca se cobró.
+    const sumPagado     = pagadosMes.reduce((s,c)=>s+parseFloat(c.monto_pagado||0),0);
+    const sumCondonado  = pagadosMes.reduce((s,c)=>s+parseFloat(c.monto_condonado||0),0);
 
     document.getElementById('stat-monto-pendiente').textContent = UI.moneda(sumPendiente);
     document.getElementById('stat-cant-pendiente').textContent  = `${(pendientes.count||0)} cobros`;
     document.getElementById('stat-monto-vencido').textContent   = UI.moneda(sumVencido);
     document.getElementById('stat-cant-vencido').textContent    = `${(vencidos.count||0)} cobros`;
     document.getElementById('stat-monto-pagado').textContent    = UI.moneda(sumPagado);
-    document.getElementById('stat-cant-pagado').textContent     = `${pagadosMes.length} pagos`;
+    document.getElementById('stat-cant-pagado').textContent     = sumCondonado > 0
+      ? `${pagadosMes.length} pagos · ${UI.moneda(sumCondonado)} condonado`
+      : `${pagadosMes.length} pagos`;
   } catch (err) { console.warn('Stats error:', err.message); }
 }
 

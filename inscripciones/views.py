@@ -15,7 +15,7 @@ from .models import Inscripcion, Cobro, Pago
 from .serializers import (
     InscripcionSerializer, InscripcionResumenSerializer, CobroSerializer, PagoSerializer
 )
-from .services import generar_ciclo_mensual
+from .services import generar_ciclo_mensual, calendario_pagos_mensual, calendario_pagos_diario
 
 
 class InscripcionViewSet(viewsets.ModelViewSet):
@@ -170,6 +170,33 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         ).order_by('fecha_vencimiento')
         serializer = CobroSerializer(cobros, many=True, context={'request': request})
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='calendario-pagos')
+    def calendario_pagos(self, request, pk=None):
+        """
+        Todo lo necesario para pintar la vista visual de "Pagos" de esta
+        inscripción en una sola llamada: si es modalidad mensual, devuelve
+        los ciclos mes a mes; si es diaria, el calendario del mes pedido
+        (por defecto el mes actual, o ?anio=YYYY&mes=M).
+        """
+        inscripcion = self.get_object()
+
+        if inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
+            return Response({
+                'modalidad': 'mensual',
+                'ciclos':    calendario_pagos_mensual(inscripcion),
+            })
+
+        hoy  = date.today()
+        anio = int(request.query_params.get('anio', hoy.year))
+        mes  = int(request.query_params.get('mes', hoy.month))
+        if not (1 <= mes <= 12):
+            return Response({'error': 'El mes debe estar entre 1 y 12.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'modalidad':  'diaria',
+            'calendario': calendario_pagos_diario(inscripcion, anio, mes),
+        })
 
 
 class CobroViewSet(viewsets.ModelViewSet):

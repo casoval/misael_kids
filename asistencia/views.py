@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from django.db import IntegrityError
 
 from .models import Asistencia
 from .serializers import AsistenciaSerializer
@@ -46,15 +47,20 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
                 periodo=periodo,
                 tipo=Cobro.TIPO_DIARIO
             ).exists():
-                Cobro.objects.create(
-                    inscripcion       = inscripcion,
-                    tipo              = Cobro.TIPO_DIARIO,
-                    periodo           = periodo,
-                    monto_base        = inscripcion.costo_diario,
-                    monto_final       = inscripcion.costo_diario_final,
-                    fecha_vencimiento = asistencia.fecha,
-                    registrado_por    = self.request.user,
-                )
+                try:
+                    Cobro.objects.create(
+                        inscripcion       = inscripcion,
+                        tipo              = Cobro.TIPO_DIARIO,
+                        periodo           = periodo,
+                        monto_base        = inscripcion.costo_diario,
+                        monto_final       = inscripcion.costo_diario_final,
+                        fecha_vencimiento = asistencia.fecha,
+                        registrado_por    = self.request.user,
+                    )
+                except IntegrityError:
+                    # Mismo caso que en generar_ciclo_mensual: dos marcas de
+                    # asistencia casi simultáneas para el mismo niño y día.
+                    pass
 
         elif inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
             # Mensualidad: la primera vez que el niño asiste dentro de un
