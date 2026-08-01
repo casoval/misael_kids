@@ -1,0 +1,40 @@
+diff --git a/frontend/pages/panel/inscripciones.html b/frontend/pages/panel/inscripciones.html
+index d915b65..861c1c8 100644
+--- a/frontend/pages/panel/inscripciones.html
++++ b/frontend/pages/panel/inscripciones.html
+@@ -194,10 +194,6 @@
+         <input type="date" id="i-inicio" class="form-input">
+         <span class="form-error" data-error="i-inicio"></span>
+       </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Fecha de fin (vacío = indefinida)</label>
+-        <input type="date" id="i-fin" class="form-input">
+-      </div>
+     </div>
+ 
+     <!-- Costos -->
+@@ -516,7 +512,7 @@ function limpiarFiltros() {
+ function abrirNuevo() {
+   editandoId = null;
+   document.getElementById('titulo-modal-insc').textContent = 'Nueva inscripción';
+-  ['i-id','i-fin','i-motivo-ajuste'].forEach(id=>document.getElementById(id).value='');
++  ['i-id','i-motivo-ajuste'].forEach(id=>document.getElementById(id).value='');
+   ['i-nino','i-sucursal','i-turno'].forEach(id=>document.getElementById(id).value='');
+   document.getElementById('i-sala').innerHTML = '<option value="">Primero elige sucursal</option>';
+   document.getElementById('i-turno').innerHTML = '<option value="">Primero elige sala</option>';
+@@ -547,7 +543,6 @@ async function editar(id) {
+     document.getElementById('i-turno').value          = i.turno;
+     document.getElementById('i-modalidad').value      = i.modalidad_pago;
+     document.getElementById('i-inicio').value         = i.fecha_inicio;
+-    document.getElementById('i-fin').value            = i.fecha_fin||'';
+     document.getElementById('i-costo-mensual').value  = i.costo_mensual;
+     document.getElementById('i-costo-diario').value   = i.costo_diario;
+     document.getElementById('i-tipo-ajuste').value    = i.tipo_ajuste;
+@@ -674,7 +669,6 @@ async function guardarInscripcion() {
+     turno:            document.getElementById('i-turno').value,
+     modalidad_pago:   document.getElementById('i-modalidad').value,
+     fecha_inicio:     document.getElementById('i-inicio').value,
+-    fecha_fin:        document.getElementById('i-fin').value||null,
+     costo_mensual:    document.getElementById('i-costo-mensual').value,
+     costo_diario:     document.getElementById('i-costo-diario').value,
+     tipo_ajuste:      tipo,
