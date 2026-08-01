@@ -50,21 +50,36 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         (normalmente para renovar el ciclo del mes siguiente; el primer
         ciclo ya se genera solo al crear la inscripción).
 
-        Opcionalmente se puede pasar `ciclo` (entero, 0 = primer mes desde
-        fecha_inicio) para generar un ciclo específico o regenerar uno que
-        se haya anulado por error.
+        Se puede pasar `ciclo` (entero, 0 = primer mes desde fecha_inicio)
+        para generar un ciclo específico de la grilla automática, o
+        `periodo_inicio` (fecha YYYY-MM-DD) para arrancar un ciclo nuevo
+        con una fecha elegida a mano —pensado para reanudar después de una
+        pausa, sin arrastrar los meses en que el niño no vino. Si se manda
+        `periodo_inicio`, tiene prioridad sobre `ciclo`.
         """
         inscripcion = self.get_object()
 
-        ciclo_param = request.data.get('ciclo')
-        ciclo_num = None
-        if ciclo_param is not None:
+        periodo_inicio_param = request.data.get('periodo_inicio')
+        periodo_inicio = None
+        if periodo_inicio_param:
             try:
-                ciclo_num = int(ciclo_param)
-            except (TypeError, ValueError):
-                return Response({'error': 'El ciclo debe ser un número entero.'}, status=status.HTTP_400_BAD_REQUEST)
+                periodo_inicio = date.fromisoformat(periodo_inicio_param)
+            except ValueError:
+                return Response({'error': 'La fecha de inicio no es válida, usa formato YYYY-MM-DD.'},
+                                 status=status.HTTP_400_BAD_REQUEST)
 
-        cobro = generar_ciclo_mensual(inscripcion, ciclo_num=ciclo_num, usuario=request.user)
+        ciclo_num = None
+        if periodo_inicio is None:
+            ciclo_param = request.data.get('ciclo')
+            if ciclo_param is not None:
+                try:
+                    ciclo_num = int(ciclo_param)
+                except (TypeError, ValueError):
+                    return Response({'error': 'El ciclo debe ser un número entero.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cobro = generar_ciclo_mensual(
+            inscripcion, ciclo_num=ciclo_num, periodo_inicio=periodo_inicio, usuario=request.user
+        )
         if cobro is None:
             return Response(
                 {'error': 'Ya existe un cobro de mensualidad para ese ciclo.'},
