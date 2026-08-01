@@ -84,13 +84,13 @@ def _serializar_cobro_resumen(cobro):
         'fecha_emision':     cobro.fecha_emision.isoformat(),
         'fecha_vencimiento': cobro.fecha_vencimiento.isoformat(),
         'fecha_pago':        cobro.fecha_pago.isoformat() if cobro.fecha_pago else None,
-        'registrado_por':    cobro.registrado_por.get_full_name() if cobro.registrado_por else None,
+        'registrado_por':    cobro.registrado_por.nombre_completo if cobro.registrado_por else None,
         'pagos': [
             {
                 'monto':          str(p.monto),
                 'fecha_pago':     p.fecha_pago.isoformat(),
                 'metodo_pago':    p.get_metodo_pago_display(),
-                'registrado_por': p.registrado_por.get_full_name() if p.registrado_por else None,
+                'registrado_por': p.registrado_por.nombre_completo if p.registrado_por else None,
                 'observacion':    p.observacion,
             }
             for p in cobro.pagos.order_by('fecha_pago', 'created_at')
