@@ -79,10 +79,6 @@ COLOR_GRIS_BORDE       = colors.HexColor('#BBBBBB')
 COLOR_FILA_PAR   = colors.HexColor('#FAFAFA')
 COLOR_FILA_IMPAR = colors.white
 
-# Colores del "confeti" decorativo del header (el detalle que diferencia
-# este recibo de uno genérico de oficina)
-COLORES_CONFETI = [COLOR_TURQUESA, COLOR_CORAL, COLOR_AMARILLO, COLOR_VERDE, COLOR_VIOLETA, COLOR_NARANJA]
-
 NOMBRE_CENTRO = "Jardín Infantil Misael Kids"
 LEMA_CENTRO = "Crece, juega, aprende y sueña con amor"
 
@@ -138,25 +134,6 @@ def dibujar_sombra_suave(c, x, y, ancho, alto, radio=10, offset=2):
     c.saveState()
     c.setFillColor(colors.HexColor('#00000015'))
     c.roundRect(x + offset, y - offset, ancho, alto, radio, fill=1, stroke=0)
-    c.restoreState()
-
-
-def dibujar_confeti(c, cx, cy, radio_max=6, cantidad=7, semilla=0):
-    """
-    Salpicón de puntitos de colores — el detalle "para niños" que
-    diferencia este recibo de uno genérico. Determinista (misma semilla
-    → mismo patrón) para que no cambie cada vez que se regenera el PDF.
-    """
-    import random
-    rng = random.Random(semilla)
-    c.saveState()
-    for i in range(cantidad):
-        color = COLORES_CONFETI[i % len(COLORES_CONFETI)]
-        r = rng.uniform(1.5, radio_max) * (0.35 * cm) / 6  # tamaño en puntos, ya escalado
-        dx = rng.uniform(-1, 1) * 2.2 * cm
-        dy = rng.uniform(-1, 1) * 0.5 * cm
-        c.setFillColor(color)
-        c.circle(cx + dx, cy + dy, r, fill=1, stroke=0)
     c.restoreState()
 
 
@@ -341,8 +318,8 @@ def dibujar_recibo_optimizado(c, x, y, ctx, texto_copia):
     # --- J. FIRMAS ---
     dibujar_seccion_firmas_optimizada(c, x, y, ctx)
 
-    # --- K. CONFETI DECORATIVO (detrás del logo, en el header) ---
-    dibujar_confeti(c, x + 1.6 * cm, y_header - 0.4 * cm, semilla=hash(str(ctx.numero_recibo)) % 1000)
+    # --- K. IMAGEN DECORATIVA (en el espacio vacío del medio, lejos del texto) ---
+    dibujar_imagen_ninos(c, x, y, ctx)
 
     # --- L. MARCA DE AGUA ---
     dibujar_marca_agua_optimizada(c, x, y, texto_copia)
@@ -408,24 +385,42 @@ def dibujar_marca_agua_optimizada(c, x, y, texto_copia):
         logger.error(f"Error en marca de agua: {e}")
 
 
+def dibujar_texto_ajustado(c, x, y, texto, fuente, tam_max, ancho_max, tam_min=5.5):
+    """
+    Dibuja texto reduciendo el tamaño de fuente hasta que quepa en
+    ancho_max; si ni al tamaño mínimo cabe, lo corta con "...". Así una
+    dirección larga (o una sucursal nueva con datos distintos) nunca se
+    sale del recibo, sin tener que adivinar límites de caracteres a mano.
+    """
+    tam = tam_max
+    while c.stringWidth(texto, fuente, tam) > ancho_max and tam > tam_min:
+        tam -= 0.25
+    if c.stringWidth(texto, fuente, tam) > ancho_max:
+        while texto and c.stringWidth(texto + '...', fuente, tam) > ancho_max:
+            texto = texto[:-1]
+        texto += '...'
+    c.setFont(fuente, tam)
+    c.drawString(x, y, texto)
+
+
 def dibujar_header_optimizado(c, x, y_base, ctx):
     """Header con logo, nombre del jardín y caja de número de recibo."""
     logo_path = encontrar_logo_misael_kids()
 
     if logo_path:
         try:
-            logo_x = x + 0.5 * cm
-            logo_y_base = y_base - 2.5 * cm
+            logo_x = x + 0.4 * cm
+            logo_y_base = y_base - 3.3 * cm
             img = ImageReader(logo_path)
             iw, ih = img.getSize()
             aspect = ih / float(iw)
-            logo_w = 2.2 * cm
+            logo_w = 3.2 * cm
             logo_h = logo_w * aspect
             c.drawImage(logo_path, logo_x, logo_y_base, width=logo_w, height=logo_h, mask='auto')
         except Exception as e:
             logger.error(f"Error dibujando logo: {e}")
 
-    text_x = x + 3.0 * cm
+    text_x = x + 4.0 * cm
     y_text = y_base - 0.5 * cm
 
     TEXTO_ANTES = "Jardín Infantil "
@@ -442,12 +437,12 @@ def dibujar_header_optimizado(c, x, y_base, ctx):
     c.setFillColor(COLOR_VIOLETA_OSCURO)
     c.drawString(text_x, y_text - 0.42 * cm, LEMA_CENTRO)
 
-    c.setFont("Helvetica", 7.5)
+    ancho_disponible = ANCHO_RECIBO - (text_x - x) - 0.3 * cm
     c.setFillColor(COLOR_TEXTO_SECUNDARIO)
-    c.drawString(text_x, y_text - 0.84 * cm, ctx.sucursal_nombre)
-    c.drawString(text_x, y_text - 1.21 * cm, ctx.sucursal_direccion)
+    dibujar_texto_ajustado(c, text_x, y_text - 0.84 * cm, ctx.sucursal_nombre, "Helvetica", 7.5, ancho_disponible)
+    dibujar_texto_ajustado(c, text_x, y_text - 1.21 * cm, ctx.sucursal_direccion, "Helvetica", 7.5, ancho_disponible)
     linea_tel = f"{ctx.sucursal_ciudad}" + (f" · Tel: {ctx.sucursal_telefono}" if ctx.sucursal_telefono else "")
-    c.drawString(text_x, y_text - 1.58 * cm, linea_tel)
+    dibujar_texto_ajustado(c, text_x, y_text - 1.58 * cm, linea_tel, "Helvetica", 7.5, ancho_disponible)
 
     # Caja de número de recibo
     titulo = "DEVOLUCIÓN" if ctx.es_devolucion else "RECIBO DE PAGO"
@@ -807,6 +802,47 @@ def safe_decimal(val):
         return Decimal(val)
     except Exception:
         return Decimal(0)
+
+
+def dibujar_imagen_ninos(c, x, y, ctx):
+    """
+    Imagen decorativa (siluetas de niños jugando) en la franja que queda
+    vacía entre la sección de total y el QR/firmas. Se ancla desde abajo
+    (y = base del recibo) para no depender de cuánto ocupe el contenido de
+    arriba (que varía si hay observación/motivo) — así nunca choca con
+    texto ni con el QR.
+    """
+    imagen_path = encontrar_imagen_ninos()
+    if not imagen_path:
+        return
+    try:
+        img = ImageReader(imagen_path)
+        iw, ih = img.getSize()
+        aspect = ih / float(iw)
+        img_w = 6.0 * cm
+        img_h = img_w * aspect
+        img_x = x + (ANCHO_RECIBO - img_w) / 2
+        img_y = y + 5.2 * cm
+        c.saveState()
+        c.setFillAlpha(0.92)
+        c.drawImage(imagen_path, img_x, img_y, width=img_w, height=img_h,
+                    mask='auto', preserveAspectRatio=True)
+        c.restoreState()
+    except Exception as e:
+        logger.error(f"Error dibujando imagen decorativa: {e}")
+
+
+def encontrar_imagen_ninos():
+    base_dir = settings.BASE_DIR
+    rutas = [
+        base_dir / 'frontend' / 'img' / 'ninos_decoracion.png',
+        base_dir / 'staticfiles' / 'img' / 'ninos_decoracion.png',
+        base_dir / 'static' / 'img' / 'ninos_decoracion.png',
+    ]
+    for ruta in rutas:
+        if os.path.exists(ruta):
+            return str(ruta)
+    return None
 
 
 def encontrar_logo_misael_kids():

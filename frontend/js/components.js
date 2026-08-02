@@ -220,6 +220,41 @@ function _pintarSidebar(items, paginaActiva, usr) {
           style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:1.1rem;opacity:.6">🚪</button>
       </div>
     </div>`;
+
+  insertarMenuMovil();
+}
+
+/* ── Menú móvil: botón hamburguesa en el topbar + fondo oscuro ────────
+   Se inyecta desde acá (no en cada página) para que funcione igual en
+   todo el panel sin tener que tocar los ~15 archivos HTML uno por uno. */
+function insertarMenuMovil() {
+  const topbar = document.querySelector('.topbar');
+  if (topbar && !document.getElementById('btn-menu-movil')) {
+    const btn = document.createElement('button');
+    btn.id = 'btn-menu-movil';
+    btn.className = 'btn-menu-movil';
+    btn.setAttribute('aria-label', 'Abrir menú');
+    btn.textContent = '☰';
+    btn.onclick = toggleSidebarMovil;
+    topbar.insertBefore(btn, topbar.firstChild);
+  }
+  if (!document.getElementById('sidebar-backdrop')) {
+    const backdrop = document.createElement('div');
+    backdrop.id = 'sidebar-backdrop';
+    backdrop.className = 'sidebar-backdrop';
+    backdrop.onclick = cerrarSidebarMovil;
+    document.body.appendChild(backdrop);
+  }
+}
+
+function toggleSidebarMovil() {
+  document.getElementById('sidebar')?.classList.toggle('abierto');
+  document.getElementById('sidebar-backdrop')?.classList.toggle('visible');
+}
+
+function cerrarSidebarMovil() {
+  document.getElementById('sidebar')?.classList.remove('abierto');
+  document.getElementById('sidebar-backdrop')?.classList.remove('visible');
 }
 
 /* ── Selector global de sucursal (persistente en topbar) ──── */
