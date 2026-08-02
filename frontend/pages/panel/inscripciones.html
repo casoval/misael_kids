@@ -443,6 +443,20 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-recibo">
+  <div class="modal" style="max-width:min(95vw,1150px);width:95vw;height:90vh;display:flex;flex-direction:column;padding:0">
+    <div class="modal-header" style="padding:var(--gap-md) var(--gap-lg)">
+      <h3 class="modal-titulo">🧾 Recibo</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-outline btn-sm" onclick="reciboAbrirEnPestana()">↗️ Abrir en pestaña nueva</button>
+        <button class="btn btn-primary btn-sm" onclick="reciboImprimir()">🖨️ Imprimir</button>
+        <button class="modal-cerrar">✕</button>
+      </div>
+    </div>
+    <iframe id="recibo-iframe" style="flex:1;width:100%;border:none;background:#94a3b8"></iframe>
+  </div>
+</div>
+
 <script src="{% static 'js/api.js' %}"></script>
 <script src="{% static 'js/components.js' %}"></script>
 <script>
@@ -906,7 +920,8 @@ function pgPintarMensual(ciclos) {
       <div style="font-size:var(--text-xs);color:var(--texto-suave);margin:4px 0;line-height:1.5">
         <div>Período: ${UI.fecha(c.periodo_inicio)} → ${UI.fecha(c.periodo_fin)}</div>
         <div>Vence: ${UI.fecha(co.fecha_vencimiento)}</div>
-        ${co.fecha_pago ? `<div>Último pago: ${UI.fecha(co.fecha_pago)}${co.registrado_por ? ' · '+co.registrado_por : ''}</div>` : ''}
+        ${co.fecha_pago ? `<div>Último pago: ${UI.fecha(co.fecha_pago)}${co.registrado_por ? ' · '+co.registrado_por : ''}
+          ${co.pagos.length ? `· <a href="#" onclick='verRecibo("pago", "${co.pagos[co.pagos.length-1].id}"); return false' style="color:var(--turquesa-d);font-weight:700">🧾 Ver recibo</a>` : ''}</div>` : ''}
         ${parseFloat(co.monto_condonado) > 0 ? `<div style="color:var(--coral-d)">Condonado: ${UI.moneda(co.monto_condonado)} — ${co.motivo_condonacion}</div>` : ''}
       </div>
       ${co.pagos.length ? `<details style="margin:4px 0">
@@ -1052,13 +1067,16 @@ async function pgConfirmarPago() {
   }
   errorEl.textContent = '';
   try {
-    await API.post(`/inscripciones/cobros/${cobroId}/registrar-pago/`, {
+    const respuesta = await API.post(`/inscripciones/cobros/${cobroId}/registrar-pago/`, {
       monto, metodo_pago: pgMetodoActual,
       observacion: document.getElementById('pgr-observacion').value,
     });
     UI.cerrarModal('modal-pg-registrar');
     UI.toast('✅ Pago registrado correctamente', 'exito');
     pgCargar();
+    if (respuesta.pagos && respuesta.pagos.length) {
+      verRecibo('pago', respuesta.pagos[0].id);
+    }
   } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
 }
 
@@ -1086,6 +1104,8 @@ async function pgConfirmarCondonar() {
   } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
 }
 
+let reciboBlobUrlActual = null;
+
 async function verRecibo(tipo, id) {
   const url = tipo === 'pago'
     ? `/inscripciones/recibos/pago/${id}/`
@@ -1095,11 +1115,30 @@ async function verRecibo(tipo, id) {
       headers: { Authorization: `Bearer ${Auth.getToken()}` },
     });
     if (!resp.ok) { UI.toast('No se pudo abrir el recibo', 'error'); return; }
-    const html = await resp.text();
-    const ventana = window.open('', '_blank');
-    ventana.document.write(html);
-    ventana.document.close();
+    const blob = await resp.blob();
+    if (reciboBlobUrlActual) URL.revokeObjectURL(reciboBlobUrlActual);
+    reciboBlobUrlActual = URL.createObjectURL(blob);
+    document.getElementById('recibo-iframe').src = reciboBlobUrlActual;
+    UI.abrirModal('modal-recibo');
   } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+}
+
+function reciboImprimir() {
+  const iframe = document.getElementById('recibo-iframe');
+  try {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  } catch (err) {
+    // Algunos navegadores no dejan controlar el visor de PDF nativo del iframe;
+    // en ese caso, que lo abra aparte y use el botón de imprimir del propio visor.
+    reciboAbrirEnPestana();
+  }
+}
+
+function reciboAbrirEnPestana() {
+  // Esto sí es un clic directo del usuario, así que el navegador no lo bloquea.
+  if (!reciboBlobUrlActual) return;
+  window.open(reciboBlobUrlActual, '_blank');
 }
 
 function pgAbrirDevolucion(cobro) {
@@ -1129,12 +1168,15 @@ async function pgConfirmarDevolucion() {
   if (!motivo) { errorEl.textContent = 'El motivo es obligatorio.'; return; }
   errorEl.textContent = '';
   try {
-    await API.post(`/inscripciones/cobros/${cobroId}/registrar-devolucion/`, {
+    const respuesta = await API.post(`/inscripciones/cobros/${cobroId}/registrar-devolucion/`, {
       monto, motivo, metodo_pago: document.getElementById('pgd-metodo').value,
     });
     UI.cerrarModal('modal-pg-devolucion');
     UI.toast('✅ Devolución registrada', 'exito');
     pgCargar();
+    if (respuesta.devoluciones && respuesta.devoluciones.length) {
+      verRecibo('devolucion', respuesta.devoluciones[0].id);
+    }
   } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
 }
 
