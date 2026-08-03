@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
-from accounts.permissions import EsAdminDirectoraOAdministrativo
+from accounts.permissions import EsAdminDirectoraOAdministrativo, filtrar_por_tutor
 from .models import Inscripcion, Cobro, Pago, Devolucion
 from .serializers import (
     InscripcionSerializer, InscripcionResumenSerializer, CobroSerializer,
@@ -29,6 +29,13 @@ class InscripcionViewSet(viewsets.ModelViewSet):
     permission_classes = [EsAdminDirectoraOAdministrativo]
     filter_backends    = [filters.SearchFilter, DjangoFilterBackend]
     search_fields      = ['nino__nombres', 'nino__apellidos']
+
+    def get_queryset(self):
+        # Sin este filtro, cualquier cuenta de tutor podía ver (y, vía las
+        # acciones de detalle: cobros-pendientes, calendario-pagos,
+        # registrar-pago...) tocar la inscripción de CUALQUIER niño con
+        # solo cambiar el id en la URL — no solo la de su propio hijo.
+        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
     filterset_fields   = ['sucursal', 'sala', 'turno', 'modalidad_pago', 'tipo_ajuste', 'activa']
 
     def get_serializer_class(self):
@@ -225,10 +232,17 @@ class CobroViewSet(viewsets.ModelViewSet):
     serializer_class   = CobroSerializer
     permission_classes = [EsAdminDirectoraOAdministrativo]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields   = ['tipo', 'estado', 'metodo_pago',
+    filterset_fields   = ['inscripcion', 'tipo', 'estado', 'metodo_pago',
                           'inscripcion__sucursal', 'inscripcion__sala']
     ordering_fields    = ['fecha_emision', 'fecha_vencimiento', 'monto_final']
     ordering           = ['-fecha_emision']
+
+    def get_queryset(self):
+        # Mismo motivo que en InscripcionViewSet: sin esto, un tutor podía
+        # leer (y, vía registrar-pago/registrar-devolucion/cerrar-con-lo-
+        # pagado si alguna vez se relaja el permiso de escritura) el cobro
+        # de cualquier niño, no solo el suyo.
+        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'inscripcion__nino')
 
     @action(detail=True, methods=['post'], url_path='registrar-pago')
     def registrar_pago(self, request, pk=None):

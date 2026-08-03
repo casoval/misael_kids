@@ -10,10 +10,25 @@ navegador.
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
 
 from accounts.permissions import EsAdminDirectoraOAdministrativo
 from .models import Pago, Devolucion
 from .pdf_generator import generar_recibo_pdf, generar_devolucion_pdf
+
+
+def _verificar_acceso_tutor(request, nino):
+    """
+    Estas vistas van directo por UUID (no pasan por un queryset filtrado
+    como CobroViewSet), así que sin este chequeo cualquier cuenta de tutor
+    podía descargar el recibo de CUALQUIER pago con solo conocer/adivinar
+    el UUID, sin importar de qué niño fuera.
+    """
+    if request.user.rol != 'tutor':
+        return
+    es_su_hijo = nino.tutores.filter(tutor__usuario=request.user).exists()
+    if not es_su_hijo:
+        raise PermissionDenied('Este recibo no pertenece a un hijo vinculado a tu cuenta.')
 
 
 class ReciboPagoView(APIView):
@@ -27,6 +42,7 @@ class ReciboPagoView(APIView):
             ).prefetch_related('cobro__inscripcion__nino__tutores__tutor'),
             pk=pago_id,
         )
+        _verificar_acceso_tutor(request, pago.cobro.inscripcion.nino)
         pdf_bytes = generar_recibo_pdf(pago)
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="recibo_{pago.numero_recibo}.pdf"'
@@ -44,6 +60,7 @@ class ReciboDevolucionView(APIView):
             ).prefetch_related('cobro__inscripcion__nino__tutores__tutor'),
             pk=devolucion_id,
         )
+        _verificar_acceso_tutor(request, devolucion.cobro.inscripcion.nino)
         pdf_bytes = generar_devolucion_pdf(devolucion)
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="devolucion_{devolucion.numero_recibo}.pdf"'

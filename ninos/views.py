@@ -62,6 +62,16 @@ class TutorViewSet(viewsets.ModelViewSet):
     filter_backends    = [filters.SearchFilter]
     search_fields      = ['nombres', 'apellidos', 'ci', 'email']
 
+    def get_queryset(self):
+        # Sin esto, cualquier cuenta de tutor podía listar el nombre,
+        # teléfono, CI y email de TODAS las familias registradas, no solo
+        # el suyo — el ViewSet no tenía ninguna restricción por usuario.
+        qs = super().get_queryset()
+        usuario = self.request.user
+        if usuario.rol == 'tutor':
+            return qs.filter(usuario=usuario)
+        return qs
+
 
 class NinoTutorViewSet(viewsets.ModelViewSet):
     """
@@ -75,6 +85,13 @@ class NinoTutorViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ['nino', 'tutor']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        usuario = self.request.user
+        if usuario.rol == 'tutor':
+            return qs.filter(tutor__usuario=usuario)
+        return qs
 
 
 class PersonaAutorizadaViewSet(viewsets.ModelViewSet):
