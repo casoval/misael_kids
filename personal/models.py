@@ -32,6 +32,7 @@ class Personal(ModeloBase):
     telefono      = models.CharField(max_length=20, blank=True)
     rol           = models.CharField(max_length=20, choices=ROLES)
     especialidad  = models.CharField(max_length=200, blank=True)
+    foto          = models.ImageField(upload_to='personal/', null=True, blank=True)
     fecha_ingreso = models.DateField()
     activo        = models.BooleanField(default=True)
 

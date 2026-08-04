@@ -125,7 +125,38 @@ const API = {
   put:    (url, data)  => apiFetch(url, { method: 'PUT',    body: JSON.stringify(data) }),
   patch:  (url, data)  => apiFetch(url, { method: 'PATCH',  body: JSON.stringify(data) }),
   delete: (url)        => apiFetch(url, { method: 'DELETE' }),
+  // Para endpoints que reciben un archivo (foto, PDF...): FormData en vez de
+  // JSON. OJO: nunca fijar 'Content-Type' a mano acá — el navegador arma
+  // el header multipart con el boundary correcto solo si lo dejamos vacío.
+  postForm:  (url, formData) => apiFetchForm(url, formData, 'POST'),
+  patchForm: (url, formData) => apiFetchForm(url, formData, 'PATCH'),
 };
+
+async function apiFetchForm(endpoint, formData, method) {
+  const token = Auth.getToken();
+  const headers = { ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
+  let res = await fetch(`${API_BASE}${endpoint}`, { method, headers, body: formData });
+
+  if (res.status === 401) {
+    const nuevoToken = await Auth.refrescarToken();
+    if (nuevoToken) {
+      headers.Authorization = `Bearer ${nuevoToken}`;
+      res = await fetch(`${API_BASE}${endpoint}`, { method, headers, body: formData });
+    }
+  }
+
+  if (!res.ok) {
+    let errorMsg = `Error ${res.status}`;
+    try {
+      const err = await res.json();
+      errorMsg = Object.values(err).flat().join(' ') || errorMsg;
+    } catch {}
+    throw new Error(errorMsg);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
 
 /* ══════════════════════════════════════
    UI HELPERS

@@ -13,5 +13,10 @@ class PlanTrabajoMisaelSerializer(serializers.ModelSerializer):
     nino_nombre = serializers.CharField(source="nino.nombre_completo", read_only=True)
     class Meta:
         model  = PlanTrabajoMisael
-        fields = ["id","nino","nino_nombre","derivacion","plan_individual","profesional_email","profesional_nombre","descripcion","fecha_inicio","fecha_fin","activo","consentimiento_tutor","created_at","updated_at"]
+        fields = ["id","nino","nino_nombre","derivacion","plan_individual",
+                  "profesional_email","profesional_nombre","profesional_telefono",
+                  "area_intervencion","frecuencia_sesiones",
+                  "descripcion","notas_seguimiento","informe_pdf",
+                  "fecha_inicio","fecha_fin","proxima_revision",
+                  "activo","consentimiento_tutor","created_at","updated_at"]
         read_only_fields = ["id","created_at","updated_at"]

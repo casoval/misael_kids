@@ -27,6 +27,13 @@ DJANGO_APPS = [
     'django.contrib.staticfiles',
 ]
 
+# Cloudinary va después de staticfiles (mismo orden que usa Centro Misael,
+# para que las fotos de niños/personal se guarden en la misma cuenta).
+CLOUDINARY_APPS = [
+    'cloudinary_storage',
+    'cloudinary',
+]
+
 THIRD_PARTY_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
@@ -51,7 +58,7 @@ LOCAL_APPS = [
     'reportes',       # Reportes y exportaciones
 ]
 
-INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+INSTALLED_APPS = DJANGO_APPS + CLOUDINARY_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
 MIDDLEWARE = [
@@ -117,6 +124,18 @@ TIME_ZONE = 'America/La_Paz'
 USE_I18N = True
 USE_TZ = True
 
+# ─── Cloudinary (fotos de niños/personal — misma cuenta que Centro Misael) ────
+# Mismos 3 nombres de variable que usa Centro Misael, para poder usar
+# exactamente las mismas credenciales/cuenta.
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY':    env('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+}
+CLOUDINARY_CONFIGURADO = bool(
+    CLOUDINARY_STORAGE['CLOUD_NAME'] and CLOUDINARY_STORAGE['API_KEY'] and CLOUDINARY_STORAGE['API_SECRET']
+)
+
 # ─── Archivos estáticos y media ───────────────────────────────────────────────
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -127,6 +146,15 @@ STATICFILES_DIRS = [
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+if CLOUDINARY_CONFIGURADO:
+    # A diferencia de Centro Misael (que activa Cloudinary solo si
+    # IS_PRODUCTION), acá lo activamos según si las credenciales están
+    # presentes, en cualquier entorno: así un desarrollador puede probarlo
+    # en local con las mismas credenciales, y si en producción alguien
+    # olvida configurar las variables, el sitio sigue funcionando con
+    # disco local en vez de romperse.
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

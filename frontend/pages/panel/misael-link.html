@@ -181,6 +181,18 @@
 
       <!-- Panel: Planes -->
       <div class="tab-panel" id="panel-planes">
+        <div style="display:flex;gap:var(--gap-sm);align-items:flex-end;margin-bottom:var(--gap-md);flex-wrap:wrap">
+          <div class="form-grupo" style="margin:0;min-width:220px">
+            <label class="form-label">Ver historial de un niño/a</label>
+            <select id="pm-filtro-nino" class="form-select" onchange="cargarPlanesMisael()">
+              <option value="">Todos los niños (activos primero)</option>
+            </select>
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-sm);padding-bottom:8px">
+            <input type="checkbox" id="pm-filtro-incluir-inactivos" onchange="cargarPlanesMisael()">
+            Incluir planes cerrados/inactivos
+          </label>
+        </div>
         <div id="lista-planes-misael">
           <div class="loader"><div class="spinner"></div></div>
         </div>
@@ -297,6 +309,18 @@
         <span class="form-error" data-error="pm-prof-email"></span>
       </div>
       <div class="form-grupo">
+        <label class="form-label">Teléfono del profesional</label>
+        <input type="text" id="pm-prof-telefono" class="form-input" placeholder="Opcional">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Área de intervención</label>
+        <input type="text" id="pm-area" class="form-input" placeholder="Ej: Lenguaje, Terapia ocupacional...">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Frecuencia de sesiones</label>
+        <input type="text" id="pm-frecuencia" class="form-input" placeholder="Ej: 2 veces por semana">
+      </div>
+      <div class="form-grupo">
         <label class="form-label">Fecha inicio *</label>
         <input type="date" id="pm-inicio" class="form-input">
         <span class="form-error" data-error="pm-inicio"></span>
@@ -305,11 +329,25 @@
         <label class="form-label">Fecha fin (vacío = vigente)</label>
         <input type="date" id="pm-fin" class="form-input">
       </div>
+      <div class="form-grupo">
+        <label class="form-label">Próxima revisión</label>
+        <input type="date" id="pm-proxima-revision" class="form-input">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Informe del Centro Misael (PDF)</label>
+        <input type="file" id="pm-informe-pdf" class="form-input" accept="application/pdf">
+        <a id="pm-informe-pdf-actual" href="#" target="_blank" style="display:none;font-size:var(--text-xs);color:var(--turquesa-d)">📄 Ver informe actual</a>
+      </div>
       <div class="form-grupo" style="grid-column:1/-1">
         <label class="form-label">Descripción del plan *</label>
         <textarea id="pm-descripcion" class="form-textarea" rows="3"
           placeholder="Objetivos y estrategias del plan de trabajo definido por el profesional..."></textarea>
         <span class="form-error" data-error="pm-descripcion"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Notas de seguimiento</label>
+        <textarea id="pm-seguimiento" class="form-textarea" rows="2"
+          placeholder="Avances, observaciones de la educadora, ajustes acordados con el profesional..."></textarea>
       </div>
       <div class="form-grupo" style="grid-column:1/-1">
         <label class="form-label">Plan individual vinculado (en Agenda)</label>
@@ -362,6 +400,8 @@ async function cargarSelectores() {
     const listaNinos = ninos.results||ninos;
     [document.getElementById('der-nino'), document.getElementById('pm-nino')].forEach(sel =>
       UI.llenarSelect(sel, listaNinos, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)'));
+    UI.llenarSelect(document.getElementById('pm-filtro-nino'), listaNinos, 'id',
+      n => n.nombre_completo+' ('+n.edad_en_meses+'m)');
     UI.llenarSelect(document.getElementById('pm-derivacion'),
       derivaciones.results||derivaciones, 'id',
       d => d.nino_nombre+' — '+d.area_derivacion+' ('+d.estado_display+')');
@@ -530,7 +570,12 @@ async function cargarPlanesMisael() {
   const cont = document.getElementById('lista-planes-misael');
   UI.mostrarLoader(cont,'Cargando planes...');
   try {
-    const data  = await API.get('/misael-link/planes-misael/?ordering=-fecha_inicio&page_size=100');
+    const ninoId = document.getElementById('pm-filtro-nino').value;
+    const incluirInactivos = document.getElementById('pm-filtro-incluir-inactivos').checked;
+    let url = '/misael-link/planes-misael/?ordering=-fecha_inicio&page_size=100';
+    if (ninoId) url += '&nino='+ninoId;
+    if (!incluirInactivos && !ninoId) url += '&activo=true';
+    const data  = await API.get(url);
     const lista = data.results||data;
     if (!lista.length) { UI.vacio(cont,'Sin planes de trabajo del Centro Misael','🧠'); return; }
     cont.innerHTML = lista.map(p => `
@@ -540,8 +585,11 @@ async function cargarPlanesMisael() {
             <div style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--violeta-d)">${p.nino_nombre}</div>
             <div style="font-size:var(--text-sm);font-weight:700;color:var(--violeta-d)">
               👩‍⚕️ ${p.profesional_nombre}
-              <span style="font-weight:400;color:var(--texto-suave)">· ${p.profesional_email}</span>
+              <span style="font-weight:400;color:var(--texto-suave)">· ${p.profesional_email}${p.profesional_telefono?' · '+p.profesional_telefono:''}</span>
             </div>
+            ${p.area_intervencion || p.frecuencia_sesiones ? `<div style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:2px">
+              ${p.area_intervencion?'🎯 '+p.area_intervencion:''} ${p.frecuencia_sesiones?'· 🔁 '+p.frecuencia_sesiones:''}
+            </div>` : ''}
           </div>
           <div style="display:flex;gap:var(--gap-sm);align-items:center">
             <span class="chip ${p.activo?'chip-verde':'chip-gris'}">${p.activo?'✅ Activo':'Inactivo'}</span>
@@ -551,10 +599,15 @@ async function cargarPlanesMisael() {
         <p style="font-size:var(--text-sm);color:var(--texto);line-height:1.7;
           background:rgba(255,255,255,.6);padding:var(--gap-sm);border-radius:var(--radio-md);
           margin-bottom:var(--gap-sm)">${p.descripcion}</p>
-        <div style="display:flex;justify-content:space-between;align-items:center">
+        ${p.notas_seguimiento ? `<p style="font-size:var(--text-sm);color:var(--texto);line-height:1.6;
+          background:var(--amarillo-l);padding:var(--gap-sm);border-radius:var(--radio-md);
+          margin-bottom:var(--gap-sm)"><strong>📝 Seguimiento:</strong> ${p.notas_seguimiento}</p>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
           <div style="font-size:var(--text-xs);color:var(--violeta-d)">
             📅 ${UI.fecha(p.fecha_inicio)} ${p.fecha_fin?'→ '+UI.fecha(p.fecha_fin):'→ Vigente'}
+            ${p.proxima_revision?' · 🔔 Revisión: '+UI.fecha(p.proxima_revision):''}
             ${p.plan_individual?'· <a href="/panel/agenda/" style="color:var(--violeta-d)">Ver plan individual →</a>':''}
+            ${p.informe_pdf?`· <a href="${p.informe_pdf}" target="_blank" style="color:var(--violeta-d)">📄 Informe PDF →</a>`:''}
           </div>
           <div style="display:flex;gap:6px">
             <button class="btn btn-outline btn-sm" onclick="editarPlanMisael('${p.id}')">✏️ Editar</button>
@@ -569,10 +622,13 @@ async function cargarPlanesMisael() {
 function abrirNuevoPlanMisael() {
   editandoPmId = null;
   document.getElementById('titulo-modal-pm').textContent = 'Nuevo plan de trabajo';
-  ['pm-id','pm-prof-nombre','pm-prof-email','pm-descripcion','pm-fin'].forEach(id=>document.getElementById(id).value='');
+  ['pm-id','pm-prof-nombre','pm-prof-email','pm-prof-telefono','pm-area','pm-frecuencia',
+   'pm-descripcion','pm-seguimiento','pm-fin','pm-proxima-revision'].forEach(id=>document.getElementById(id).value='');
   ['pm-nino','pm-derivacion','pm-plan-ind'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('pm-inicio').value         = hoy;
   document.getElementById('pm-consentimiento').checked = true;
+  document.getElementById('pm-informe-pdf').value = '';
+  document.getElementById('pm-informe-pdf-actual').style.display = 'none';
   document.querySelectorAll('#modal-plan-misael .form-error').forEach(el=>el.textContent='');
   UI.abrirModal('modal-plan-misael');
 }
@@ -588,10 +644,19 @@ async function editarPlanMisael(id) {
     document.getElementById('pm-plan-ind').value         = p.plan_individual||'';
     document.getElementById('pm-prof-nombre').value      = p.profesional_nombre;
     document.getElementById('pm-prof-email').value       = p.profesional_email;
+    document.getElementById('pm-prof-telefono').value    = p.profesional_telefono||'';
+    document.getElementById('pm-area').value             = p.area_intervencion||'';
+    document.getElementById('pm-frecuencia').value       = p.frecuencia_sesiones||'';
     document.getElementById('pm-descripcion').value      = p.descripcion;
+    document.getElementById('pm-seguimiento').value      = p.notas_seguimiento||'';
     document.getElementById('pm-inicio').value           = p.fecha_inicio;
     document.getElementById('pm-fin').value              = p.fecha_fin||'';
+    document.getElementById('pm-proxima-revision').value = p.proxima_revision||'';
     document.getElementById('pm-consentimiento').checked = p.consentimiento_tutor;
+    document.getElementById('pm-informe-pdf').value = '';
+    const linkPdf = document.getElementById('pm-informe-pdf-actual');
+    if (p.informe_pdf) { linkPdf.href = p.informe_pdf; linkPdf.style.display = 'inline'; }
+    else { linkPdf.style.display = 'none'; }
     UI.abrirModal('modal-plan-misael');
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
 }
@@ -611,15 +676,28 @@ async function guardarPlanMisael() {
     plan_individual:     document.getElementById('pm-plan-ind').value||null,
     profesional_nombre:  document.getElementById('pm-prof-nombre').value,
     profesional_email:   document.getElementById('pm-prof-email').value,
+    profesional_telefono:document.getElementById('pm-prof-telefono').value,
+    area_intervencion:  document.getElementById('pm-area').value,
+    frecuencia_sesiones:document.getElementById('pm-frecuencia').value,
     descripcion:         document.getElementById('pm-descripcion').value,
+    notas_seguimiento:   document.getElementById('pm-seguimiento').value,
     fecha_inicio:        document.getElementById('pm-inicio').value,
     fecha_fin:           document.getElementById('pm-fin').value||null,
+    proxima_revision:    document.getElementById('pm-proxima-revision').value||null,
     consentimiento_tutor:document.getElementById('pm-consentimiento').checked,
     activo:              true,
   };
   try {
+    let planId = editandoPmId;
     if (editandoPmId) await API.patch('/misael-link/planes-misael/'+editandoPmId+'/',datos);
-    else              await API.post('/misael-link/planes-misael/',datos);
+    else              { const nuevo = await API.post('/misael-link/planes-misael/',datos); planId = nuevo.id; }
+
+    const archivoPdf = document.getElementById('pm-informe-pdf').files[0];
+    if (archivoPdf) {
+      const fd = new FormData();
+      fd.append('informe_pdf', archivoPdf);
+      await API.patchForm('/misael-link/planes-misael/'+planId+'/', fd);
+    }
     UI.toast('Plan guardado correctamente','exito');
     UI.cerrarModal('modal-plan-misael');
     cargarPlanesMisael(); cargarStats();

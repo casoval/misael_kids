@@ -18,7 +18,7 @@ class PersonalSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'usuario', 'nombre_completo', 'email',
             'usuario_nombres', 'usuario_apellidos', 'usuario_username',
-            'ci', 'telefono', 'rol', 'rol_display',
+            'ci', 'telefono', 'rol', 'rol_display', 'foto',
             'especialidad', 'fecha_ingreso', 'activo',
             'created_at', 'updated_at',
         ]

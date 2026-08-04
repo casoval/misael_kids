@@ -101,6 +101,16 @@
     <input type="hidden" id="p-id">
     <input type="hidden" id="p-usuario-id">
 
+    <div style="display:flex;align-items:center;gap:var(--gap-md);margin-bottom:var(--gap-lg)">
+      <div id="p-foto-preview" style="width:72px;height:72px;border-radius:50%;background:var(--gris-100);
+        background-size:cover;background-position:center;flex-shrink:0;display:flex;align-items:center;
+        justify-content:center;font-size:1.5rem;color:var(--gris-500);border:2px solid var(--gris-100)">👤</div>
+      <div class="form-grupo" style="margin:0;flex:1">
+        <label class="form-label">Foto (opcional)</label>
+        <input type="file" id="p-foto" class="form-input" accept="image/*" onchange="previsualizarFotoPersonal(this)">
+      </div>
+    </div>
+
     <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
       text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">Datos del personal</p>
     <div class="grid-2">
@@ -277,7 +287,7 @@ async function cargar() {
     if (!lista.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin resultados</td></tr>'; return; }
     tbody.innerHTML = lista.map(p => `<tr>
       <td><div style="display:flex;align-items:center;gap:var(--gap-sm)">
-        <div class="avatar-personal">${UI.iniciales(p.nombre_completo)}</div>
+        <div class="avatar-personal" style="${p.foto ? `background-image:url('${p.foto}');background-size:cover;background-position:center;` : ''}">${p.foto ? '' : UI.iniciales(p.nombre_completo)}</div>
         <div><div style="font-weight:700">${p.nombre_completo}</div>
         <div style="font-size:var(--text-xs);color:var(--texto-suave)">CI: ${p.ci}</div></div>
       </div></td>
@@ -319,6 +329,18 @@ function limpiarFiltros() {
   ['f-buscar','f-rol'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-activo').value='true'; cargar();
 }
+function previsualizarFotoPersonal(input) {
+  const preview = document.getElementById('p-foto-preview');
+  const archivo = input.files[0];
+  if (!archivo) return;
+  const lector = new FileReader();
+  lector.onload = e => {
+    preview.style.backgroundImage = `url('${e.target.result}')`;
+    preview.textContent = '';
+  };
+  lector.readAsDataURL(archivo);
+}
+
 function abrirNuevo() {
   editandoId=null;
   document.getElementById('titulo-modal-personal').textContent='Nuevo personal';
@@ -328,6 +350,9 @@ function abrirNuevo() {
   document.getElementById('p-rol').value='';
   document.getElementById('p-password').value='MisaelKids2025!';
   document.getElementById('p-fecha-ingreso').value=hoy;
+  document.getElementById('p-foto').value='';
+  document.getElementById('p-foto-preview').style.backgroundImage='';
+  document.getElementById('p-foto-preview').textContent='👤';
   document.querySelectorAll('#modal-personal .form-error').forEach(el=>el.textContent='');
   document.querySelectorAll('#modal-personal .input-error').forEach(el=>el.classList.remove('input-error'));
   UI.abrirModal('modal-personal');
@@ -348,6 +373,10 @@ async function editar(id) {
     document.getElementById('p-rol').value=p.rol||'';
     document.getElementById('p-fecha-ingreso').value=p.fecha_ingreso||hoy;
     document.getElementById('p-especialidad').value=p.especialidad||'';
+    document.getElementById('p-foto').value='';
+    const preview = document.getElementById('p-foto-preview');
+    if (p.foto) { preview.style.backgroundImage = `url('${p.foto}')`; preview.textContent = ''; }
+    else { preview.style.backgroundImage = ''; preview.textContent = '👤'; }
     document.querySelectorAll('#modal-personal .form-error').forEach(el=>el.textContent='');
     document.querySelectorAll('#modal-personal .input-error').forEach(el=>el.classList.remove('input-error'));
     UI.abrirModal('modal-personal');
@@ -374,6 +403,7 @@ async function guardarPersonal() {
   const rol       = document.getElementById('p-rol').value;
 
   try {
+    let personalId = editandoId;
     if (!editandoId) {
       const usuario = await API.post('/auth/usuarios/', {
         nombres, apellidos, telefono, rol,
@@ -381,12 +411,13 @@ async function guardarPersonal() {
         password: document.getElementById('p-password').value,
         password2: document.getElementById('p-password').value,
       });
-      await API.post('/personal/personal/', {
+      const nuevo = await API.post('/personal/personal/', {
         usuario:usuario.id, ci:document.getElementById('p-ci').value,
         telefono, rol,
         fecha_ingreso:document.getElementById('p-fecha-ingreso').value,
         especialidad:document.getElementById('p-especialidad').value,
       });
+      personalId = nuevo.id;
       UI.toast('Personal creado correctamente','exito');
     } else {
       const usuarioId = document.getElementById('p-usuario-id').value;
@@ -400,6 +431,12 @@ async function guardarPersonal() {
         especialidad:document.getElementById('p-especialidad').value,
       });
       UI.toast('Personal actualizado correctamente','exito');
+    }
+    const archivoFoto = document.getElementById('p-foto').files[0];
+    if (archivoFoto) {
+      const fd = new FormData();
+      fd.append('foto', archivoFoto);
+      await API.patchForm('/personal/personal/'+personalId+'/', fd);
     }
     UI.cerrarModal('modal-personal'); cargar(); cargarSelectores();
   } catch (err) { UI.toast('Error: '+err.message,'error'); }

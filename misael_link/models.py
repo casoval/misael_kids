@@ -46,6 +46,12 @@ class PlanTrabajoMisael(ModeloBase):
     Plan de trabajo creado por un profesional del Centro Misael
     para ser ejecutado por la educadora del jardín.
     Se vincula a un PlanIndividual de la app agenda.
+
+    Centro Misael no expone ninguna API para consultar esto en vivo (se
+    revisó su repo: no hay endpoint de pacientes/evaluaciones/planes), así
+    que esto sigue siendo un registro manual — pero con más contexto y
+    con el informe adjunto, para no depender de tener que preguntarle al
+    profesional cada dato por WhatsApp.
     """
     nino              = models.ForeignKey('ninos.Nino', on_delete=models.CASCADE, related_name='planes_misael')
     derivacion        = models.ForeignKey(Derivacion, on_delete=models.SET_NULL, null=True, blank=True)
@@ -53,11 +59,32 @@ class PlanTrabajoMisael(ModeloBase):
         'agenda.PlanIndividual', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='plan_misael'
     )
-    profesional_email = models.EmailField(help_text='Email del profesional en el Centro Misael')
-    profesional_nombre = models.CharField(max_length=200)
-    descripcion       = models.TextField()
+    profesional_email    = models.EmailField(help_text='Email del profesional en el Centro Misael')
+    profesional_nombre   = models.CharField(max_length=200)
+    profesional_telefono = models.CharField(max_length=20, blank=True)
+    area_intervencion    = models.CharField(
+        max_length=150, blank=True,
+        help_text='Ej: Lenguaje, Terapia ocupacional, Psicología...'
+    )
+    frecuencia_sesiones  = models.CharField(
+        max_length=100, blank=True,
+        help_text='Ej: 2 veces por semana'
+    )
+    descripcion       = models.TextField(help_text='Objetivos y lineamientos del plan')
+    notas_seguimiento = models.TextField(
+        blank=True,
+        help_text='Avances, observaciones de la educadora, ajustes acordados con el profesional'
+    )
+    informe_pdf       = models.FileField(
+        upload_to='planes_misael/', null=True, blank=True,
+        help_text='Informe o plan de trabajo del Centro Misael, en PDF'
+    )
     fecha_inicio      = models.DateField()
     fecha_fin         = models.DateField(null=True, blank=True)
+    proxima_revision  = models.DateField(
+        null=True, blank=True,
+        help_text='Cuándo toca revisar/renovar el plan con el Centro Misael'
+    )
     activo            = models.BooleanField(default=True)
     consentimiento_tutor = models.BooleanField(default=False,
         help_text='El tutor autorizó compartir información entre ambos centros')
