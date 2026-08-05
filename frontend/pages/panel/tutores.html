@@ -14,6 +14,7 @@
     <header class="topbar">
       <h1 class="topbar-titulo">👨‍👩‍👧 Tutores y padres</h1>
       <div class="topbar-acciones">
+        <a href="/panel/ninos/" class="btn btn-outline">← Volver a Niños</a>
         <button class="btn btn-primary" onclick="abrirNuevo()">➕ Nuevo tutor</button>
       </div>
     </header>
@@ -193,10 +194,14 @@ let editandoId = null;
 
 async function inicializar() {
   await Promise.all([cargar(), cargarNinosSelectores()]);
-  const ninoParam = new URLSearchParams(location.search).get('nino');
+  const params = new URLSearchParams(location.search);
+  const ninoParam   = params.get('nino');
+  const editarParam = params.get('editar');
   if (ninoParam) {
     abrirNuevo();
     document.getElementById('t-nino').value = ninoParam;
+  } else if (editarParam) {
+    editar(editarParam);
   }
 }
 

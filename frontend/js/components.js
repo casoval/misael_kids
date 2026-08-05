@@ -159,7 +159,6 @@ function renderSidebar(paginaActiva) {
     { href: '/panel/agenda/',       icon: '📔', label: 'Agenda pedagógica' },
     { seccion: 'Gestión' },
     { href: '/panel/ninos/',        icon: '👶', label: 'Niños' },
-    { href: '/panel/tutores/',      icon: '👨‍👩‍👧', label: 'Tutores' },
     { href: '/panel/inscripciones/',icon: '📝', label: 'Inscripciones' },
     { href: '/panel/cobros/',       icon: '💰', label: 'Cobros' },
     { seccion: 'Personal y Operación' },
