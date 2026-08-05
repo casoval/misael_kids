@@ -149,6 +149,9 @@
         <button class="page-tab" onclick="cambiarTab('planes')" id="tab-planes">
           🧠 Planes de trabajo
         </button>
+        <button class="page-tab" onclick="cambiarTab('vinculacion')" id="tab-vinculacion">
+          🔗 Vincular con Centro Misael
+        </button>
       </div>
 
       <!-- Panel: Derivaciones -->
@@ -194,6 +197,28 @@
           </label>
         </div>
         <div id="lista-planes-misael">
+          <div class="loader"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Panel: Vinculación con Centro Misael -->
+      <div class="tab-panel" id="panel-vinculacion">
+        <div style="background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
+          box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100);margin-bottom:var(--gap-md)">
+          <p style="font-size:var(--text-sm);color:var(--gris-600);margin-bottom:var(--gap-sm)">
+            Busca al niño/a en Centro Misael por su nombre o el de su tutor. Se incluyen pacientes
+            <strong>activos e inactivos</strong> — el estado en Centro Misael no impide vincularlo.
+          </p>
+          <div style="display:flex;gap:var(--gap-sm);flex-wrap:wrap">
+            <input type="text" id="cm-buscar-input" class="form-input" style="flex:1;min-width:220px"
+              placeholder="Nombre del niño o del tutor..." onkeydown="if(event.key==='Enter')buscarEnCentroMisael()">
+            <button class="btn btn-primary" onclick="buscarEnCentroMisael()">🔍 Buscar en Centro Misael</button>
+          </div>
+        </div>
+        <div id="cm-resultados"></div>
+
+        <h4 style="margin:var(--gap-lg) 0 var(--gap-sm)">Niños ya vinculados</h4>
+        <div id="cm-vinculados">
           <div class="loader"><div class="spinner"></div></div>
         </div>
       </div>
@@ -375,6 +400,7 @@ initPanel('misael-link', ['admin', 'directora', 'educadora', 'ayudante', 'admini
 const hoy = new Date().toISOString().split('T')[0];
 document.getElementById('pm-inicio').value = hoy;
 let editandoDerId = null, editandoPmId = null;
+let ninosCache = [];
 
 const estadoColors = {
   solicitada:'estado-solicitada', aceptada:'estado-aceptada',
@@ -388,6 +414,8 @@ const estadoLabels = {
 async function inicializar() {
   await cargarSelectores();
   await Promise.all([cargarStats(), cargarDerivaciones(), cargarPlanesMisael()]);
+  const tabInicial = new URLSearchParams(window.location.search).get('tab');
+  if (tabInicial) cambiarTab(tabInicial);
 }
 
 async function cargarSelectores() {
@@ -398,6 +426,7 @@ async function cargarSelectores() {
       API.get('/agenda/planes-individuales/?activo=true&page_size=200'),
     ]);
     const listaNinos = ninos.results||ninos;
+    ninosCache = listaNinos;
     [document.getElementById('der-nino'), document.getElementById('pm-nino')].forEach(sel =>
       UI.llenarSelect(sel, listaNinos, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)'));
     UI.llenarSelect(document.getElementById('pm-filtro-nino'), listaNinos, 'id',
@@ -427,11 +456,12 @@ async function cargarStats() {
 }
 
 function cambiarTab(tab) {
-  ['derivaciones','planes'].forEach(t => {
+  ['derivaciones','planes','vinculacion'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('activo',t===tab);
     document.getElementById('panel-'+t).classList.toggle('activo',t===tab);
   });
   if (tab==='planes') cargarPlanesMisael();
+  if (tab==='vinculacion') cargarVinculados();
 }
 
 // ── Derivaciones ──
@@ -711,6 +741,104 @@ async function eliminarPlanMisael(id, nombre) {
     UI.toast('Plan eliminado','exito');
     cargarPlanesMisael(); cargarStats();
   } catch (err) { UI.toast('No se puede eliminar: '+err.message,'error'); }
+}
+
+// ── Vinculación con Centro Misael ──
+async function buscarEnCentroMisael() {
+  const q = document.getElementById('cm-buscar-input').value.trim();
+  const cont = document.getElementById('cm-resultados');
+  if (q.length < 2) { UI.toast('Escribe al menos 2 caracteres','warn'); return; }
+  UI.mostrarLoader(cont, 'Buscando en Centro Misael...');
+  try {
+    const resultados = await API.get('/misael-link/centro-misael/buscar/?q='+encodeURIComponent(q));
+    if (!resultados.length) { UI.vacio(cont, 'Sin resultados en Centro Misael', '🔍'); return; }
+    cont.innerHTML = resultados.map(p => `
+      <div class="card" style="margin-bottom:var(--gap-sm);padding:var(--gap-md);display:flex;
+        justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--gap-sm)">
+        <div>
+          <strong>${p.nombre_completo}</strong>
+          <span class="badge ${p.estado==='activo'?'estado-aceptada':'estado-cerrada'}" style="margin-left:8px">
+            ${p.estado==='activo' ? '✅ Activo' : '⏸️ Inactivo'} en Centro Misael
+          </span>
+          <div style="font-size:var(--text-xs);color:var(--gris-500)">
+            ${p.edad} años · Tutor: ${p.nombre_tutor || '—'} · ${p.telefono_tutor || 'sin teléfono'}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <select id="cm-select-nino-${p.id}" class="form-select" style="min-width:180px">
+            <option value="">➕ Crear niño/a nuevo</option>
+            ${ninosCache.map(n=>`<option value="${n.id}">Vincular a: ${n.nombre_completo}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="vincularConCentroMisael(${p.id})">🔗 Vincular</button>
+        </div>
+      </div>`).join('');
+  } catch (err) {
+    UI.vacio(cont, 'Error: '+err.message, '⚠️');
+  }
+}
+
+async function vincularConCentroMisael(pacienteCentroId) {
+  const sel = document.getElementById('cm-select-nino-'+pacienteCentroId);
+  const ninoId = sel.value || null;
+  const cuerpo = { paciente_centro_id: pacienteCentroId };
+  if (ninoId) cuerpo.nino_id = ninoId;
+
+  if (!confirm(ninoId
+    ? '¿Vincular este paciente al niño/a seleccionado? Se completarán los datos de salud que estén vacíos.'
+    : '¿Crear un niño/a nuevo en Misael Kids copiando los datos de este paciente?')) return;
+
+  try {
+    const resp = await API.post('/misael-link/centro-misael/vincular/', cuerpo);
+    UI.toast(resp.creado_nuevo ? '✅ Niño/a creado y vinculado' : '✅ Vinculado correctamente', 'exito');
+    document.getElementById('cm-buscar-input').value = '';
+    document.getElementById('cm-resultados').innerHTML = '';
+    await cargarSelectores();
+    await cargarVinculados();
+  } catch (err) {
+    UI.toast('No se pudo vincular: '+err.message, 'error');
+  }
+}
+
+async function cargarVinculados() {
+  const cont = document.getElementById('cm-vinculados');
+  UI.mostrarLoader(cont, 'Cargando vínculos...');
+  try {
+    const vinculos = await API.get('/misael-link/vinculos-centro-misael/?page_size=200');
+    const lista = vinculos.results || vinculos;
+    if (!lista.length) { UI.vacio(cont, 'Todavía no hay niños vinculados con Centro Misael', '🔗'); return; }
+    cont.innerHTML = lista.map(v => `
+      <div class="card" style="margin-bottom:var(--gap-sm);padding:var(--gap-md);display:flex;
+        justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--gap-sm)">
+        <div>
+          <strong>${v.nino_nombre}</strong>
+          <span class="badge ${v.estado_centro_cache==='activo'?'estado-aceptada':'estado-cerrada'}" style="margin-left:8px">
+            paciente #${v.paciente_centro_id} en Centro Misael
+          </span>
+          <div style="font-size:var(--text-xs);color:var(--gris-500)">
+            Vinculado el ${new Date(v.fecha_vinculacion).toLocaleDateString()}
+            ${v.ultima_sincronizacion ? '· Última sync: '+new Date(v.ultima_sincronizacion).toLocaleString() : '· Sin sincronizar aún'}
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="sincronizarPlanesMisael(${v.nino})">
+          🔄 Sincronizar planes/documentos
+        </button>
+      </div>`).join('');
+  } catch (err) {
+    UI.vacio(cont, 'Error: '+err.message, '⚠️');
+  }
+}
+
+async function sincronizarPlanesMisael(ninoId) {
+  try {
+    const resp = await API.post('/misael-link/centro-misael/sincronizar/', { nino_id: ninoId });
+    UI.toast(resp.importados > 0
+      ? `✅ ${resp.importados} documento(s) nuevo(s) importado(s)`
+      : 'Ya estaba todo sincronizado, sin documentos nuevos', 'exito');
+    cargarVinculados();
+    if (document.getElementById('panel-planes').classList.contains('activo')) cargarPlanesMisael();
+  } catch (err) {
+    UI.toast('No se pudo sincronizar: '+err.message, 'error');
+  }
 }
 
 inicializar();

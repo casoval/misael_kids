@@ -41,6 +41,43 @@ class Derivacion(ModeloBase):
         return f'Derivación {self.nino} — {self.area_derivacion} ({self.get_estado_display()})'
 
 
+class VinculoCentroMisael(ModeloBase):
+    """
+    Vínculo entre un Nino de Misael Kids y un Paciente del Centro Misael
+    (repo centro_terapias_v2, vía su API de integración).
+
+    Un niño solo puede estar vinculado a un paciente. El vínculo se
+    mantiene aunque el paciente pase a inactivo en Centro Misael: el
+    jardín igual necesita seguir viendo sus planes de trabajo.
+    """
+    nino = models.OneToOneField(
+        'ninos.Nino', on_delete=models.CASCADE, related_name='vinculo_centro_misael'
+    )
+    paciente_centro_id = models.PositiveIntegerField(
+        help_text='ID del Paciente en Centro Misael (centro_terapias_v2)'
+    )
+    nombre_paciente_centro = models.CharField(
+        max_length=200, blank=True,
+        help_text='Nombre del paciente al momento de vincular, para referencia rápida'
+    )
+    estado_centro_cache = models.CharField(
+        max_length=10, blank=True,
+        help_text='Último estado (activo/inactivo) visto en Centro Misael. Informativo solamente.'
+    )
+    vinculado_por = models.ForeignKey(
+        'personal.Personal', on_delete=models.SET_NULL, null=True, blank=True
+    )
+    fecha_vinculacion = models.DateTimeField(auto_now_add=True)
+    ultima_sincronizacion = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Vínculo con Centro Misael'
+        ordering = ['-fecha_vinculacion']
+
+    def __str__(self):
+        return f'{self.nino} ↔ paciente #{self.paciente_centro_id} en Centro Misael'
+
+
 class PlanTrabajoMisael(ModeloBase):
     """
     Plan de trabajo creado por un profesional del Centro Misael
@@ -88,6 +125,20 @@ class PlanTrabajoMisael(ModeloBase):
     activo            = models.BooleanField(default=True)
     consentimiento_tutor = models.BooleanField(default=False,
         help_text='El tutor autorizó compartir información entre ambos centros')
+
+    # ── Sincronización automática desde Centro Misael ──────────────
+    # Si el plan/informe fue traído automáticamente desde la API de
+    # Centro Misael (en vez de cargado a mano), guardamos el ID del
+    # documento de origen para no volver a importarlo en cada sync.
+    documento_centro_id = models.PositiveIntegerField(
+        null=True, blank=True, unique=True,
+        help_text='ID del DocumentoPaciente en Centro Misael, si fue traído automáticamente'
+    )
+    origen = models.CharField(
+        max_length=20,
+        choices=[('manual', 'Cargado manualmente'), ('sincronizado', 'Sincronizado desde Centro Misael')],
+        default='manual',
+    )
 
     class Meta:
         verbose_name = 'Plan de trabajo Centro Misael'

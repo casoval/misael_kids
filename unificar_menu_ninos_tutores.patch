@@ -1,0 +1,146 @@
+diff --git a/frontend/js/components.js b/frontend/js/components.js
+index c7f6191..17cad28 100644
+--- a/frontend/js/components.js
++++ b/frontend/js/components.js
+@@ -159,7 +159,6 @@ function renderSidebar(paginaActiva) {
+     { href: '/panel/agenda/',       icon: '📔', label: 'Agenda pedagógica' },
+     { seccion: 'Gestión' },
+     { href: '/panel/ninos/',        icon: '👶', label: 'Niños' },
+-    { href: '/panel/tutores/',      icon: '👨‍👩‍👧', label: 'Tutores' },
+     { href: '/panel/inscripciones/',icon: '📝', label: 'Inscripciones' },
+     { href: '/panel/cobros/',       icon: '💰', label: 'Cobros' },
+     { seccion: 'Personal y Operación' },
+diff --git a/frontend/pages/panel/ninos.html b/frontend/pages/panel/ninos.html
+index 7224c98..ad75dde 100644
+--- a/frontend/pages/panel/ninos.html
++++ b/frontend/pages/panel/ninos.html
+@@ -66,6 +66,7 @@
+     <header class="topbar">
+       <h1 class="topbar-titulo">👶 Niños</h1>
+       <div class="topbar-acciones">
++        <a href="/panel/misael-link/?tab=vinculacion" class="btn btn-outline">🔗 Vincular con Centro Misael</a>
+         <button class="btn btn-primary" onclick="abrirNuevo()">➕ Registrar niño/a</button>
+       </div>
+     </header>
+@@ -328,6 +329,23 @@
+   </div>
+ </div>
+ 
++<!-- Modal: detalle de tutor (solo lectura) -->
++<div class="modal-overlay" id="modal-detalle-tutor">
++  <div class="modal" style="max-width:480px">
++    <div class="modal-header">
++      <h3 class="modal-titulo">👨‍👩‍👧 Detalle del tutor</h3>
++      <button class="modal-cerrar">✕</button>
++    </div>
++    <div id="detalle-tutor-body">
++      <div class="loader"><div class="spinner"></div></div>
++    </div>
++    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-md)">
++      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-detalle-tutor')">Cerrar</button>
++      <a id="detalle-tutor-editar" class="btn btn-primary" href="#">✏️ Editar tutor</a>
++    </div>
++  </div>
++</div>
++
+ <script src="{% static 'js/api.js' %}"></script>
+ <script src="{% static 'js/components.js' %}"></script>
+ <script>
+@@ -470,7 +488,7 @@ async function verPerfil(id) {
+       <div class="perfil-seccion">
+         <h4>👨‍👩‍👧 Tutores</h4>
+         ${n.tutores?.length?n.tutores.map(t=>`
+-          <div class="tutor-item">
++          <div class="tutor-item" style="cursor:pointer" onclick="verDetalleTutor('${t.tutor}')" title="Ver detalle del tutor">
+             <div class="tutor-ava">${UI.iniciales(t.tutor_nombre)}</div>
+             <div style="flex:1">
+               <div style="font-weight:700;font-size:var(--text-sm)">${t.tutor_nombre}</div>
+@@ -478,6 +496,7 @@ async function verPerfil(id) {
+                 ${t.es_principal?'⭐ Principal · ':''}${t.puede_retirar?'✅ Puede retirar':'❌ No puede retirar'}
+               </div>
+             </div>
++            <span style="font-size:var(--text-xs);color:var(--texto-suave)">👁 Ver</span>
+           </div>`).join(''):'<p style="font-size:var(--text-sm);color:var(--texto-suave)">Sin tutores registrados</p>'}
+       </div>
+       <div class="perfil-seccion">
+@@ -507,6 +526,43 @@ async function verPerfil(id) {
+ function cerrarPerfil() { document.getElementById('perfil-lateral').classList.remove('abierto'); }
+ function editarDesadePerfil() { if (ninoPerfilId) { cerrarPerfil(); editar(ninoPerfilId); } }
+ 
++// ── Ver detalle de un tutor (sin necesidad de un menú aparte de "Tutores") ──
++async function verDetalleTutor(tutorId) {
++  UI.abrirModal('modal-detalle-tutor');
++  document.getElementById('detalle-tutor-editar').href = '/panel/tutores/?editar='+tutorId;
++  const body = document.getElementById('detalle-tutor-body');
++  body.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
++  try {
++    const t = await API.get('/ninos/tutores/'+tutorId+'/');
++    body.innerHTML = `
++      <div class="perfil-seccion">
++        <div style="display:flex;align-items:center;gap:var(--gap-sm);margin-bottom:var(--gap-sm)">
++          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--naranja));
++            display:flex;align-items:center;justify-content:center;color:white;font-weight:800">
++            ${UI.iniciales(t.nombres+' '+t.apellidos)}
++          </div>
++          <div>
++            <div style="font-weight:700">${t.nombres} ${t.apellidos}</div>
++            <span class="chip chip-turquesa">${t.parentesco_display}</span>
++          </div>
++        </div>
++        <div class="dato-fila"><span class="clave">CI</span><span class="valor">${t.ci||'—'}</span></div>
++        <div class="dato-fila"><span class="clave">Teléfono</span><span class="valor">${t.telefono||'—'}</span></div>
++        <div class="dato-fila"><span class="clave">Teléfono alt.</span><span class="valor">${t.telefono_alt||'—'}</span></div>
++        <div class="dato-fila"><span class="clave">Email</span><span class="valor">${t.email||'—'}</span></div>
++        <div class="dato-fila"><span class="clave">Estado</span><span class="valor">${t.activo?'✅ Activo':'❌ Inactivo'}</span></div>
++      </div>
++      <div class="perfil-seccion">
++        <h4>👶 Niños vinculados</h4>
++        ${(t.ninos_resumen||[]).length
++          ? t.ninos_resumen.map(n=>`<span class="chip ${n.es_principal?'chip-violeta':'chip-gris'}" style="margin:2px" title="${n.es_principal?'Tutor principal · ':''}${n.puede_retirar?'Puede retirar':'No puede retirar'}">${n.es_principal?'⭐ ':''}${n.nombre}</span>`).join(' ')
++          : '<p style="font-size:var(--text-sm);color:var(--texto-suave)">Sin niños vinculados</p>'}
++      </div>`;
++  } catch (err) {
++    body.innerHTML = '<div class="alerta alerta-peligro">Error: '+err.message+'</div>';
++  }
++}
++
+ // ── CRUD Modal ──
+ function cambiarTabModal(tab) {
+   ['datos','tutores','autorizados','salud'].forEach(t => {
+@@ -701,6 +757,8 @@ async function cargarTutoresVinculados() {
+             ${t.es_principal?'⭐ Principal · ':''}${t.puede_retirar?'✅ Puede retirar':'❌ No puede retirar'}
+           </div>
+         </div>
++        <button class="btn btn-sm" style="background:var(--gris-100);color:var(--texto)"
++          onclick="verDetalleTutor('${t.tutor}')" title="Ver detalle del tutor">👁</button>
+         <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+           onclick="quitarVinculoTutor('${t.id}')">🗑️</button>
+       </div>`).join('');
+diff --git a/frontend/pages/panel/tutores.html b/frontend/pages/panel/tutores.html
+index 1b353b9..148d731 100644
+--- a/frontend/pages/panel/tutores.html
++++ b/frontend/pages/panel/tutores.html
+@@ -14,6 +14,7 @@
+     <header class="topbar">
+       <h1 class="topbar-titulo">👨‍👩‍👧 Tutores y padres</h1>
+       <div class="topbar-acciones">
++        <a href="/panel/ninos/" class="btn btn-outline">← Volver a Niños</a>
+         <button class="btn btn-primary" onclick="abrirNuevo()">➕ Nuevo tutor</button>
+       </div>
+     </header>
+@@ -193,10 +194,14 @@ let editandoId = null;
+ 
+ async function inicializar() {
+   await Promise.all([cargar(), cargarNinosSelectores()]);
+-  const ninoParam = new URLSearchParams(location.search).get('nino');
++  const params = new URLSearchParams(location.search);
++  const ninoParam   = params.get('nino');
++  const editarParam = params.get('editar');
+   if (ninoParam) {
+     abrirNuevo();
+     document.getElementById('t-nino').value = ninoParam;
++  } else if (editarParam) {
++    editar(editarParam);
+   }
+ }
+ 

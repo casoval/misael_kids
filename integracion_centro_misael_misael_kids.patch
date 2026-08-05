@@ -1,0 +1,782 @@
+diff --git a/frontend/pages/panel/misael-link.html b/frontend/pages/panel/misael-link.html
+index 99f75e9..4670ea9 100644
+--- a/frontend/pages/panel/misael-link.html
++++ b/frontend/pages/panel/misael-link.html
+@@ -149,6 +149,9 @@
+         <button class="page-tab" onclick="cambiarTab('planes')" id="tab-planes">
+           🧠 Planes de trabajo
+         </button>
++        <button class="page-tab" onclick="cambiarTab('vinculacion')" id="tab-vinculacion">
++          🔗 Vincular con Centro Misael
++        </button>
+       </div>
+ 
+       <!-- Panel: Derivaciones -->
+@@ -198,6 +201,28 @@
+         </div>
+       </div>
+ 
++      <!-- Panel: Vinculación con Centro Misael -->
++      <div class="tab-panel" id="panel-vinculacion">
++        <div style="background:var(--blanco);padding:var(--gap-lg);border-radius:var(--radio-xl);
++          box-shadow:var(--sombra-sm);border:1.5px solid var(--gris-100);margin-bottom:var(--gap-md)">
++          <p style="font-size:var(--text-sm);color:var(--gris-600);margin-bottom:var(--gap-sm)">
++            Busca al niño/a en Centro Misael por su nombre o el de su tutor. Se incluyen pacientes
++            <strong>activos e inactivos</strong> — el estado en Centro Misael no impide vincularlo.
++          </p>
++          <div style="display:flex;gap:var(--gap-sm);flex-wrap:wrap">
++            <input type="text" id="cm-buscar-input" class="form-input" style="flex:1;min-width:220px"
++              placeholder="Nombre del niño o del tutor..." onkeydown="if(event.key==='Enter')buscarEnCentroMisael()">
++            <button class="btn btn-primary" onclick="buscarEnCentroMisael()">🔍 Buscar en Centro Misael</button>
++          </div>
++        </div>
++        <div id="cm-resultados"></div>
++
++        <h4 style="margin:var(--gap-lg) 0 var(--gap-sm)">Niños ya vinculados</h4>
++        <div id="cm-vinculados">
++          <div class="loader"><div class="spinner"></div></div>
++        </div>
++      </div>
++
+     </div>
+   </main>
+ </div>
+@@ -375,6 +400,7 @@ initPanel('misael-link', ['admin', 'directora', 'educadora', 'ayudante', 'admini
+ const hoy = new Date().toISOString().split('T')[0];
+ document.getElementById('pm-inicio').value = hoy;
+ let editandoDerId = null, editandoPmId = null;
++let ninosCache = [];
+ 
+ const estadoColors = {
+   solicitada:'estado-solicitada', aceptada:'estado-aceptada',
+@@ -388,6 +414,8 @@ const estadoLabels = {
+ async function inicializar() {
+   await cargarSelectores();
+   await Promise.all([cargarStats(), cargarDerivaciones(), cargarPlanesMisael()]);
++  const tabInicial = new URLSearchParams(window.location.search).get('tab');
++  if (tabInicial) cambiarTab(tabInicial);
+ }
+ 
+ async function cargarSelectores() {
+@@ -398,6 +426,7 @@ async function cargarSelectores() {
+       API.get('/agenda/planes-individuales/?activo=true&page_size=200'),
+     ]);
+     const listaNinos = ninos.results||ninos;
++    ninosCache = listaNinos;
+     [document.getElementById('der-nino'), document.getElementById('pm-nino')].forEach(sel =>
+       UI.llenarSelect(sel, listaNinos, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)'));
+     UI.llenarSelect(document.getElementById('pm-filtro-nino'), listaNinos, 'id',
+@@ -427,11 +456,12 @@ async function cargarStats() {
+ }
+ 
+ function cambiarTab(tab) {
+-  ['derivaciones','planes'].forEach(t => {
++  ['derivaciones','planes','vinculacion'].forEach(t => {
+     document.getElementById('tab-'+t).classList.toggle('activo',t===tab);
+     document.getElementById('panel-'+t).classList.toggle('activo',t===tab);
+   });
+   if (tab==='planes') cargarPlanesMisael();
++  if (tab==='vinculacion') cargarVinculados();
+ }
+ 
+ // ── Derivaciones ──
+@@ -713,6 +743,104 @@ async function eliminarPlanMisael(id, nombre) {
+   } catch (err) { UI.toast('No se puede eliminar: '+err.message,'error'); }
+ }
+ 
++// ── Vinculación con Centro Misael ──
++async function buscarEnCentroMisael() {
++  const q = document.getElementById('cm-buscar-input').value.trim();
++  const cont = document.getElementById('cm-resultados');
++  if (q.length < 2) { UI.toast('Escribe al menos 2 caracteres','warn'); return; }
++  UI.mostrarLoader(cont, 'Buscando en Centro Misael...');
++  try {
++    const resultados = await API.get('/misael-link/centro-misael/buscar/?q='+encodeURIComponent(q));
++    if (!resultados.length) { UI.vacio(cont, 'Sin resultados en Centro Misael', '🔍'); return; }
++    cont.innerHTML = resultados.map(p => `
++      <div class="card" style="margin-bottom:var(--gap-sm);padding:var(--gap-md);display:flex;
++        justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--gap-sm)">
++        <div>
++          <strong>${p.nombre_completo}</strong>
++          <span class="badge ${p.estado==='activo'?'estado-aceptada':'estado-cerrada'}" style="margin-left:8px">
++            ${p.estado==='activo' ? '✅ Activo' : '⏸️ Inactivo'} en Centro Misael
++          </span>
++          <div style="font-size:var(--text-xs);color:var(--gris-500)">
++            ${p.edad} años · Tutor: ${p.nombre_tutor || '—'} · ${p.telefono_tutor || 'sin teléfono'}
++          </div>
++        </div>
++        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
++          <select id="cm-select-nino-${p.id}" class="form-select" style="min-width:180px">
++            <option value="">➕ Crear niño/a nuevo</option>
++            ${ninosCache.map(n=>`<option value="${n.id}">Vincular a: ${n.nombre_completo}</option>`).join('')}
++          </select>
++          <button class="btn btn-primary btn-sm" onclick="vincularConCentroMisael(${p.id})">🔗 Vincular</button>
++        </div>
++      </div>`).join('');
++  } catch (err) {
++    UI.vacio(cont, 'Error: '+err.message, '⚠️');
++  }
++}
++
++async function vincularConCentroMisael(pacienteCentroId) {
++  const sel = document.getElementById('cm-select-nino-'+pacienteCentroId);
++  const ninoId = sel.value || null;
++  const cuerpo = { paciente_centro_id: pacienteCentroId };
++  if (ninoId) cuerpo.nino_id = ninoId;
++
++  if (!confirm(ninoId
++    ? '¿Vincular este paciente al niño/a seleccionado? Se completarán los datos de salud que estén vacíos.'
++    : '¿Crear un niño/a nuevo en Misael Kids copiando los datos de este paciente?')) return;
++
++  try {
++    const resp = await API.post('/misael-link/centro-misael/vincular/', cuerpo);
++    UI.toast(resp.creado_nuevo ? '✅ Niño/a creado y vinculado' : '✅ Vinculado correctamente', 'exito');
++    document.getElementById('cm-buscar-input').value = '';
++    document.getElementById('cm-resultados').innerHTML = '';
++    await cargarSelectores();
++    await cargarVinculados();
++  } catch (err) {
++    UI.toast('No se pudo vincular: '+err.message, 'error');
++  }
++}
++
++async function cargarVinculados() {
++  const cont = document.getElementById('cm-vinculados');
++  UI.mostrarLoader(cont, 'Cargando vínculos...');
++  try {
++    const vinculos = await API.get('/misael-link/vinculos-centro-misael/?page_size=200');
++    const lista = vinculos.results || vinculos;
++    if (!lista.length) { UI.vacio(cont, 'Todavía no hay niños vinculados con Centro Misael', '🔗'); return; }
++    cont.innerHTML = lista.map(v => `
++      <div class="card" style="margin-bottom:var(--gap-sm);padding:var(--gap-md);display:flex;
++        justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--gap-sm)">
++        <div>
++          <strong>${v.nino_nombre}</strong>
++          <span class="badge ${v.estado_centro_cache==='activo'?'estado-aceptada':'estado-cerrada'}" style="margin-left:8px">
++            paciente #${v.paciente_centro_id} en Centro Misael
++          </span>
++          <div style="font-size:var(--text-xs);color:var(--gris-500)">
++            Vinculado el ${new Date(v.fecha_vinculacion).toLocaleDateString()}
++            ${v.ultima_sincronizacion ? '· Última sync: '+new Date(v.ultima_sincronizacion).toLocaleString() : '· Sin sincronizar aún'}
++          </div>
++        </div>
++        <button class="btn btn-outline btn-sm" onclick="sincronizarPlanesMisael(${v.nino})">
++          🔄 Sincronizar planes/documentos
++        </button>
++      </div>`).join('');
++  } catch (err) {
++    UI.vacio(cont, 'Error: '+err.message, '⚠️');
++  }
++}
++
++async function sincronizarPlanesMisael(ninoId) {
++  try {
++    const resp = await API.post('/misael-link/centro-misael/sincronizar/', { nino_id: ninoId });
++    UI.toast(resp.importados > 0
++      ? `✅ ${resp.importados} documento(s) nuevo(s) importado(s)`
++      : 'Ya estaba todo sincronizado, sin documentos nuevos', 'exito');
++    cargarVinculados();
++    if (document.getElementById('panel-planes').classList.contains('activo')) cargarPlanesMisael();
++  } catch (err) {
++    UI.toast('No se pudo sincronizar: '+err.message, 'error');
++  }
++}
++
+ inicializar();
+ </script>
+ </body>
+diff --git a/frontend/pages/panel/ninos.html b/frontend/pages/panel/ninos.html
+index 7224c98..eeb3243 100644
+--- a/frontend/pages/panel/ninos.html
++++ b/frontend/pages/panel/ninos.html
+@@ -66,6 +66,7 @@
+     <header class="topbar">
+       <h1 class="topbar-titulo">👶 Niños</h1>
+       <div class="topbar-acciones">
++        <a href="/panel/misael-link/?tab=vinculacion" class="btn btn-outline">🔗 Vincular con Centro Misael</a>
+         <button class="btn btn-primary" onclick="abrirNuevo()">➕ Registrar niño/a</button>
+       </div>
+     </header>
+diff --git a/misael_link/centro_misael_client.py b/misael_link/centro_misael_client.py
+new file mode 100644
+index 0000000..261d075
+--- /dev/null
++++ b/misael_link/centro_misael_client.py
+@@ -0,0 +1,79 @@
++"""
++misael_link/centro_misael_client.py
++
++Cliente delgado hacia la API de integración expuesta por Centro Misael
++(app integracion_misael_kids del repo centro_terapias_v2).
++
++Requiere en el .env de Misael Kids:
++    CENTRO_MISAEL_API_URL=https://tu-centro-misael.com
++    CENTRO_MISAEL_API_KEY=<misma clave que MISAEL_KIDS_API_KEY en Centro Misael>
++"""
++import requests
++from django.conf import settings
++
++
++class CentroMisaelNoConfigurado(Exception):
++    """La URL o la API key de Centro Misael no están configuradas."""
++
++
++class CentroMisaelError(Exception):
++    """Error de red o respuesta inesperada de Centro Misael."""
++
++
++def _base_url():
++    if not settings.CENTRO_MISAEL_API_URL or not settings.CENTRO_MISAEL_API_KEY:
++        raise CentroMisaelNoConfigurado(
++            'CENTRO_MISAEL_API_URL / CENTRO_MISAEL_API_KEY no están configurados en el .env.'
++        )
++    return settings.CENTRO_MISAEL_API_URL.rstrip('/') + '/api/integracion/misael-kids'
++
++
++def _headers():
++    return {'Authorization': f'ApiKey {settings.CENTRO_MISAEL_API_KEY}'}
++
++
++def _get(path, params=None, timeout=10):
++    url = f'{_base_url()}{path}'
++    try:
++        resp = requests.get(url, headers=_headers(), params=params, timeout=timeout)
++    except requests.RequestException as exc:
++        raise CentroMisaelError(f'No se pudo conectar con Centro Misael: {exc}') from exc
++
++    if resp.status_code == 401:
++        raise CentroMisaelError('API key rechazada por Centro Misael.')
++    if resp.status_code == 404:
++        return None
++    if not resp.ok:
++        raise CentroMisaelError(f'Centro Misael respondió {resp.status_code}: {resp.text[:300]}')
++    return resp.json()
++
++
++def buscar_pacientes(query):
++    """Devuelve lista de pacientes (activos e inactivos) que calzan con `query`."""
++    data = _get('/pacientes/buscar/', params={'q': query})
++    return data or []
++
++
++def obtener_paciente(paciente_id):
++    """Detalle completo de un paciente, para copiar datos. None si no existe."""
++    return _get(f'/pacientes/{paciente_id}/')
++
++
++def listar_documentos_compartidos(paciente_id):
++    """Documentos marcados por el profesional como 'Compartir con Misael Kids'."""
++    data = _get(f'/pacientes/{paciente_id}/documentos/')
++    return data or []
++
++
++def descargar_archivo(url, timeout=30):
++    """
++    Descarga el archivo de un documento compartido.
++    Sin headers de auth: `archivo_url` ya viene lista para descarga directa
++    desde el storage (Cloudflare R2 / disco), no pasa por nuestra API key.
++    """
++    try:
++        resp = requests.get(url, timeout=timeout)
++        resp.raise_for_status()
++    except requests.RequestException as exc:
++        raise CentroMisaelError(f'No se pudo descargar el archivo: {exc}') from exc
++    return resp.content
+diff --git a/misael_link/migrations/0003_vinculocentromisael_and_more.py b/misael_link/migrations/0003_vinculocentromisael_and_more.py
+new file mode 100644
+index 0000000..dd1201c
+--- /dev/null
++++ b/misael_link/migrations/0003_vinculocentromisael_and_more.py
+@@ -0,0 +1,50 @@
++import django.db.models.deletion
++from django.conf import settings
++from django.db import migrations, models
++
++
++class Migration(migrations.Migration):
++
++    dependencies = [
++        ('misael_link', '0002_plantrabajomisael_area_intervencion_and_more'),
++        ('ninos', '0001_initial'),
++        ('personal', '0001_initial'),
++    ]
++
++    operations = [
++        migrations.AddField(
++            model_name='plantrabajomisael',
++            name='documento_centro_id',
++            field=models.PositiveIntegerField(
++                blank=True, null=True, unique=True,
++                help_text='ID del DocumentoPaciente en Centro Misael, si fue traído automáticamente',
++            ),
++        ),
++        migrations.AddField(
++            model_name='plantrabajomisael',
++            name='origen',
++            field=models.CharField(
++                choices=[('manual', 'Cargado manualmente'), ('sincronizado', 'Sincronizado desde Centro Misael')],
++                default='manual', max_length=20,
++            ),
++        ),
++        migrations.CreateModel(
++            name='VinculoCentroMisael',
++            fields=[
++                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
++                ('created_at', models.DateTimeField(auto_now_add=True)),
++                ('updated_at', models.DateTimeField(auto_now=True)),
++                ('paciente_centro_id', models.PositiveIntegerField(help_text='ID del Paciente en Centro Misael (centro_terapias_v2)')),
++                ('nombre_paciente_centro', models.CharField(blank=True, max_length=200, help_text='Nombre del paciente al momento de vincular, para referencia rápida')),
++                ('estado_centro_cache', models.CharField(blank=True, max_length=10, help_text='Último estado (activo/inactivo) visto en Centro Misael. Informativo solamente.')),
++                ('fecha_vinculacion', models.DateTimeField(auto_now_add=True)),
++                ('ultima_sincronizacion', models.DateTimeField(blank=True, null=True)),
++                ('nino', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='vinculo_centro_misael', to='ninos.nino')),
++                ('vinculado_por', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='personal.personal')),
++            ],
++            options={
++                'verbose_name': 'Vínculo con Centro Misael',
++                'ordering': ['-fecha_vinculacion'],
++            },
++        ),
++    ]
+diff --git a/misael_link/models.py b/misael_link/models.py
+index 0f255cd..057407e 100644
+--- a/misael_link/models.py
++++ b/misael_link/models.py
+@@ -41,6 +41,43 @@ class Derivacion(ModeloBase):
+         return f'Derivación {self.nino} — {self.area_derivacion} ({self.get_estado_display()})'
+ 
+ 
++class VinculoCentroMisael(ModeloBase):
++    """
++    Vínculo entre un Nino de Misael Kids y un Paciente del Centro Misael
++    (repo centro_terapias_v2, vía su API de integración).
++
++    Un niño solo puede estar vinculado a un paciente. El vínculo se
++    mantiene aunque el paciente pase a inactivo en Centro Misael: el
++    jardín igual necesita seguir viendo sus planes de trabajo.
++    """
++    nino = models.OneToOneField(
++        'ninos.Nino', on_delete=models.CASCADE, related_name='vinculo_centro_misael'
++    )
++    paciente_centro_id = models.PositiveIntegerField(
++        help_text='ID del Paciente en Centro Misael (centro_terapias_v2)'
++    )
++    nombre_paciente_centro = models.CharField(
++        max_length=200, blank=True,
++        help_text='Nombre del paciente al momento de vincular, para referencia rápida'
++    )
++    estado_centro_cache = models.CharField(
++        max_length=10, blank=True,
++        help_text='Último estado (activo/inactivo) visto en Centro Misael. Informativo solamente.'
++    )
++    vinculado_por = models.ForeignKey(
++        'personal.Personal', on_delete=models.SET_NULL, null=True, blank=True
++    )
++    fecha_vinculacion = models.DateTimeField(auto_now_add=True)
++    ultima_sincronizacion = models.DateTimeField(null=True, blank=True)
++
++    class Meta:
++        verbose_name = 'Vínculo con Centro Misael'
++        ordering = ['-fecha_vinculacion']
++
++    def __str__(self):
++        return f'{self.nino} ↔ paciente #{self.paciente_centro_id} en Centro Misael'
++
++
+ class PlanTrabajoMisael(ModeloBase):
+     """
+     Plan de trabajo creado por un profesional del Centro Misael
+@@ -89,6 +126,20 @@ class PlanTrabajoMisael(ModeloBase):
+     consentimiento_tutor = models.BooleanField(default=False,
+         help_text='El tutor autorizó compartir información entre ambos centros')
+ 
++    # ── Sincronización automática desde Centro Misael ──────────────
++    # Si el plan/informe fue traído automáticamente desde la API de
++    # Centro Misael (en vez de cargado a mano), guardamos el ID del
++    # documento de origen para no volver a importarlo en cada sync.
++    documento_centro_id = models.PositiveIntegerField(
++        null=True, blank=True, unique=True,
++        help_text='ID del DocumentoPaciente en Centro Misael, si fue traído automáticamente'
++    )
++    origen = models.CharField(
++        max_length=20,
++        choices=[('manual', 'Cargado manualmente'), ('sincronizado', 'Sincronizado desde Centro Misael')],
++        default='manual',
++    )
++
+     class Meta:
+         verbose_name = 'Plan de trabajo Centro Misael'
+         ordering     = ['-fecha_inicio']
+diff --git a/misael_link/serializers.py b/misael_link/serializers.py
+index 4676a4f..be53960 100644
+--- a/misael_link/serializers.py
++++ b/misael_link/serializers.py
+@@ -1,5 +1,5 @@
+ from rest_framework import serializers
+-from .models import Derivacion, PlanTrabajoMisael
++from .models import Derivacion, PlanTrabajoMisael, VinculoCentroMisael
+ class DerivacionSerializer(serializers.ModelSerializer):
+     nino_nombre      = serializers.CharField(source="nino.nombre_completo", read_only=True)
+     solicitado_por_nombre = serializers.CharField(source="solicitado_por.usuario.nombre_completo", read_only=True)
+@@ -18,5 +18,17 @@ class PlanTrabajoMisaelSerializer(serializers.ModelSerializer):
+                   "area_intervencion","frecuencia_sesiones",
+                   "descripcion","notas_seguimiento","informe_pdf",
+                   "fecha_inicio","fecha_fin","proxima_revision",
+-                  "activo","consentimiento_tutor","created_at","updated_at"]
+-        read_only_fields = ["id","created_at","updated_at"]
+\ No newline at end of file
++                  "activo","consentimiento_tutor","origen","documento_centro_id",
++                  "created_at","updated_at"]
++        read_only_fields = ["id","origen","documento_centro_id","created_at","updated_at"]
++
++
++class VinculoCentroMisaelSerializer(serializers.ModelSerializer):
++    nino_nombre = serializers.CharField(source="nino.nombre_completo", read_only=True)
++
++    class Meta:
++        model  = VinculoCentroMisael
++        fields = ["id","nino","nino_nombre","paciente_centro_id","nombre_paciente_centro",
++                  "estado_centro_cache","vinculado_por","fecha_vinculacion",
++                  "ultima_sincronizacion","created_at","updated_at"]
++        read_only_fields = ["id","fecha_vinculacion","created_at","updated_at"]
+\ No newline at end of file
+diff --git a/misael_link/urls.py b/misael_link/urls.py
+index 844cfca..2df1df9 100644
+--- a/misael_link/urls.py
++++ b/misael_link/urls.py
+@@ -1,7 +1,17 @@
+ from django.urls import path, include
+ from rest_framework.routers import DefaultRouter
+-from .views import DerivacionViewSet, PlanTrabajoMisaelViewSet
++from .views import (
++    DerivacionViewSet, PlanTrabajoMisaelViewSet, VinculoCentroMisaelViewSet,
++    BuscarPacienteCentroMisaelView, VincularCentroMisaelView,
++    SincronizarDocumentosCentroMisaelView,
++)
+ router = DefaultRouter()
+ router.register(r"derivaciones",   DerivacionViewSet,       basename="derivacion")
+ router.register(r"planes-misael",  PlanTrabajoMisaelViewSet, basename="plan-misael")
+-urlpatterns = [path("", include(router.urls))]
+\ No newline at end of file
++router.register(r"vinculos-centro-misael", VinculoCentroMisaelViewSet, basename="vinculo-centro-misael")
++urlpatterns = [
++    path("centro-misael/buscar/", BuscarPacienteCentroMisaelView.as_view(), name="cm-buscar"),
++    path("centro-misael/vincular/", VincularCentroMisaelView.as_view(), name="cm-vincular"),
++    path("centro-misael/sincronizar/", SincronizarDocumentosCentroMisaelView.as_view(), name="cm-sincronizar"),
++    path("", include(router.urls)),
++]
+\ No newline at end of file
+diff --git a/misael_link/views.py b/misael_link/views.py
+index a3175f1..4e9a962 100644
+--- a/misael_link/views.py
++++ b/misael_link/views.py
+@@ -1,9 +1,19 @@
+-from rest_framework import viewsets, filters
++from django.core.files.base import ContentFile
++from django.db import transaction
++from django.utils import timezone
++from rest_framework import viewsets, filters, status
+ from rest_framework.permissions import IsAuthenticated
++from rest_framework.response import Response
++from rest_framework.views import APIView
+ from django_filters.rest_framework import DjangoFilterBackend
+-from .models import Derivacion, PlanTrabajoMisael
+-from .serializers import DerivacionSerializer, PlanTrabajoMisaelSerializer
+-from accounts.permissions import filtrar_por_tutor
++
++from ninos.models import Nino, Tutor, NinoTutor
++from .models import Derivacion, PlanTrabajoMisael, VinculoCentroMisael
++from .serializers import (
++    DerivacionSerializer, PlanTrabajoMisaelSerializer, VinculoCentroMisaelSerializer,
++)
++from .import centro_misael_client as cm
++from accounts.permissions import filtrar_por_tutor, NoEsTutor
+ 
+ class DerivacionViewSet(viewsets.ModelViewSet):
+     queryset = Derivacion.objects.select_related("nino","solicitado_por__usuario").all()
+@@ -28,5 +38,272 @@ class PlanTrabajoMisaelViewSet(viewsets.ModelViewSet):
+     filter_backends    = [DjangoFilterBackend]
+     filterset_fields   = ["nino","activo","consentimiento_tutor"]
+ 
++    def get_queryset(self):
++        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
++
++
++# ═══════════════════════════════════════════════════════════════════
++# Integración en vivo con Centro Misael (centro_terapias_v2)
++# ═══════════════════════════════════════════════════════════════════
++
++# Centro Misael usa 'tio'/'hermano' que Misael Kids no distingue; el
++# resto mapea 1 a 1.
++_MAPA_PARENTESCO = {
++    'madre':   Tutor.PARENTESCO_MADRE,
++    'padre':   Tutor.PARENTESCO_PADRE,
++    'tutor':   Tutor.PARENTESCO_TUTOR,
++    'abuelo':  Tutor.PARENTESCO_ABUELO,
++    'tio':     Tutor.PARENTESCO_OTRO,
++    'hermano': Tutor.PARENTESCO_OTRO,
++    'otro':    Tutor.PARENTESCO_OTRO,
++}
++
++
++def _personal_del_usuario(usuario):
++    return getattr(usuario, 'perfil_personal', None)
++
++
++def _crear_tutores_desde_paciente(nino, paciente, es_principal_solo_el_primero=True):
++    """
++    Crea (o reutiliza si ya hay uno con el mismo teléfono) los Tutor de
++    Misael Kids a partir de los datos del tutor/es del paciente en
++    Centro Misael, y los vincula al niño.
++
++    Centro Misael no guarda CI del tutor (Misael Kids sí la requiere
++    para retiro de niños), así que queda marcada como pendiente de
++    completar por el jardín — no bloquea la vinculación.
++    """
++    creados = []
++    datos_tutores = [
++        {
++            'nombre_completo': paciente.get('nombre_tutor', ''),
++            'parentesco':      paciente.get('parentesco', 'otro'),
++            'telefono':        paciente.get('telefono_tutor', ''),
++            'email':           paciente.get('email_tutor', '') or '',
++        },
++    ]
++    if paciente.get('nombre_tutor_2'):
++        datos_tutores.append({
++            'nombre_completo': paciente.get('nombre_tutor_2', ''),
++            'parentesco':      paciente.get('parentesco_2', 'otro'),
++            'telefono':        paciente.get('telefono_tutor_2', ''),
++            'email':           paciente.get('email_tutor_2', '') or '',
++        })
++
++    for i, datos in enumerate(datos_tutores):
++        nombre_completo = (datos['nombre_completo'] or '').strip()
++        if not nombre_completo:
++            continue
++        partes = nombre_completo.split(' ', 1)
++        nombres = partes[0]
++        apellidos = partes[1] if len(partes) > 1 else ''
++
++        # Reutiliza un tutor existente con el mismo teléfono, para no
++        # duplicar si el mismo padre ya tiene cuenta en Misael Kids
++        # (p.ej. por un hermano ya inscrito).
++        tutor = None
++        if datos['telefono']:
++            tutor = Tutor.objects.filter(telefono=datos['telefono']).first()
++
++        if tutor is None:
++            tutor = Tutor.objects.create(
++                nombres=nombres,
++                apellidos=apellidos,
++                ci=f'PENDIENTE-CM-{paciente["id"]}-{i}',
++                telefono=datos['telefono'] or '',
++                email=datos['email'],
++                parentesco=_MAPA_PARENTESCO.get(datos['parentesco'], Tutor.PARENTESCO_OTRO),
++            )
++            creados.append(tutor)
++
++        NinoTutor.objects.get_or_create(
++            nino=nino, tutor=tutor,
++            defaults={'es_principal': (i == 0), 'puede_retirar': True},
++        )
++
++    return creados
++
++
++class BuscarPacienteCentroMisaelView(APIView):
++    """GET /api/misael-link/centro-misael/buscar/?q=<texto>"""
++    permission_classes = [IsAuthenticated, NoEsTutor]
++
++    def get(self, request):
++        q = request.query_params.get('q', '').strip()
++        if len(q) < 2:
++            return Response({'detail': 'Escribe al menos 2 caracteres para buscar.'}, status=400)
++        try:
++            resultados = cm.buscar_pacientes(q)
++        except cm.CentroMisaelNoConfigurado as exc:
++            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
++        except cm.CentroMisaelError as exc:
++            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
++        return Response(resultados)
++
++
++class VincularCentroMisaelView(APIView):
++    """
++    POST /api/misael-link/centro-misael/vincular/
++    body: { "paciente_centro_id": 123, "nino_id": 45 (opcional) }
++
++    - Si se envía `nino_id`: vincula ese niño existente con el paciente
++      de Centro Misael y completa los campos de salud que estén vacíos
++      (no pisa datos que la educadora ya haya cargado a mano).
++    - Si NO se envía `nino_id`: crea un niño nuevo con los datos
++      copiados del paciente (y sus tutores), y lo vincula.
++
++    El estado (activo/inactivo) del paciente en Centro Misael no se
++    valida: si el tutor lo pide, se vincula igual.
++    """
++    permission_classes = [IsAuthenticated, NoEsTutor]
++
++    @transaction.atomic
++    def post(self, request):
++        paciente_centro_id = request.data.get('paciente_centro_id')
++        nino_id = request.data.get('nino_id')
++        if not paciente_centro_id:
++            return Response({'detail': 'paciente_centro_id es requerido.'}, status=400)
++
++        try:
++            paciente = cm.obtener_paciente(paciente_centro_id)
++        except cm.CentroMisaelNoConfigurado as exc:
++            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
++        except cm.CentroMisaelError as exc:
++            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
++
++        if paciente is None:
++            return Response({'detail': 'No se encontró ese paciente en Centro Misael.'}, status=404)
++
++        if VinculoCentroMisael.objects.filter(paciente_centro_id=paciente_centro_id).exists():
++            return Response(
++                {'detail': 'Ese paciente ya está vinculado a otro niño en Misael Kids.'}, status=409
++            )
++
++        condiciones = ' / '.join(filter(None, [
++            paciente.get('diagnostico', ''), paciente.get('observaciones_medicas', ''),
++        ]))
++
++        if nino_id:
++            try:
++                nino = Nino.objects.get(pk=nino_id)
++            except Nino.DoesNotExist:
++                return Response({'detail': 'Niño no encontrado.'}, status=404)
++            if hasattr(nino, 'vinculo_centro_misael'):
++                return Response({'detail': 'Este niño ya está vinculado con Centro Misael.'}, status=409)
++
++            # Solo completa lo que esté vacío — no pisa datos ya cargados.
++            if not nino.alergias and paciente.get('alergias'):
++                nino.alergias = paciente['alergias']
++            if not nino.condiciones_medicas and condiciones:
++                nino.condiciones_medicas = condiciones
++            nino.save(update_fields=['alergias', 'condiciones_medicas'])
++        else:
++            genero = paciente.get('genero') or Nino.GENERO_OTRO
++            if genero not in dict(Nino.GENEROS):
++                genero = Nino.GENERO_OTRO
++            nino = Nino.objects.create(
++                nombres=paciente.get('nombre', ''),
++                apellidos=paciente.get('apellido', ''),
++                fecha_nacimiento=paciente['fecha_nacimiento'],
++                genero=genero,
++                alergias=paciente.get('alergias', '') or '',
++                condiciones_medicas=condiciones,
++            )
++
++        _crear_tutores_desde_paciente(nino, paciente)
++
++        vinculo = VinculoCentroMisael.objects.create(
++            nino=nino,
++            paciente_centro_id=paciente_centro_id,
++            nombre_paciente_centro=paciente.get('nombre_completo', ''),
++            estado_centro_cache=paciente.get('estado', ''),
++            vinculado_por=_personal_del_usuario(request.user),
++        )
++
++        return Response({
++            'nino_id': nino.id,
++            'vinculo': VinculoCentroMisaelSerializer(vinculo).data,
++            'creado_nuevo': not bool(nino_id),
++        }, status=201)
++
++
++class SincronizarDocumentosCentroMisaelView(APIView):
++    """
++    POST /api/misael-link/centro-misael/sincronizar/
++    body: { "nino_id": 45 }
++
++    Trae los documentos que el profesional de Centro Misael marcó como
++    "Compartir con Misael Kids" y los guarda como PlanTrabajoMisael,
++    sin duplicar los que ya se hayan importado antes. Funciona igual
++    si el paciente está inactivo en Centro Misael.
++    """
++    permission_classes = [IsAuthenticated, NoEsTutor]
++
++    def post(self, request):
++        nino_id = request.data.get('nino_id')
++        try:
++            vinculo = VinculoCentroMisael.objects.select_related('nino').get(nino_id=nino_id)
++        except VinculoCentroMisael.DoesNotExist:
++            return Response(
++                {'detail': 'Este niño no está vinculado con Centro Misael todavía.'}, status=404
++            )
++
++        try:
++            documentos = cm.listar_documentos_compartidos(vinculo.paciente_centro_id)
++        except cm.CentroMisaelNoConfigurado as exc:
++            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
++        except cm.CentroMisaelError as exc:
++            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
++
++        ya_importados = set(
++            PlanTrabajoMisael.objects.filter(nino=vinculo.nino, documento_centro_id__isnull=False)
++            .values_list('documento_centro_id', flat=True)
++        )
++
++        creados = []
++        for doc in documentos:
++            if doc['id'] in ya_importados:
++                continue
++            fecha_str = (doc.get('fecha_subida') or '')[:10]
++            plan = PlanTrabajoMisael(
++                nino=vinculo.nino,
++                profesional_email='',
++                profesional_nombre=doc.get('subido_por_nombre', '') or 'Centro Misael',
++                descripcion=doc.get('descripcion') or doc.get('titulo', ''),
++                fecha_inicio=fecha_str or timezone.now().date(),
++                origen='sincronizado',
++                documento_centro_id=doc['id'],
++            )
++            if doc.get('archivo_url'):
++                try:
++                    contenido = cm.descargar_archivo(doc['archivo_url'])
++                    plan.informe_pdf.save(
++                        doc.get('nombre_archivo') or f'plan_misael_{doc["id"]}.pdf',
++                        ContentFile(contenido), save=False,
++                    )
++                except cm.CentroMisaelError:
++                    pass  # el registro igual se crea, sin archivo adjunto
++            plan.save()
++            creados.append(plan)
++
++        if creados:
++            vinculo.nino.tiene_plan_misael = True
++            vinculo.nino.save(update_fields=['tiene_plan_misael'])
++        vinculo.ultima_sincronizacion = timezone.now()
++        vinculo.save(update_fields=['ultima_sincronizacion'])
++
++        return Response({
++            'importados': len(creados),
++            'planes': PlanTrabajoMisaelSerializer(creados, many=True).data,
++        })
++
++
++class VinculoCentroMisaelViewSet(viewsets.ReadOnlyModelViewSet):
++    queryset = VinculoCentroMisael.objects.select_related('nino', 'vinculado_por').all()
++    serializer_class = VinculoCentroMisaelSerializer
++    permission_classes = [IsAuthenticated]
++    filter_backends = [DjangoFilterBackend]
++    filterset_fields = ['nino']
++
+     def get_queryset(self):
+         return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+\ No newline at end of file
+diff --git a/requirements.txt b/requirements.txt
+index e859371..4778c39 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -16,6 +16,7 @@ django-cors-headers==4.4.*
+ Pillow==10.*
+ cloudinary==1.36.*
+ django-cloudinary-storage==0.3.*
++requests==2.32.*
+ 
+ # ─── Utilidades ──────────────────────────────────────────────────
+ django-filter==24.*
