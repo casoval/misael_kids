@@ -1,0 +1,46 @@
+diff --git a/misael_link/views.py b/misael_link/views.py
+index 4e9a962..e87a197 100644
+--- a/misael_link/views.py
++++ b/misael_link/views.py
+@@ -63,6 +63,25 @@ def _personal_del_usuario(usuario):
+     return getattr(usuario, 'perfil_personal', None)
+ 
+ 
++def _copiar_foto_si_falta(nino, paciente):
++    """
++    Copia la foto del paciente de Centro Misael al niño, solo si el
++    niño todavía no tiene una propia (no pisa una foto ya subida a
++    mano en Misael Kids). Si falla la descarga, no bloquea nada — el
++    niño/vínculo se crea igual, simplemente sin foto.
++    """
++    if nino.foto:
++        return
++    foto_url = paciente.get('foto_url')
++    if not foto_url:
++        return
++    try:
++        contenido = cm.descargar_archivo(foto_url)
++        nino.foto.save(f'centro_misael_{paciente.get("id","")}.jpg', ContentFile(contenido), save=True)
++    except cm.CentroMisaelError:
++        pass  # el niño igual se crea/vincula, solo queda sin foto
++
++
+ def _crear_tutores_desde_paciente(nino, paciente, es_principal_solo_el_primero=True):
+     """
+     Crea (o reutiliza si ya hay uno con el mismo teléfono) los Tutor de
+@@ -197,6 +216,7 @@ class VincularCentroMisaelView(APIView):
+             if not nino.condiciones_medicas and condiciones:
+                 nino.condiciones_medicas = condiciones
+             nino.save(update_fields=['alergias', 'condiciones_medicas'])
++            _copiar_foto_si_falta(nino, paciente)
+         else:
+             genero = paciente.get('genero') or Nino.GENERO_OTRO
+             if genero not in dict(Nino.GENEROS):
+@@ -209,6 +229,7 @@ class VincularCentroMisaelView(APIView):
+                 alergias=paciente.get('alergias', '') or '',
+                 condiciones_medicas=condiciones,
+             )
++            _copiar_foto_si_falta(nino, paciente)
+ 
+         _crear_tutores_desde_paciente(nino, paciente)
+ 
