@@ -1,0 +1,78 @@
+diff --git a/frontend/pages/panel/misael-link.html b/frontend/pages/panel/misael-link.html
+index 4670ea9..bd5e192 100644
+--- a/frontend/pages/panel/misael-link.html
++++ b/frontend/pages/panel/misael-link.html
+@@ -401,6 +401,7 @@ const hoy = new Date().toISOString().split('T')[0];
+ document.getElementById('pm-inicio').value = hoy;
+ let editandoDerId = null, editandoPmId = null;
+ let ninosCache = [];
++let ninosVinculadosIds = new Set();
+ 
+ const estadoColors = {
+   solicitada:'estado-solicitada', aceptada:'estado-aceptada',
+@@ -420,13 +421,15 @@ async function inicializar() {
+ 
+ async function cargarSelectores() {
+   try {
+-    const [ninos, derivaciones, planesInd] = await Promise.all([
++    const [ninos, derivaciones, planesInd, vinculos] = await Promise.all([
+       API.get('/ninos/ninos/?activo=true&page_size=500'),
+       API.get('/misael-link/derivaciones/?page_size=200'),
+       API.get('/agenda/planes-individuales/?activo=true&page_size=200'),
++      API.get('/misael-link/vinculos-centro-misael/?page_size=500'),
+     ]);
+     const listaNinos = ninos.results||ninos;
+     ninosCache = listaNinos;
++    ninosVinculadosIds = new Set((vinculos.results||vinculos).map(v=>v.nino));
+     [document.getElementById('der-nino'), document.getElementById('pm-nino')].forEach(sel =>
+       UI.llenarSelect(sel, listaNinos, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)'));
+     UI.llenarSelect(document.getElementById('pm-filtro-nino'), listaNinos, 'id',
+@@ -752,7 +755,14 @@ async function buscarEnCentroMisael() {
+   try {
+     const resultados = await API.get('/misael-link/centro-misael/buscar/?q='+encodeURIComponent(q));
+     if (!resultados.length) { UI.vacio(cont, 'Sin resultados en Centro Misael', '🔍'); return; }
+-    cont.innerHTML = resultados.map(p => `
++    // Solo se ofrecen como "vincular a" los niños que TODAVÍA no tienen
++    // vínculo con Centro Misael — uno ya vinculado siempre lo rechaza el
++    // backend, así que ni tiene sentido mostrarlo como opción.
++    const ninosDisponibles = ninosCache.filter(n => !ninosVinculadosIds.has(n.id));
++    const datalistHtml = `<datalist id="dl-ninos-disponibles">
++      ${ninosDisponibles.map(n=>`<option value="${n.nombre_completo}">`).join('')}
++    </datalist>`;
++    cont.innerHTML = datalistHtml + resultados.map(p => `
+       <div class="card" style="margin-bottom:var(--gap-sm);padding:var(--gap-md);display:flex;
+         justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--gap-sm)">
+         <div>
+@@ -765,10 +775,9 @@ async function buscarEnCentroMisael() {
+           </div>
+         </div>
+         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+-          <select id="cm-select-nino-${p.id}" class="form-select" style="min-width:180px">
+-            <option value="">➕ Crear niño/a nuevo</option>
+-            ${ninosCache.map(n=>`<option value="${n.id}">Vincular a: ${n.nombre_completo}</option>`).join('')}
+-          </select>
++          <input type="text" id="cm-select-nino-${p.id}" class="form-input" style="min-width:220px"
++            list="dl-ninos-disponibles" autocomplete="off"
++            placeholder="➕ Nuevo (o escribe para vincular a uno existente)">
+           <button class="btn btn-primary btn-sm" onclick="vincularConCentroMisael(${p.id})">🔗 Vincular</button>
+         </div>
+       </div>`).join('');
+@@ -779,7 +788,17 @@ async function buscarEnCentroMisael() {
+ 
+ async function vincularConCentroMisael(pacienteCentroId) {
+   const sel = document.getElementById('cm-select-nino-'+pacienteCentroId);
+-  const ninoId = sel.value || null;
++  const texto = sel.value.trim();
++  let ninoId = null;
++  if (texto) {
++    const ninosDisponibles = ninosCache.filter(n => !ninosVinculadosIds.has(n.id));
++    const match = ninosDisponibles.find(n => n.nombre_completo === texto);
++    if (!match) {
++      UI.toast('Ese nombre no coincide con ningún niño/a disponible para vincular. Elige uno de la lista sugerida, o deja el campo vacío para crear uno nuevo.', 'error');
++      return;
++    }
++    ninoId = match.id;
++  }
+   const cuerpo = { paciente_centro_id: pacienteCentroId };
+   if (ninoId) cuerpo.nino_id = ninoId;
+ 
