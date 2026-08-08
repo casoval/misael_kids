@@ -47,7 +47,6 @@ urlpatterns = [
 
 
     # ── Páginas adicionales del frontend ──────────────────────────────────────
-    path('panel/tutores/',      TemplateView.as_view(template_name='pages/panel/tutores.html'),      name='panel-tutores'),
     path('panel/personal/nuevo/', TemplateView.as_view(template_name='pages/panel/personal.html'),  name='panel-personal-nuevo'),
 
 

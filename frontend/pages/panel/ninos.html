@@ -245,36 +245,93 @@
       </p>
       <div id="tutores-vinculados"></div>
       <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
+
       <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
         text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--gap-sm)">
-        Vincular tutor existente
+        ➕ Agregar tutor
       </p>
       <div class="grid-2">
-        <div class="form-grupo" style="grid-column:1/-1">
-          <label class="form-label">Tutor</label>
-          <select id="tv-tutor" class="form-select">
-            <option value="">Seleccionar tutor...</option>
+        <div class="form-grupo">
+          <label class="form-label">Nombres *</label>
+          <input type="text" id="tn-nombres" class="form-input" placeholder="Nombres">
+          <span class="form-error" data-error="tn-nombres"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Apellidos *</label>
+          <input type="text" id="tn-apellidos" class="form-input" placeholder="Apellidos">
+          <span class="form-error" data-error="tn-apellidos"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">CI *</label>
+          <input type="text" id="tn-ci" class="form-input" placeholder="Número de CI">
+          <span class="form-error" data-error="tn-ci"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Parentesco *</label>
+          <select id="tn-parentesco" class="form-select">
+            <option value="">Seleccionar...</option>
+            <option value="padre">Padre</option>
+            <option value="madre">Madre</option>
+            <option value="abuelo">Abuelo/a</option>
+            <option value="tutor_legal">Tutor legal</option>
+            <option value="otro">Otro</option>
           </select>
+          <span class="form-error" data-error="tn-parentesco"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Teléfono *</label>
+          <input type="text" id="tn-telefono" class="form-input" placeholder="Ej: 76XXXXXX">
+          <span class="form-error" data-error="tn-telefono"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Teléfono alternativo</label>
+          <input type="text" id="tn-telefono-alt" class="form-input" placeholder="Opcional">
         </div>
         <div class="form-grupo">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
-            <input type="checkbox" id="tv-principal" style="width:13px;height:13px">
+            <input type="checkbox" id="tn-principal" style="width:13px;height:13px">
             Tutor principal (recibe notificaciones)
           </label>
         </div>
         <div class="form-grupo">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
-            <input type="checkbox" id="tv-retirar" checked style="width:13px;height:13px">
+            <input type="checkbox" id="tn-retirar" checked style="width:13px;height:13px">
             Autorizado a retirar al niño/a
           </label>
         </div>
       </div>
-      <button class="btn btn-outline" onclick="agregarTutorVinculo()">➕ Vincular tutor</button>
-      <div style="margin-top:var(--gap-md);padding:var(--gap-md);background:var(--gris-50);
-        border-radius:var(--radio-lg);font-size:var(--text-sm);color:var(--texto-suave)">
-        ¿El tutor todavía no está registrado? <a href="#" onclick="irARegistrarTutor();return false"
-        style="color:var(--turquesa-d);font-weight:700">Regístralo desde Tutores</a>
-        y luego vuelve aquí para vincularlo.
+      <div id="tn-acceso-portal-bloque" style="display:none;margin-top:var(--gap-md)"></div>
+      <button class="btn btn-primary" onclick="crearYVincularTutorNuevo()">➕ Crear y vincular</button>
+
+      <div style="margin-top:var(--gap-md)">
+        <a href="#" onclick="const b=document.getElementById('bloque-vincular-existente');b.style.display=b.style.display==='none'?'block':'none';return false"
+          style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:600">
+          ¿Es hermano/a de otro niño/a ya registrado? Vincular al mismo tutor →
+        </a>
+        <div id="bloque-vincular-existente" style="display:none;margin-top:var(--gap-md);padding:var(--gap-md);
+          background:var(--gris-50);border-radius:var(--radio-lg)">
+          <div class="grid-2">
+            <div class="form-grupo" style="grid-column:1/-1">
+              <label class="form-label">Tutor ya registrado</label>
+              <select id="tv-tutor" class="form-select">
+                <option value="">Seleccionar tutor...</option>
+              </select>
+            </div>
+            <div class="form-grupo">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+                <input type="checkbox" id="tv-principal" style="width:13px;height:13px">
+                Tutor principal (recibe notificaciones)
+              </label>
+            </div>
+            <div class="form-grupo">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+                <input type="checkbox" id="tv-retirar" checked style="width:13px;height:13px">
+                Autorizado a retirar al niño/a
+              </label>
+            </div>
+          </div>
+          <button class="btn btn-outline" onclick="agregarTutorVinculo()">🔗 Vincular este tutor</button>
+        </div>
       </div>
     </div>
 
@@ -333,15 +390,16 @@
 <div class="modal-overlay" id="modal-detalle-tutor">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
-      <h3 class="modal-titulo">👨‍👩‍👧 Detalle del tutor</h3>
+      <h3 class="modal-titulo">👨‍👩‍👧 Editar tutor</h3>
       <button class="modal-cerrar">✕</button>
     </div>
+    <input type="hidden" id="dt-id">
     <div id="detalle-tutor-body">
       <div class="loader"><div class="spinner"></div></div>
     </div>
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-md)">
-      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-detalle-tutor')">Cerrar</button>
-      <a id="detalle-tutor-editar" class="btn btn-primary" href="#">✏️ Editar tutor</a>
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-detalle-tutor')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarDetalleTutor()">💾 Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -526,41 +584,179 @@ async function verPerfil(id) {
 function cerrarPerfil() { document.getElementById('perfil-lateral').classList.remove('abierto'); }
 function editarDesadePerfil() { if (ninoPerfilId) { cerrarPerfil(); editar(ninoPerfilId); } }
 
-// ── Ver detalle de un tutor (sin necesidad de un menú aparte de "Tutores") ──
+// ── Editar tutor inline (sin necesidad de un menú aparte de "Tutores") ──
 async function verDetalleTutor(tutorId) {
   UI.abrirModal('modal-detalle-tutor');
-  document.getElementById('detalle-tutor-editar').href = '/panel/tutores/?editar='+tutorId;
+  document.getElementById('dt-id').value = tutorId;
   const body = document.getElementById('detalle-tutor-body');
   body.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
     const t = await API.get('/ninos/tutores/'+tutorId+'/');
     body.innerHTML = `
-      <div class="perfil-seccion">
-        <div style="display:flex;align-items:center;gap:var(--gap-sm);margin-bottom:var(--gap-sm)">
-          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--naranja));
-            display:flex;align-items:center;justify-content:center;color:white;font-weight:800">
-            ${UI.iniciales(t.nombres+' '+t.apellidos)}
-          </div>
-          <div>
-            <div style="font-weight:700">${t.nombres} ${t.apellidos}</div>
-            <span class="chip chip-turquesa">${t.parentesco_display}</span>
-          </div>
+      <div class="grid-2">
+        <div class="form-grupo">
+          <label class="form-label">Nombres *</label>
+          <input type="text" id="dt-nombres" class="form-input" value="${t.nombres||''}">
+          <span class="form-error" data-error="dt-nombres"></span>
         </div>
-        <div class="dato-fila"><span class="clave">CI</span><span class="valor">${t.ci||'—'}</span></div>
-        <div class="dato-fila"><span class="clave">Teléfono</span><span class="valor">${t.telefono||'—'}</span></div>
-        <div class="dato-fila"><span class="clave">Teléfono alt.</span><span class="valor">${t.telefono_alt||'—'}</span></div>
-        <div class="dato-fila"><span class="clave">Email</span><span class="valor">${t.email||'—'}</span></div>
-        <div class="dato-fila"><span class="clave">Estado</span><span class="valor">${t.activo?'✅ Activo':'❌ Inactivo'}</span></div>
+        <div class="form-grupo">
+          <label class="form-label">Apellidos *</label>
+          <input type="text" id="dt-apellidos" class="form-input" value="${t.apellidos||''}">
+          <span class="form-error" data-error="dt-apellidos"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">CI *</label>
+          <input type="text" id="dt-ci" class="form-input" value="${t.ci||''}">
+          <span class="form-error" data-error="dt-ci"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Parentesco *</label>
+          <select id="dt-parentesco" class="form-select">
+            <option value="padre">Padre</option>
+            <option value="madre">Madre</option>
+            <option value="abuelo">Abuelo/a</option>
+            <option value="tutor_legal">Tutor legal</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Teléfono *</label>
+          <input type="text" id="dt-telefono" class="form-input" value="${t.telefono||''}">
+          <span class="form-error" data-error="dt-telefono"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Teléfono alternativo</label>
+          <input type="text" id="dt-telefono-alt" class="form-input" value="${t.telefono_alt||''}">
+        </div>
+        <div class="form-grupo" style="grid-column:1/-1">
+          <label class="form-label">Email</label>
+          <input type="email" id="dt-email" class="form-input" value="${t.email||''}">
+        </div>
+        <div class="form-grupo">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+            <input type="checkbox" id="dt-activo" style="width:13px;height:13px" ${t.activo?'checked':''}>
+            Tutor activo
+          </label>
+        </div>
       </div>
-      <div class="perfil-seccion">
+      <div id="dt-acceso-portal-bloque" style="display:none;margin-top:var(--gap-md)"></div>
+      <div class="perfil-seccion" style="margin-top:var(--gap-md)">
         <h4>👶 Niños vinculados</h4>
         ${(t.ninos_resumen||[]).length
           ? t.ninos_resumen.map(n=>`<span class="chip ${n.es_principal?'chip-violeta':'chip-gris'}" style="margin:2px" title="${n.es_principal?'Tutor principal · ':''}${n.puede_retirar?'Puede retirar':'No puede retirar'}">${n.es_principal?'⭐ ':''}${n.nombre}</span>`).join(' ')
           : '<p style="font-size:var(--text-sm);color:var(--texto-suave)">Sin niños vinculados</p>'}
+        <p style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:6px">
+          Para vincular o quitar niños, hazlo desde la pestaña Tutores de cada niño/a.
+        </p>
       </div>`;
+    document.getElementById('dt-parentesco').value = t.parentesco;
+    renderAccesoPortalEditar(t);
   } catch (err) {
     body.innerHTML = '<div class="alerta alerta-peligro">Error: '+err.message+'</div>';
   }
+}
+
+// ── Acceso al portal de padres (solo admin/directora pueden otorgarlo) ──
+const ROLES_GESTIONAN_ACCESO_PORTAL = ['admin', 'directora'];
+function puedeGestionarAccesoPortal() {
+  return ROLES_GESTIONAN_ACCESO_PORTAL.includes(Auth.getRol());
+}
+
+function renderAccesoPortalNuevo() {
+  const cont = document.getElementById('tn-acceso-portal-bloque');
+  if (!puedeGestionarAccesoPortal()) { cont.style.display='none'; cont.innerHTML=''; return; }
+  cont.style.display = 'block';
+  cont.innerHTML = `
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+      <input type="checkbox" id="tn-dar-acceso" style="width:13px;height:13px"
+        onchange="document.getElementById('tn-acceso-campos').style.display=this.checked?'grid':'none'">
+      🔑 Darle acceso al portal de padres
+    </label>
+    <div id="tn-acceso-campos" class="grid-2" style="display:none;margin-top:var(--gap-sm)">
+      <div class="form-grupo">
+        <label class="form-label">Nombre de usuario *</label>
+        <input type="text" id="tn-username" class="form-input" placeholder="Nombre de usuario">
+        <span class="form-error" data-error="tn-username"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Contraseña inicial *</label>
+        <input type="text" id="tn-password" class="form-input" value="MisaelKids2025!">
+        <span class="form-error" data-error="tn-password"></span>
+        <span style="font-size:var(--text-xs);color:var(--texto-suave)">El tutor podrá cambiarla luego desde el portal.</span>
+      </div>
+    </div>`;
+}
+
+function renderAccesoPortalEditar(tutor) {
+  const cont = document.getElementById('dt-acceso-portal-bloque');
+  if (tutor.usuario) {
+    cont.style.display = 'block';
+    cont.innerHTML = '<p style="font-size:var(--text-sm);color:var(--verde-d);font-weight:600">✅ Ya tiene acceso al portal de padres</p>';
+    return;
+  }
+  if (!puedeGestionarAccesoPortal()) { cont.style.display='none'; cont.innerHTML=''; return; }
+  cont.style.display = 'block';
+  cont.innerHTML = `
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+      <input type="checkbox" id="dt-dar-acceso" style="width:13px;height:13px"
+        onchange="document.getElementById('dt-acceso-campos').style.display=this.checked?'grid':'none'">
+      🔑 Darle acceso al portal de padres
+    </label>
+    <div id="dt-acceso-campos" class="grid-2" style="display:none;margin-top:var(--gap-sm)">
+      <div class="form-grupo">
+        <label class="form-label">Nombre de usuario *</label>
+        <input type="text" id="dt-username" class="form-input" placeholder="Nombre de usuario">
+        <span class="form-error" data-error="dt-username"></span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Contraseña inicial *</label>
+        <input type="text" id="dt-password" class="form-input" value="MisaelKids2025!">
+        <span class="form-error" data-error="dt-password"></span>
+      </div>
+    </div>`;
+}
+
+async function guardarDetalleTutor() {
+  const tutorId = document.getElementById('dt-id').value;
+  const reglas = {
+    'dt-nombres':   [()=>Validar.requerido(document.getElementById('dt-nombres').value,'Nombres')],
+    'dt-apellidos': [()=>Validar.requerido(document.getElementById('dt-apellidos').value,'Apellidos')],
+    'dt-ci':        [()=>Validar.requerido(document.getElementById('dt-ci').value,'CI')],
+    'dt-telefono':  [()=>Validar.requerido(document.getElementById('dt-telefono').value,'Teléfono')],
+  };
+  const darAcceso = document.getElementById('dt-dar-acceso');
+  if (darAcceso && darAcceso.checked) {
+    reglas['dt-username'] = [()=>Validar.requerido(document.getElementById('dt-username').value,'Nombre de usuario')];
+    reglas['dt-password'] = [()=>Validar.minLength(document.getElementById('dt-password').value,8,'La contraseña')];
+  }
+  const errores = Validar.formulario(reglas);
+  if (!Validar.mostrarErrores(errores,'#modal-detalle-tutor ')) return;
+  try {
+    const datos = {
+      nombres:      document.getElementById('dt-nombres').value.trim(),
+      apellidos:    document.getElementById('dt-apellidos').value.trim(),
+      ci:           document.getElementById('dt-ci').value.trim(),
+      telefono:     document.getElementById('dt-telefono').value.trim(),
+      telefono_alt: document.getElementById('dt-telefono-alt').value.trim(),
+      email:        document.getElementById('dt-email').value.trim(),
+      parentesco:   document.getElementById('dt-parentesco').value,
+      activo:       document.getElementById('dt-activo').checked,
+    };
+    if (darAcceso && darAcceso.checked) {
+      const usuario = await API.post('/auth/usuarios/', {
+        nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor',
+        username: document.getElementById('dt-username').value.trim(),
+        password: document.getElementById('dt-password').value,
+        password2: document.getElementById('dt-password').value,
+      });
+      datos.usuario = usuario.id;
+    }
+    await API.patch('/ninos/tutores/'+tutorId+'/', datos);
+    UI.toast('Tutor actualizado','exito');
+    UI.cerrarModal('modal-detalle-tutor');
+    await cargarTutoresVinculados();
+    await cargarTutoresSelector();
+  } catch (err) { UI.toast('Error: '+err.message,'error'); }
 }
 
 // ── CRUD Modal ──
@@ -600,6 +796,12 @@ function abrirNuevo() {
   document.getElementById('autorizados-existentes').innerHTML = '';
   document.getElementById('tutores-vinculados').innerHTML = '';
   ['aut-nombres','aut-apellidos','aut-ci','aut-telefono','aut-parentesco','aut-vigencia'].forEach(id=>document.getElementById(id).value='');
+  ['tn-nombres','tn-apellidos','tn-ci','tn-telefono','tn-telefono-alt'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tn-parentesco').value = '';
+  document.getElementById('tn-principal').checked = false;
+  document.getElementById('tn-retirar').checked   = true;
+  document.getElementById('bloque-vincular-existente').style.display = 'none';
+  renderAccesoPortalNuevo();
   cambiarTabModal('datos');
   document.querySelectorAll('#modal-nino .form-error').forEach(el=>el.textContent='');
   document.querySelectorAll('#modal-nino .input-error').forEach(el=>el.classList.remove('input-error'));
@@ -627,6 +829,12 @@ async function editar(id) {
     const preview = document.getElementById('n-foto-preview');
     if (n.foto) { preview.style.backgroundImage = `url('${n.foto}')`; preview.textContent = ''; }
     else { preview.style.backgroundImage = ''; preview.textContent = '🧒'; }
+    ['tn-nombres','tn-apellidos','tn-ci','tn-telefono','tn-telefono-alt'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('tn-parentesco').value = '';
+    document.getElementById('tn-principal').checked = false;
+    document.getElementById('tn-retirar').checked   = true;
+    document.getElementById('bloque-vincular-existente').style.display = 'none';
+    renderAccesoPortalNuevo();
     cambiarTabModal('datos');
     document.querySelectorAll('#modal-nino .form-error').forEach(el=>el.textContent='');
     UI.abrirModal('modal-nino');
@@ -683,8 +891,82 @@ async function cargarTutoresSelector() {
   } catch {}
 }
 
-function irARegistrarTutor() {
-  window.location.href = editandoId ? '/panel/tutores/?nino='+editandoId : '/panel/tutores/';
+async function crearYVincularTutorNuevo() {
+  const reglas = {
+    'tn-nombres':    [()=>Validar.requerido(document.getElementById('tn-nombres').value,'Nombres')],
+    'tn-apellidos':  [()=>Validar.requerido(document.getElementById('tn-apellidos').value,'Apellidos')],
+    'tn-ci':         [()=>Validar.requerido(document.getElementById('tn-ci').value,'CI')],
+    'tn-parentesco': [()=>Validar.requerido(document.getElementById('tn-parentesco').value,'Parentesco')],
+    'tn-telefono':   [()=>Validar.requerido(document.getElementById('tn-telefono').value,'Teléfono')],
+  };
+  const darAcceso = document.getElementById('tn-dar-acceso');
+  if (darAcceso && darAcceso.checked) {
+    reglas['tn-username'] = [()=>Validar.requerido(document.getElementById('tn-username').value,'Nombre de usuario')];
+    reglas['tn-password'] = [()=>Validar.minLength(document.getElementById('tn-password').value,8,'La contraseña')];
+  }
+  const errores = Validar.formulario(reglas);
+  if (!Validar.mostrarErrores(errores,'#mtab-tutores-panel ')) return;
+
+  const datosTutor = {
+    nombres:      document.getElementById('tn-nombres').value.trim(),
+    apellidos:    document.getElementById('tn-apellidos').value.trim(),
+    ci:           document.getElementById('tn-ci').value.trim(),
+    parentesco:   document.getElementById('tn-parentesco').value,
+    telefono:     document.getElementById('tn-telefono').value.trim(),
+    telefono_alt: document.getElementById('tn-telefono-alt').value.trim(),
+  };
+  const accesoPortal = (darAcceso && darAcceso.checked) ? {
+    username: document.getElementById('tn-username').value.trim(),
+    password: document.getElementById('tn-password').value,
+  } : null;
+  const esPrincipal  = document.getElementById('tn-principal').checked;
+  const puedeRetirar = document.getElementById('tn-retirar').checked;
+
+  const limpiarForm = () => {
+    ['tn-nombres','tn-apellidos','tn-ci','tn-telefono','tn-telefono-alt'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('tn-parentesco').value = '';
+    document.getElementById('tn-principal').checked = false;
+    document.getElementById('tn-retirar').checked   = true;
+    renderAccesoPortalNuevo();
+  };
+
+  if (editandoId) {
+    // Niño/a ya existe: se crea el tutor y se vincula de una — sin salir de esta página.
+    try {
+      const datos = {...datosTutor};
+      if (accesoPortal) {
+        const usuario = await API.post('/auth/usuarios/', {
+          nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor',
+          username: accesoPortal.username, password: accesoPortal.password, password2: accesoPortal.password,
+        });
+        datos.usuario = usuario.id;
+      }
+      const nuevoTutor = await API.post('/ninos/tutores/', datos);
+      await API.post('/ninos/tutores-nino/', {
+        nino: editandoId, tutor: nuevoTutor.id,
+        es_principal: esPrincipal, puede_retirar: puedeRetirar,
+      });
+      UI.toast('Tutor creado y vinculado','exito');
+      limpiarForm();
+      await cargarTutoresVinculados();
+      await cargarTutoresSelector();
+    } catch (err) { UI.toast('Error: '+err.message,'error'); }
+  } else {
+    // Niño/a nuevo (aún sin guardar): se deja pendiente — el tutor (y el
+    // usuario del portal, si se pidió) se crean de verdad recién cuando
+    // se guarde el niño/a (ver guardarNino()).
+    tutoresPendientes.push({
+      tutor: null,
+      tutor_nuevo: datosTutor,
+      acceso_portal: accesoPortal,
+      tutor_nombre: datosTutor.nombres+' '+datosTutor.apellidos,
+      es_principal: esPrincipal,
+      puede_retirar: puedeRetirar,
+    });
+    limpiarForm();
+    pintarTutoresPendientes();
+    UI.toast('Tutor agregado (se creará al guardar el niño/a)','info');
+  }
 }
 
 async function agregarTutorVinculo() {
@@ -833,10 +1115,27 @@ async function guardarNino() {
     for (const aut of autorizadosPendientes) {
       await API.post('/ninos/autorizados/',{...aut, nino:ninoId});
     }
-    // Guardar tutores pendientes (solo aplica si el niño era nuevo)
+    // Guardar tutores pendientes (solo aplica si el niño era nuevo).
+    // Si el pendiente trae tutor_nuevo (se creó inline, sin id todavía),
+    // primero se crea el Tutor de verdad y recién con ese id se vincula.
+    // Si además pidió acceso al portal, el Usuario se crea justo antes.
     for (const t of tutoresPendientes) {
+      let tutorId = t.tutor;
+      if (!tutorId && t.tutor_nuevo) {
+        const datos = {...t.tutor_nuevo};
+        if (t.acceso_portal) {
+          const usuario = await API.post('/auth/usuarios/', {
+            nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor',
+            username: t.acceso_portal.username, password: t.acceso_portal.password,
+            password2: t.acceso_portal.password,
+          });
+          datos.usuario = usuario.id;
+        }
+        const nuevoTutor = await API.post('/ninos/tutores/', datos);
+        tutorId = nuevoTutor.id;
+      }
       await API.post('/ninos/tutores-nino/',{
-        nino:ninoId, tutor:t.tutor,
+        nino:ninoId, tutor:tutorId,
         es_principal:t.es_principal, puede_retirar:t.puede_retirar,
       });
     }
