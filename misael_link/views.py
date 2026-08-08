@@ -248,6 +248,59 @@ class VincularCentroMisaelView(APIView):
         }, status=201)
 
 
+def _obtener_vinculo_o_404(nino_id):
+    try:
+        return VinculoCentroMisael.objects.select_related('nino').get(nino_id=nino_id)
+    except VinculoCentroMisael.DoesNotExist:
+        return None
+
+
+def _documentos_y_pendientes(vinculo):
+    """
+    Trae los documentos compartidos desde Centro Misael y separa cuáles
+    ya se importaron antes (por documento_centro_id) de cuáles son nuevos.
+    Puede lanzar CentroMisaelNoConfigurado / CentroMisaelError: el
+    llamador decide cómo traducir eso a una respuesta HTTP.
+    """
+    documentos = cm.listar_documentos_compartidos(vinculo.paciente_centro_id)
+    ya_importados = set(
+        PlanTrabajoMisael.objects.filter(nino=vinculo.nino, documento_centro_id__isnull=False)
+        .values_list('documento_centro_id', flat=True)
+    )
+    pendientes = [doc for doc in documentos if doc['id'] not in ya_importados]
+    return documentos, ya_importados, pendientes
+
+
+class PendientesCentroMisaelView(APIView):
+    """
+    GET /api/misael-link/centro-misael/pendientes/?nino_id=<uuid>
+
+    Chequeo liviano de "solo lectura": cuenta cuántos documentos
+    compartidos desde Centro Misael todavía NO se importaron como
+    PlanTrabajoMisael, sin descargar archivos ni crear nada. Pensado
+    para pintar un indicador en la lista de vinculados sin obligar al
+    usuario a apretar "Sincronizar" a ciegas.
+    """
+    permission_classes = [IsAuthenticated, NoEsTutor]
+
+    def get(self, request):
+        nino_id = request.query_params.get('nino_id')
+        vinculo = _obtener_vinculo_o_404(nino_id)
+        if vinculo is None:
+            return Response(
+                {'detail': 'Este niño no está vinculado con Centro Misael todavía.'}, status=404
+            )
+
+        try:
+            _, _, pendientes = _documentos_y_pendientes(vinculo)
+        except cm.CentroMisaelNoConfigurado as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except cm.CentroMisaelError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response({'pendientes': len(pendientes)})
+
+
 class SincronizarDocumentosCentroMisaelView(APIView):
     """
     POST /api/misael-link/centro-misael/sincronizar/
@@ -262,24 +315,18 @@ class SincronizarDocumentosCentroMisaelView(APIView):
 
     def post(self, request):
         nino_id = request.data.get('nino_id')
-        try:
-            vinculo = VinculoCentroMisael.objects.select_related('nino').get(nino_id=nino_id)
-        except VinculoCentroMisael.DoesNotExist:
+        vinculo = _obtener_vinculo_o_404(nino_id)
+        if vinculo is None:
             return Response(
                 {'detail': 'Este niño no está vinculado con Centro Misael todavía.'}, status=404
             )
 
         try:
-            documentos = cm.listar_documentos_compartidos(vinculo.paciente_centro_id)
+            documentos, ya_importados, _ = _documentos_y_pendientes(vinculo)
         except cm.CentroMisaelNoConfigurado as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except cm.CentroMisaelError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
-
-        ya_importados = set(
-            PlanTrabajoMisael.objects.filter(nino=vinculo.nino, documento_centro_id__isnull=False)
-            .values_list('documento_centro_id', flat=True)
-        )
 
         creados = []
         for doc in documentos:

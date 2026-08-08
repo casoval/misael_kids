@@ -826,7 +826,7 @@ async function cargarVinculados() {
     const lista = vinculos.results || vinculos;
     if (!lista.length) { UI.vacio(cont, 'Todavía no hay niños vinculados con Centro Misael', '🔗'); return; }
     cont.innerHTML = lista.map(v => `
-      <div class="card" style="margin-bottom:var(--gap-sm);padding:var(--gap-md);display:flex;
+      <div class="card" id="vinculo-${v.nino}" style="margin-bottom:var(--gap-sm);padding:var(--gap-md);display:flex;
         justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--gap-sm)">
         <div>
           <strong>${v.nino_nombre}</strong>
@@ -838,12 +838,42 @@ async function cargarVinculados() {
             ${v.ultima_sincronizacion ? '· Última sync: '+new Date(v.ultima_sincronizacion).toLocaleString() : '· Sin sincronizar aún'}
           </div>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="sincronizarPlanesMisael(${v.nino})">
-          🔄 Sincronizar planes/documentos
-        </button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="pendientes-${v.nino}"></span>
+          <button class="btn btn-outline btn-sm" id="btn-sync-${v.nino}" onclick="sincronizarPlanesMisael('${v.nino}')">
+            🔄 Sincronizar planes/documentos
+          </button>
+        </div>
       </div>`).join('');
+
+    // Chequeo de pendientes en segundo plano, sin bloquear el render de
+    // la lista: cada card se entera por su cuenta si tiene algo nuevo.
+    lista.forEach(v => verificarPendientes(v.nino));
   } catch (err) {
     UI.vacio(cont, 'Error: '+err.message, '⚠️');
+  }
+}
+
+async function verificarPendientes(ninoId) {
+  const badge = document.getElementById(`pendientes-${ninoId}`);
+  const boton = document.getElementById(`btn-sync-${ninoId}`);
+  if (!badge) return; // la card ya no está (se recargó la lista mientras tanto)
+  try {
+    const resp = await API.get(`/misael-link/centro-misael/pendientes/?nino_id=${ninoId}`);
+    if (resp.pendientes > 0) {
+      badge.innerHTML = `<span class="chip chip-coral" title="Hay documentos nuevos en Centro Misael sin importar">
+        🔴 ${resp.pendientes} nuevo${resp.pendientes === 1 ? '' : 's'}
+      </span>`;
+      boton?.classList.remove('btn-outline');
+      boton?.classList.add('btn-primary');
+    }
+    // Si pendientes es 0 no mostramos nada: evita ruido visual en la
+    // mayoría de las cards, que van a estar al día.
+  } catch (err) {
+    // Fallo silencioso a propósito: es solo un indicador informativo,
+    // no queremos tapar la pantalla de toasts de error si Centro Misael
+    // está caído — el botón de sincronizar ya reporta el error real
+    // cuando el usuario efectivamente lo intenta.
   }
 }
 

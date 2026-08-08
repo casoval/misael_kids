@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     DerivacionViewSet, PlanTrabajoMisaelViewSet, VinculoCentroMisaelViewSet,
     BuscarPacienteCentroMisaelView, VincularCentroMisaelView,
-    SincronizarDocumentosCentroMisaelView,
+    SincronizarDocumentosCentroMisaelView, PendientesCentroMisaelView,
 )
 router = DefaultRouter()
 router.register(r"derivaciones",   DerivacionViewSet,       basename="derivacion")
@@ -13,5 +13,6 @@ urlpatterns = [
     path("centro-misael/buscar/", BuscarPacienteCentroMisaelView.as_view(), name="cm-buscar"),
     path("centro-misael/vincular/", VincularCentroMisaelView.as_view(), name="cm-vincular"),
     path("centro-misael/sincronizar/", SincronizarDocumentosCentroMisaelView.as_view(), name="cm-sincronizar"),
+    path("centro-misael/pendientes/", PendientesCentroMisaelView.as_view(), name="cm-pendientes"),
     path("", include(router.urls)),
 ]
