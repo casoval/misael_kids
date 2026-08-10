@@ -2,17 +2,16 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import viewsets, filters, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 
 from ninos.models import Nino, Tutor, NinoTutor
-from .models import Derivacion, PlanTrabajoMisael, VinculoCentroMisael
-from .serializers import (
-    DerivacionSerializer, PlanTrabajoMisaelSerializer, VinculoCentroMisaelSerializer,
-)
+from .models import Derivacion, VinculoCentroMisael
+from .serializers import DerivacionSerializer, VinculoCentroMisaelSerializer
 from .import centro_misael_client as cm
+from .authentication import CentroMisaelAPIKeyAuthentication
 from accounts.permissions import filtrar_por_tutor, NoEsTutor
 
 class DerivacionViewSet(viewsets.ModelViewSet):
@@ -29,16 +28,6 @@ class DerivacionViewSet(viewsets.ModelViewSet):
         # filtro, CUALQUIER cuenta de tutor podía listar TODAS las
         # derivaciones de TODOS los niños, ni siquiera hacía falta
         # adivinar un ID — bastaba con llamar al endpoint sin filtros.
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
-
-class PlanTrabajoMisaelViewSet(viewsets.ModelViewSet):
-    queryset = PlanTrabajoMisael.objects.select_related("nino","derivacion","plan_individual").all()
-    serializer_class   = PlanTrabajoMisaelSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends    = [DjangoFilterBackend]
-    filterset_fields   = ["nino","activo","consentimiento_tutor"]
-
-    def get_queryset(self):
         return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
 
 
@@ -255,31 +244,15 @@ def _obtener_vinculo_o_404(nino_id):
         return None
 
 
-def _documentos_y_pendientes(vinculo):
+class PlanesTrabajoCentroMisaelView(APIView):
     """
-    Trae los documentos compartidos desde Centro Misael y separa cuáles
-    ya se importaron antes (por documento_centro_id) de cuáles son nuevos.
-    Puede lanzar CentroMisaelNoConfigurado / CentroMisaelError: el
-    llamador decide cómo traducir eso a una respuesta HTTP.
-    """
-    documentos = cm.listar_documentos_compartidos(vinculo.paciente_centro_id)
-    ya_importados = set(
-        PlanTrabajoMisael.objects.filter(nino=vinculo.nino, documento_centro_id__isnull=False)
-        .values_list('documento_centro_id', flat=True)
-    )
-    pendientes = [doc for doc in documentos if doc['id'] not in ya_importados]
-    return documentos, ya_importados, pendientes
+    GET /api/misael-link/centro-misael/planes-trabajo/?nino_id=<uuid>
 
-
-class PendientesCentroMisaelView(APIView):
-    """
-    GET /api/misael-link/centro-misael/pendientes/?nino_id=<uuid>
-
-    Chequeo liviano de "solo lectura": cuenta cuántos documentos
-    compartidos desde Centro Misael todavía NO se importaron como
-    PlanTrabajoMisael, sin descargar archivos ni crear nada. Pensado
-    para pintar un indicador en la lista de vinculados sin obligar al
-    usuario a apretar "Sincronizar" a ciegas.
+    Lista en vivo los planes de trabajo (modelo PlanTrabajo) que los
+    profesionales del Centro Misael crearon para este paciente — cada
+    uno con su propio profesional, área, fechas y documento adjunto.
+    Solo lectura: no se descarga ni guarda nada en Misael Kids, se
+    consulta la API de Centro Misael en cada request.
     """
     permission_classes = [IsAuthenticated, NoEsTutor]
 
@@ -292,78 +265,84 @@ class PendientesCentroMisaelView(APIView):
             )
 
         try:
-            _, _, pendientes = _documentos_y_pendientes(vinculo)
+            planes = cm.listar_planes_trabajo(vinculo.paciente_centro_id)
         except cm.CentroMisaelNoConfigurado as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except cm.CentroMisaelError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
 
-        return Response({'pendientes': len(pendientes)})
-
-
-class SincronizarDocumentosCentroMisaelView(APIView):
-    """
-    POST /api/misael-link/centro-misael/sincronizar/
-    body: { "nino_id": 45 }
-
-    Trae los documentos que el profesional de Centro Misael marcó como
-    "Compartir con Misael Kids" y los guarda como PlanTrabajoMisael,
-    sin duplicar los que ya se hayan importado antes. Funciona igual
-    si el paciente está inactivo en Centro Misael.
-    """
-    permission_classes = [IsAuthenticated, NoEsTutor]
-
-    def post(self, request):
-        nino_id = request.data.get('nino_id')
-        vinculo = _obtener_vinculo_o_404(nino_id)
-        if vinculo is None:
-            return Response(
-                {'detail': 'Este niño no está vinculado con Centro Misael todavía.'}, status=404
-            )
-
-        try:
-            documentos, ya_importados, _ = _documentos_y_pendientes(vinculo)
-        except cm.CentroMisaelNoConfigurado as exc:
-            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        except cm.CentroMisaelError as exc:
-            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
-
-        creados = []
-        for doc in documentos:
-            if doc['id'] in ya_importados:
-                continue
-            fecha_str = (doc.get('fecha_subida') or '')[:10]
-            plan = PlanTrabajoMisael(
-                nino=vinculo.nino,
-                profesional_email='',
-                profesional_nombre=doc.get('subido_por_nombre', '') or 'Centro Misael',
-                descripcion=doc.get('descripcion') or doc.get('titulo', ''),
-                fecha_inicio=fecha_str or timezone.now().date(),
-                origen='sincronizado',
-                documento_centro_id=doc['id'],
-            )
-            if doc.get('archivo_url'):
-                try:
-                    contenido = cm.descargar_archivo(doc['archivo_url'])
-                    plan.informe_pdf.save(
-                        doc.get('nombre_archivo') or f'plan_misael_{doc["id"]}.pdf',
-                        ContentFile(contenido), save=False,
-                    )
-                except cm.CentroMisaelError:
-                    pass  # el registro igual se crea, sin archivo adjunto
-            plan.save()
-            creados.append(plan)
-
-        if creados:
-            vinculo.nino.tiene_plan_misael = True
-            vinculo.nino.save(update_fields=['tiene_plan_misael'])
         vinculo.ultima_sincronizacion = timezone.now()
         vinculo.save(update_fields=['ultima_sincronizacion'])
 
+        return Response({'planes': planes})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Endpoints ENTRANTES: Centro Misael consultando a Misael Kids
+# ═══════════════════════════════════════════════════════════════════
+
+class ConsultaVinculoCentroMisaelView(APIView):
+    """
+    GET /api/misael-link/consulta/vinculo/?paciente_centro_id=<id>
+
+    Llamado por Centro Misael (con su propia API key) para saber si un
+    paciente suyo ya está vinculado con algún niño de Misael Kids, sin
+    necesidad de mantener una copia de la tabla de vínculos del otro
+    lado — Misael Kids sigue siendo la única fuente de verdad.
+    """
+    authentication_classes = [CentroMisaelAPIKeyAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        paciente_centro_id = request.query_params.get('paciente_centro_id')
+        if not paciente_centro_id:
+            return Response({'detail': 'paciente_centro_id es requerido.'}, status=400)
+
+        vinculo = VinculoCentroMisael.objects.select_related('nino').filter(
+            paciente_centro_id=paciente_centro_id
+        ).first()
+
+        if vinculo is None:
+            return Response({'vinculado': False})
+
         return Response({
-            'importados': len(creados),
-            'planes': PlanTrabajoMisaelSerializer(creados, many=True).data,
+            'vinculado': True,
+            'nino_id': vinculo.nino_id,
+            'nino_nombre': vinculo.nino.nombre_completo,
+            'fecha_vinculacion': vinculo.fecha_vinculacion,
         })
+
+
+class DerivacionesCentroMisaelView(APIView):
+    """
+    GET /api/misael-link/consulta/derivaciones/?paciente_centro_id=<id>
+
+    Llamado por Centro Misael para ver las derivaciones que Misael Kids
+    mandó sobre el paciente vinculado. Marca `vista_por_centro=True` en
+    las que devuelve, para que Misael Kids pueda mostrar más adelante
+    cuáles ya fueron revisadas del otro lado.
+    """
+    authentication_classes = [CentroMisaelAPIKeyAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        paciente_centro_id = request.query_params.get('paciente_centro_id')
+        if not paciente_centro_id:
+            return Response({'detail': 'paciente_centro_id es requerido.'}, status=400)
+
+        try:
+            vinculo = VinculoCentroMisael.objects.get(paciente_centro_id=paciente_centro_id)
+        except VinculoCentroMisael.DoesNotExist:
+            return Response({'detail': 'Ese paciente no está vinculado con ningún niño.'}, status=404)
+
+        derivaciones = Derivacion.objects.filter(nino=vinculo.nino).order_by('-fecha_solicitud')
+        data = DerivacionSerializer(derivaciones, many=True).data
+
+        no_vistas = derivaciones.filter(vista_por_centro=False)
+        if no_vistas.exists():
+            no_vistas.update(vista_por_centro=True, fecha_vista_por_centro=timezone.now())
+
+        return Response(data)
 
 
 class VinculoCentroMisaelViewSet(viewsets.ReadOnlyModelViewSet):

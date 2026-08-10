@@ -1,18 +1,21 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    DerivacionViewSet, PlanTrabajoMisaelViewSet, VinculoCentroMisaelViewSet,
+    DerivacionViewSet, VinculoCentroMisaelViewSet,
     BuscarPacienteCentroMisaelView, VincularCentroMisaelView,
-    SincronizarDocumentosCentroMisaelView, PendientesCentroMisaelView,
+    PlanesTrabajoCentroMisaelView,
+    ConsultaVinculoCentroMisaelView, DerivacionesCentroMisaelView,
 )
 router = DefaultRouter()
 router.register(r"derivaciones",   DerivacionViewSet,       basename="derivacion")
-router.register(r"planes-misael",  PlanTrabajoMisaelViewSet, basename="plan-misael")
 router.register(r"vinculos-centro-misael", VinculoCentroMisaelViewSet, basename="vinculo-centro-misael")
 urlpatterns = [
+    # Saliente: Misael Kids -> Centro Misael
     path("centro-misael/buscar/", BuscarPacienteCentroMisaelView.as_view(), name="cm-buscar"),
     path("centro-misael/vincular/", VincularCentroMisaelView.as_view(), name="cm-vincular"),
-    path("centro-misael/sincronizar/", SincronizarDocumentosCentroMisaelView.as_view(), name="cm-sincronizar"),
-    path("centro-misael/pendientes/", PendientesCentroMisaelView.as_view(), name="cm-pendientes"),
+    path("centro-misael/planes-trabajo/", PlanesTrabajoCentroMisaelView.as_view(), name="cm-planes-trabajo"),
+    # Entrante: Centro Misael -> Misael Kids (autenticado con CENTRO_MISAEL_API_KEY)
+    path("consulta/vinculo/", ConsultaVinculoCentroMisaelView.as_view(), name="cm-consulta-vinculo"),
+    path("consulta/derivaciones/", DerivacionesCentroMisaelView.as_view(), name="cm-consulta-derivaciones"),
     path("", include(router.urls)),
 ]

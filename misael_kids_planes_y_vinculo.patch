@@ -1,0 +1,1039 @@
+diff --git a/frontend/pages/panel/misael-link.html b/frontend/pages/panel/misael-link.html
+index d407769..2a99d85 100644
+--- a/frontend/pages/panel/misael-link.html
++++ b/frontend/pages/panel/misael-link.html
+@@ -53,7 +53,6 @@
+       <h1 class="topbar-titulo">🔗 Centro Misael</h1>
+       <div class="topbar-acciones">
+         <button class="btn btn-primary" onclick="abrirNuevaDerivacion()">➕ Nueva derivación</button>
+-        <button class="btn btn-outline" onclick="abrirNuevoPlanMisael()">🧠 Plan de trabajo</button>
+       </div>
+     </header>
+     <div class="pagina">
+@@ -126,10 +125,10 @@
+           </div>
+         </div>
+         <div class="stat-card">
+-          <div class="stat-icon violeta">🧠</div>
++          <div class="stat-icon violeta">🔗</div>
+           <div class="stat-info">
+-            <div class="valor" id="stat-planes-activos">—</div>
+-            <div class="etiqueta">Planes activos</div>
++            <div class="valor" id="stat-vinculados">—</div>
++            <div class="etiqueta">Niños vinculados</div>
+           </div>
+         </div>
+         <div class="stat-card">
+@@ -182,19 +181,19 @@
+         </div>
+       </div>
+ 
+-      <!-- Panel: Planes -->
++      <!-- Panel: Planes (solo lectura — los crea el profesional en Centro Misael) -->
+       <div class="tab-panel" id="panel-planes">
++        <div class="alerta alerta-info mb-md">
++          ℹ️ Los planes de trabajo los crea el profesional directamente en Centro Misael.
++          Acá se consultan en vivo, de solo lectura — no se pueden crear ni editar desde Misael Kids.
++        </div>
+         <div style="display:flex;gap:var(--gap-sm);align-items:flex-end;margin-bottom:var(--gap-md);flex-wrap:wrap">
+           <div class="form-grupo" style="margin:0;min-width:220px">
+-            <label class="form-label">Ver historial de un niño/a</label>
++            <label class="form-label">Ver planes de un niño/a vinculado</label>
+             <select id="pm-filtro-nino" class="form-select" onchange="cargarPlanesMisael()">
+-              <option value="">Todos los niños (activos primero)</option>
++              <option value="">Seleccionar niño/a...</option>
+             </select>
+           </div>
+-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-sm);padding-bottom:8px">
+-            <input type="checkbox" id="pm-filtro-incluir-inactivos" onchange="cargarPlanesMisael()">
+-            Incluir planes cerrados/inactivos
+-          </label>
+         </div>
+         <div id="lista-planes-misael">
+           <div class="loader"><div class="spinner"></div></div>
+@@ -237,13 +236,15 @@
+     <input type="hidden" id="der-id">
+ 
+     <div class="alerta alerta-info mb-md">
+-      ℹ️ Antes de crear la derivación, asegúrate de tener el consentimiento verbal del tutor.
+-      La autorización formal se registra en este formulario.
++      ℹ️ Solo se puede derivar a niños/as ya <strong>vinculados con Centro Misael</strong> — si no
++      aparece en la lista, primero vincúlalo en la pestaña "Vincular con Centro Misael".
++      Antes de crear la derivación, asegúrate también de tener el consentimiento verbal del tutor;
++      la autorización formal se registra en este formulario.
+     </div>
+ 
+     <div class="grid-2">
+       <div class="form-grupo">
+-        <label class="form-label">Niño/a *</label>
++        <label class="form-label">Niño/a * (solo vinculados con Centro Misael)</label>
+         <select id="der-nino" class="form-select">
+           <option value="">Seleccionar...</option>
+         </select>
+@@ -299,108 +300,14 @@
+   </div>
+ </div>
+ 
+-<!-- Modal: Plan de trabajo Misael -->
+-<div class="modal-overlay" id="modal-plan-misael">
+-  <div class="modal" style="max-width:620px">
+-    <div class="modal-header">
+-      <h3 class="modal-titulo" id="titulo-modal-pm">Nuevo plan de trabajo</h3>
+-      <button class="modal-cerrar">✕</button>
+-    </div>
+-    <input type="hidden" id="pm-id">
+-    <div class="grid-2">
+-      <div class="form-grupo">
+-        <label class="form-label">Niño/a *</label>
+-        <select id="pm-nino" class="form-select">
+-          <option value="">Seleccionar...</option>
+-        </select>
+-        <span class="form-error" data-error="pm-nino"></span>
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Derivación relacionada</label>
+-        <select id="pm-derivacion" class="form-select">
+-          <option value="">Sin derivación</option>
+-        </select>
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Nombre del profesional *</label>
+-        <input type="text" id="pm-prof-nombre" class="form-input"
+-          placeholder="Nombre del profesional del Centro Misael">
+-        <span class="form-error" data-error="pm-prof-nombre"></span>
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Email del profesional *</label>
+-        <input type="email" id="pm-prof-email" class="form-input"
+-          placeholder="profesional@centromisael.com">
+-        <span class="form-error" data-error="pm-prof-email"></span>
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Teléfono del profesional</label>
+-        <input type="text" id="pm-prof-telefono" class="form-input" placeholder="Opcional">
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Área de intervención</label>
+-        <input type="text" id="pm-area" class="form-input" placeholder="Ej: Lenguaje, Terapia ocupacional...">
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Frecuencia de sesiones</label>
+-        <input type="text" id="pm-frecuencia" class="form-input" placeholder="Ej: 2 veces por semana">
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Fecha inicio *</label>
+-        <input type="date" id="pm-inicio" class="form-input">
+-        <span class="form-error" data-error="pm-inicio"></span>
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Fecha fin (vacío = vigente)</label>
+-        <input type="date" id="pm-fin" class="form-input">
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Próxima revisión</label>
+-        <input type="date" id="pm-proxima-revision" class="form-input">
+-      </div>
+-      <div class="form-grupo">
+-        <label class="form-label">Informe del Centro Misael (PDF)</label>
+-        <input type="file" id="pm-informe-pdf" class="form-input" accept="application/pdf">
+-        <a id="pm-informe-pdf-actual" href="#" target="_blank" style="display:none;font-size:var(--text-xs);color:var(--turquesa-d)">📄 Ver informe actual</a>
+-      </div>
+-      <div class="form-grupo" style="grid-column:1/-1">
+-        <label class="form-label">Descripción del plan *</label>
+-        <textarea id="pm-descripcion" class="form-textarea" rows="3"
+-          placeholder="Objetivos y estrategias del plan de trabajo definido por el profesional..."></textarea>
+-        <span class="form-error" data-error="pm-descripcion"></span>
+-      </div>
+-      <div class="form-grupo" style="grid-column:1/-1">
+-        <label class="form-label">Notas de seguimiento</label>
+-        <textarea id="pm-seguimiento" class="form-textarea" rows="2"
+-          placeholder="Avances, observaciones de la educadora, ajustes acordados con el profesional..."></textarea>
+-      </div>
+-      <div class="form-grupo" style="grid-column:1/-1">
+-        <label class="form-label">Plan individual vinculado (en Agenda)</label>
+-        <select id="pm-plan-ind" class="form-select">
+-          <option value="">Sin vinculación</option>
+-        </select>
+-      </div>
+-    </div>
+-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
+-      font-size:var(--text-sm);font-weight:700;margin-bottom:var(--gap-md)">
+-      <input type="checkbox" id="pm-consentimiento" checked style="width:13px;height:13px">
+-      ✅ Tutor autorizó compartir información entre jardín y Centro Misael
+-    </label>
+-    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
+-      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-plan-misael')">Cancelar</button>
+-      <button class="btn btn-primary" onclick="guardarPlanMisael()">🧠 Guardar plan</button>
+-    </div>
+-  </div>
+-</div>
+-
+ <script src="{% static 'js/api.js' %}"></script>
+ <script src="{% static 'js/components.js' %}"></script>
+ <script>
+ initPanel('misael-link', ['admin', 'directora', 'educadora', 'ayudante', 'administrativo', 'cocina', 'profesional']);
+ const hoy = new Date().toISOString().split('T')[0];
+-document.getElementById('pm-inicio').value = hoy;
+-let editandoDerId = null, editandoPmId = null;
++let editandoDerId = null;
+ let ninosCache = [];
++let vinculosCache = [];
+ let ninosVinculadosIds = new Set();
+ 
+ const estadoColors = {
+@@ -414,46 +321,43 @@ const estadoLabels = {
+ 
+ async function inicializar() {
+   await cargarSelectores();
+-  await Promise.all([cargarStats(), cargarDerivaciones(), cargarPlanesMisael()]);
++  await Promise.all([cargarStats(), cargarDerivaciones()]);
+   const tabInicial = new URLSearchParams(window.location.search).get('tab');
+   if (tabInicial) cambiarTab(tabInicial);
+ }
+ 
+ async function cargarSelectores() {
+   try {
+-    const [ninos, derivaciones, planesInd, vinculos] = await Promise.all([
++    const [ninos, vinculos] = await Promise.all([
+       API.get('/ninos/ninos/?activo=true&page_size=500'),
+-      API.get('/misael-link/derivaciones/?page_size=200'),
+-      API.get('/agenda/planes-individuales/?activo=true&page_size=200'),
+       API.get('/misael-link/vinculos-centro-misael/?page_size=500'),
+     ]);
+     const listaNinos = ninos.results||ninos;
+     ninosCache = listaNinos;
+-    ninosVinculadosIds = new Set((vinculos.results||vinculos).map(v=>v.nino));
+-    [document.getElementById('der-nino'), document.getElementById('pm-nino')].forEach(sel =>
+-      UI.llenarSelect(sel, listaNinos, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)'));
+-    UI.llenarSelect(document.getElementById('pm-filtro-nino'), listaNinos, 'id',
++    vinculosCache = vinculos.results||vinculos;
++    ninosVinculadosIds = new Set(vinculosCache.map(v=>v.nino));
++
++    // La derivación solo puede crearse para niños YA vinculados con
++    // Centro Misael — si no aparece en este select, hay que vincularlo
++    // primero en la pestaña de vinculación.
++    const ninosVinculados = listaNinos.filter(n => ninosVinculadosIds.has(n.id));
++    UI.llenarSelect(document.getElementById('der-nino'), ninosVinculados, 'id',
++      n => n.nombre_completo+' ('+n.edad_en_meses+'m)');
++    UI.llenarSelect(document.getElementById('pm-filtro-nino'), ninosVinculados, 'id',
+       n => n.nombre_completo+' ('+n.edad_en_meses+'m)');
+-    UI.llenarSelect(document.getElementById('pm-derivacion'),
+-      derivaciones.results||derivaciones, 'id',
+-      d => d.nino_nombre+' — '+d.area_derivacion+' ('+d.estado_display+')');
+-    UI.llenarSelect(document.getElementById('pm-plan-ind'),
+-      planesInd.results||planesInd, 'id',
+-      p => p.nino_nombre+' — '+p.descripcion?.slice(0,50));
+   } catch {}
+ }
+ 
+ async function cargarStats() {
+   try {
+-    const [total, pendientes, planesActivos, cerradas] = await Promise.all([
++    const [total, pendientes, cerradas] = await Promise.all([
+       API.get('/misael-link/derivaciones/?page_size=1'),
+       API.get('/misael-link/derivaciones/?estado=solicitada&page_size=1'),
+-      API.get('/misael-link/planes-misael/?activo=true&page_size=1'),
+       API.get('/misael-link/derivaciones/?estado=cerrada&page_size=1'),
+     ]);
+     document.getElementById('stat-der-total').textContent     = total.count||0;
+     document.getElementById('stat-der-pendientes').textContent= pendientes.count||0;
+-    document.getElementById('stat-planes-activos').textContent= planesActivos.count||0;
++    document.getElementById('stat-vinculados').textContent    = vinculosCache.length||0;
+     document.getElementById('stat-der-cerradas').textContent  = cerradas.count||0;
+   } catch {}
+ }
+@@ -463,7 +367,7 @@ function cambiarTab(tab) {
+     document.getElementById('tab-'+t).classList.toggle('activo',t===tab);
+     document.getElementById('panel-'+t).classList.toggle('activo',t===tab);
+   });
+-  if (tab==='planes') cargarPlanesMisael();
++  if (tab==='planes' && document.getElementById('pm-filtro-nino').value) cargarPlanesMisael();
+   if (tab==='vinculacion') cargarVinculados();
+ }
+ 
+@@ -601,33 +505,26 @@ async function eliminarDerivacion(id, nombre) {
+ // ── Planes de trabajo Misael ──
+ async function cargarPlanesMisael() {
+   const cont = document.getElementById('lista-planes-misael');
+-  UI.mostrarLoader(cont,'Cargando planes...');
++  const ninoId = document.getElementById('pm-filtro-nino').value;
++  if (!ninoId) { UI.vacio(cont,'Elige un niño/a vinculado para ver sus planes de trabajo','🧠'); return; }
++  UI.mostrarLoader(cont,'Consultando planes en Centro Misael...');
+   try {
+-    const ninoId = document.getElementById('pm-filtro-nino').value;
+-    const incluirInactivos = document.getElementById('pm-filtro-incluir-inactivos').checked;
+-    let url = '/misael-link/planes-misael/?ordering=-fecha_inicio&page_size=100';
+-    if (ninoId) url += '&nino='+ninoId;
+-    if (!incluirInactivos && !ninoId) url += '&activo=true';
+-    const data  = await API.get(url);
+-    const lista = data.results||data;
+-    if (!lista.length) { UI.vacio(cont,'Sin planes de trabajo del Centro Misael','🧠'); return; }
++    const data  = await API.get('/misael-link/centro-misael/planes-trabajo/?nino_id='+ninoId);
++    const lista = data.planes || [];
++    if (!lista.length) { UI.vacio(cont,'Este niño/a todavía no tiene planes de trabajo en Centro Misael','🧠'); return; }
+     cont.innerHTML = lista.map(p => `
+       <div class="plan-misael-card">
+         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--gap-sm)">
+           <div>
+-            <div style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--violeta-d)">${p.nino_nombre}</div>
+             <div style="font-size:var(--text-sm);font-weight:700;color:var(--violeta-d)">
+               👩‍⚕️ ${p.profesional_nombre}
+-              <span style="font-weight:400;color:var(--texto-suave)">· ${p.profesional_email}${p.profesional_telefono?' · '+p.profesional_telefono:''}</span>
++              ${p.profesional_telefono?'<span style="font-weight:400;color:var(--texto-suave)"> · '+p.profesional_telefono+'</span>':''}
+             </div>
+             ${p.area_intervencion || p.frecuencia_sesiones ? `<div style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:2px">
+               ${p.area_intervencion?'🎯 '+p.area_intervencion:''} ${p.frecuencia_sesiones?'· 🔁 '+p.frecuencia_sesiones:''}
+             </div>` : ''}
+           </div>
+-          <div style="display:flex;gap:var(--gap-sm);align-items:center">
+-            <span class="chip ${p.activo?'chip-verde':'chip-gris'}">${p.activo?'✅ Activo':'Inactivo'}</span>
+-            ${p.consentimiento_tutor?'<span class="chip chip-turquesa" style="font-size:.65rem">✅ Consentido</span>':''}
+-          </div>
++          <span class="chip ${p.activo?'chip-verde':'chip-gris'}">${p.activo?'✅ Activo':'Inactivo'}</span>
+         </div>
+         <p style="font-size:var(--text-sm);color:var(--texto);line-height:1.7;
+           background:rgba(255,255,255,.6);padding:var(--gap-sm);border-radius:var(--radio-md);
+@@ -635,117 +532,15 @@ async function cargarPlanesMisael() {
+         ${p.notas_seguimiento ? `<p style="font-size:var(--text-sm);color:var(--texto);line-height:1.6;
+           background:var(--amarillo-l);padding:var(--gap-sm);border-radius:var(--radio-md);
+           margin-bottom:var(--gap-sm)"><strong>📝 Seguimiento:</strong> ${p.notas_seguimiento}</p>` : ''}
+-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+-          <div style="font-size:var(--text-xs);color:var(--violeta-d)">
+-            📅 ${UI.fecha(p.fecha_inicio)} ${p.fecha_fin?'→ '+UI.fecha(p.fecha_fin):'→ Vigente'}
+-            ${p.proxima_revision?' · 🔔 Revisión: '+UI.fecha(p.proxima_revision):''}
+-            ${p.plan_individual?'· <a href="/panel/agenda/" style="color:var(--violeta-d)">Ver plan individual →</a>':''}
+-            ${p.informe_pdf?`· <a href="${p.informe_pdf}" target="_blank" style="color:var(--violeta-d)">📄 Informe PDF →</a>`:''}
+-          </div>
+-          <div style="display:flex;gap:6px">
+-            <button class="btn btn-outline btn-sm" onclick="editarPlanMisael('${p.id}')">✏️ Editar</button>
+-            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+-              onclick="eliminarPlanMisael('${p.id}','${p.nino_nombre}')">🗑️</button>
+-          </div>
++        <div style="font-size:var(--text-xs);color:var(--violeta-d)">
++          📅 ${UI.fecha(p.fecha_inicio)} ${p.fecha_fin?'→ '+UI.fecha(p.fecha_fin):'→ Vigente'}
++          ${p.proxima_revision?' · 🔔 Revisión: '+UI.fecha(p.proxima_revision):''}
++          ${p.archivo_url?`· <a href="${p.archivo_url}" target="_blank" style="color:var(--violeta-d)">📄 Ver documento →</a>`:''}
+         </div>
+       </div>`).join('');
+   } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+ }
+ 
+-function abrirNuevoPlanMisael() {
+-  editandoPmId = null;
+-  document.getElementById('titulo-modal-pm').textContent = 'Nuevo plan de trabajo';
+-  ['pm-id','pm-prof-nombre','pm-prof-email','pm-prof-telefono','pm-area','pm-frecuencia',
+-   'pm-descripcion','pm-seguimiento','pm-fin','pm-proxima-revision'].forEach(id=>document.getElementById(id).value='');
+-  ['pm-nino','pm-derivacion','pm-plan-ind'].forEach(id=>document.getElementById(id).value='');
+-  document.getElementById('pm-inicio').value         = hoy;
+-  document.getElementById('pm-consentimiento').checked = true;
+-  document.getElementById('pm-informe-pdf').value = '';
+-  document.getElementById('pm-informe-pdf-actual').style.display = 'none';
+-  document.querySelectorAll('#modal-plan-misael .form-error').forEach(el=>el.textContent='');
+-  UI.abrirModal('modal-plan-misael');
+-}
+-
+-async function editarPlanMisael(id) {
+-  editandoPmId = id;
+-  document.getElementById('titulo-modal-pm').textContent = 'Editar plan de trabajo';
+-  try {
+-    const p = await API.get('/misael-link/planes-misael/'+id+'/');
+-    document.getElementById('pm-id').value               = id;
+-    document.getElementById('pm-nino').value             = p.nino;
+-    document.getElementById('pm-derivacion').value       = p.derivacion||'';
+-    document.getElementById('pm-plan-ind').value         = p.plan_individual||'';
+-    document.getElementById('pm-prof-nombre').value      = p.profesional_nombre;
+-    document.getElementById('pm-prof-email').value       = p.profesional_email;
+-    document.getElementById('pm-prof-telefono').value    = p.profesional_telefono||'';
+-    document.getElementById('pm-area').value             = p.area_intervencion||'';
+-    document.getElementById('pm-frecuencia').value       = p.frecuencia_sesiones||'';
+-    document.getElementById('pm-descripcion').value      = p.descripcion;
+-    document.getElementById('pm-seguimiento').value      = p.notas_seguimiento||'';
+-    document.getElementById('pm-inicio').value           = p.fecha_inicio;
+-    document.getElementById('pm-fin').value              = p.fecha_fin||'';
+-    document.getElementById('pm-proxima-revision').value = p.proxima_revision||'';
+-    document.getElementById('pm-consentimiento').checked = p.consentimiento_tutor;
+-    document.getElementById('pm-informe-pdf').value = '';
+-    const linkPdf = document.getElementById('pm-informe-pdf-actual');
+-    if (p.informe_pdf) { linkPdf.href = p.informe_pdf; linkPdf.style.display = 'inline'; }
+-    else { linkPdf.style.display = 'none'; }
+-    UI.abrirModal('modal-plan-misael');
+-  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+-}
+-
+-async function guardarPlanMisael() {
+-  const errores = Validar.formulario({
+-    'pm-nino':       [()=>Validar.requerido(document.getElementById('pm-nino').value,'Niño/a')],
+-    'pm-prof-nombre':[()=>Validar.requerido(document.getElementById('pm-prof-nombre').value,'Nombre del profesional')],
+-    'pm-prof-email': [()=>Validar.email(document.getElementById('pm-prof-email').value)],
+-    'pm-descripcion':[()=>Validar.requerido(document.getElementById('pm-descripcion').value,'Descripción')],
+-    'pm-inicio':     [()=>Validar.fecha(document.getElementById('pm-inicio').value,'Fecha inicio')],
+-  });
+-  if (!Validar.mostrarErrores(errores,'#modal-plan-misael ')) return;
+-  const datos = {
+-    nino:                document.getElementById('pm-nino').value,
+-    derivacion:          document.getElementById('pm-derivacion').value||null,
+-    plan_individual:     document.getElementById('pm-plan-ind').value||null,
+-    profesional_nombre:  document.getElementById('pm-prof-nombre').value,
+-    profesional_email:   document.getElementById('pm-prof-email').value,
+-    profesional_telefono:document.getElementById('pm-prof-telefono').value,
+-    area_intervencion:  document.getElementById('pm-area').value,
+-    frecuencia_sesiones:document.getElementById('pm-frecuencia').value,
+-    descripcion:         document.getElementById('pm-descripcion').value,
+-    notas_seguimiento:   document.getElementById('pm-seguimiento').value,
+-    fecha_inicio:        document.getElementById('pm-inicio').value,
+-    fecha_fin:           document.getElementById('pm-fin').value||null,
+-    proxima_revision:    document.getElementById('pm-proxima-revision').value||null,
+-    consentimiento_tutor:document.getElementById('pm-consentimiento').checked,
+-    activo:              true,
+-  };
+-  try {
+-    let planId = editandoPmId;
+-    if (editandoPmId) await API.patch('/misael-link/planes-misael/'+editandoPmId+'/',datos);
+-    else              { const nuevo = await API.post('/misael-link/planes-misael/',datos); planId = nuevo.id; }
+-
+-    const archivoPdf = document.getElementById('pm-informe-pdf').files[0];
+-    if (archivoPdf) {
+-      const fd = new FormData();
+-      fd.append('informe_pdf', archivoPdf);
+-      await API.patchForm('/misael-link/planes-misael/'+planId+'/', fd);
+-    }
+-    UI.toast('Plan guardado correctamente','exito');
+-    UI.cerrarModal('modal-plan-misael');
+-    cargarPlanesMisael(); cargarStats();
+-  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+-}
+-
+-async function eliminarPlanMisael(id, nombre) {
+-  if (!confirm('Eliminar el plan de "'+nombre+'"?')) return;
+-  try {
+-    await API.delete('/misael-link/planes-misael/'+id+'/');
+-    UI.toast('Plan eliminado','exito');
+-    cargarPlanesMisael(); cargarStats();
+-  } catch (err) { UI.toast('No se puede eliminar: '+err.message,'error'); }
+-}
+-
+ // ── Vinculación con Centro Misael ──
+ async function buscarEnCentroMisael() {
+   const q = document.getElementById('cm-buscar-input').value.trim();
+@@ -835,59 +630,23 @@ async function cargarVinculados() {
+           </span>
+           <div style="font-size:var(--text-xs);color:var(--gris-500)">
+             Vinculado el ${new Date(v.fecha_vinculacion).toLocaleDateString()}
+-            ${v.ultima_sincronizacion ? '· Última sync: '+new Date(v.ultima_sincronizacion).toLocaleString() : '· Sin sincronizar aún'}
+           </div>
+         </div>
+         <div style="display:flex;align-items:center;gap:8px">
+-          <span id="pendientes-${v.nino}"></span>
+-          <button class="btn btn-outline btn-sm" id="btn-sync-${v.nino}" onclick="sincronizarPlanesMisael('${v.nino}')">
+-            🔄 Sincronizar planes/documentos
++          <button class="btn btn-outline btn-sm" onclick="verPlanesDeVinculado('${v.nino}')">
++            🧠 Ver planes de trabajo
+           </button>
+         </div>
+       </div>`).join('');
+-
+-    // Chequeo de pendientes en segundo plano, sin bloquear el render de
+-    // la lista: cada card se entera por su cuenta si tiene algo nuevo.
+-    lista.forEach(v => verificarPendientes(v.nino));
+   } catch (err) {
+     UI.vacio(cont, 'Error: '+err.message, '⚠️');
+   }
+ }
+ 
+-async function verificarPendientes(ninoId) {
+-  const badge = document.getElementById(`pendientes-${ninoId}`);
+-  const boton = document.getElementById(`btn-sync-${ninoId}`);
+-  if (!badge) return; // la card ya no está (se recargó la lista mientras tanto)
+-  try {
+-    const resp = await API.get(`/misael-link/centro-misael/pendientes/?nino_id=${ninoId}`);
+-    if (resp.pendientes > 0) {
+-      badge.innerHTML = `<span class="chip chip-coral" title="Hay documentos nuevos en Centro Misael sin importar">
+-        🔴 ${resp.pendientes} nuevo${resp.pendientes === 1 ? '' : 's'}
+-      </span>`;
+-      boton?.classList.remove('btn-outline');
+-      boton?.classList.add('btn-primary');
+-    }
+-    // Si pendientes es 0 no mostramos nada: evita ruido visual en la
+-    // mayoría de las cards, que van a estar al día.
+-  } catch (err) {
+-    // Fallo silencioso a propósito: es solo un indicador informativo,
+-    // no queremos tapar la pantalla de toasts de error si Centro Misael
+-    // está caído — el botón de sincronizar ya reporta el error real
+-    // cuando el usuario efectivamente lo intenta.
+-  }
+-}
+-
+-async function sincronizarPlanesMisael(ninoId) {
+-  try {
+-    const resp = await API.post('/misael-link/centro-misael/sincronizar/', { nino_id: ninoId });
+-    UI.toast(resp.importados > 0
+-      ? `✅ ${resp.importados} documento(s) nuevo(s) importado(s)`
+-      : 'Ya estaba todo sincronizado, sin documentos nuevos', 'exito');
+-    cargarVinculados();
+-    if (document.getElementById('panel-planes').classList.contains('activo')) cargarPlanesMisael();
+-  } catch (err) {
+-    UI.toast('No se pudo sincronizar: '+err.message, 'error');
+-  }
++function verPlanesDeVinculado(ninoId) {
++  cambiarTab('planes');
++  document.getElementById('pm-filtro-nino').value = ninoId;
++  cargarPlanesMisael();
+ }
+ 
+ inicializar();
+diff --git a/misael_link/admin.py b/misael_link/admin.py
+index d204ce9..0da174c 100644
+--- a/misael_link/admin.py
++++ b/misael_link/admin.py
+@@ -1,14 +1,8 @@
+ from django.contrib import admin
+-from .models import Derivacion, PlanTrabajoMisael
++from .models import Derivacion
+ 
+ @admin.register(Derivacion)
+ class DerivacionAdmin(admin.ModelAdmin):
+-    list_display  = ['nino', 'area_derivacion', 'estado', 'solicitado_por', 'fecha_solicitud', 'consentimiento_tutor']
+-    list_filter   = ['estado', 'consentimiento_tutor']
++    list_display  = ['nino', 'area_derivacion', 'estado', 'solicitado_por', 'fecha_solicitud', 'consentimiento_tutor', 'vista_por_centro']
++    list_filter   = ['estado', 'consentimiento_tutor', 'vista_por_centro']
+     search_fields = ['nino__nombres', 'nino__apellidos', 'area_derivacion']
+-
+-@admin.register(PlanTrabajoMisael)
+-class PlanTrabajoMisaelAdmin(admin.ModelAdmin):
+-    list_display  = ['nino', 'profesional_nombre', 'fecha_inicio', 'fecha_fin', 'activo', 'consentimiento_tutor']
+-    list_filter   = ['activo', 'consentimiento_tutor']
+-    search_fields = ['nino__nombres', 'profesional_nombre']
+diff --git a/misael_link/authentication.py b/misael_link/authentication.py
+new file mode 100644
+index 0000000..b2602a1
+--- /dev/null
++++ b/misael_link/authentication.py
+@@ -0,0 +1,59 @@
++"""
++misael_link/authentication.py
++
++Autenticación por API key para consumo servicio-a-servicio, en el
++sentido ENTRANTE: Centro Misael (repo centro_terapias_v2) consultando
++esta API para saber si un paciente ya está vinculado, o para leer sus
++planes de trabajo.
++
++Espeja MisaelKidsAPIKeyAuthentication del otro repo. Usa la misma
++clave compartida (settings.CENTRO_MISAEL_API_KEY == MISAEL_KIDS_API_KEY
++del lado de Centro Misael), ya que es un secreto simétrico entre los
++dos únicos servicios que se hablan.
++"""
++import hmac
++
++from django.conf import settings
++from rest_framework import authentication, exceptions
++
++
++class CentroMisaelAPIKeyAuthentication(authentication.BaseAuthentication):
++    """
++    Espera el header:  Authorization: ApiKey <clave>
++    """
++
++    keyword = 'ApiKey'
++
++    def authenticate(self, request):
++        auth_header = authentication.get_authorization_header(request).decode('utf-8')
++        if not auth_header or not auth_header.startswith(self.keyword + ' '):
++            return None
++
++        clave_recibida = auth_header[len(self.keyword) + 1:].strip()
++        clave_esperada = getattr(settings, 'CENTRO_MISAEL_API_KEY', '')
++
++        if not clave_esperada:
++            raise exceptions.AuthenticationFailed(
++                'CENTRO_MISAEL_API_KEY no está configurada en el servidor.'
++            )
++
++        if not clave_recibida or not hmac.compare_digest(clave_recibida, clave_esperada):
++            raise exceptions.AuthenticationFailed('API key inválida.')
++
++        return (_UsuarioServicioCentroMisael(), None)
++
++    def authenticate_header(self, request):
++        return self.keyword
++
++
++class _UsuarioServicioCentroMisael:
++    """Usuario "falso" mínimo para que IsAuthenticated pase y quede claro en logs quién llamó."""
++    is_authenticated = True
++    is_active = True
++    is_staff = False
++    is_superuser = False
++    pk = None
++    id = None
++
++    def __str__(self):
++        return 'servicio:centro_misael'
+diff --git a/misael_link/centro_misael_client.py b/misael_link/centro_misael_client.py
+index 261d075..4bd52f1 100644
+--- a/misael_link/centro_misael_client.py
++++ b/misael_link/centro_misael_client.py
+@@ -65,6 +65,16 @@ def listar_documentos_compartidos(paciente_id):
+     return data or []
+ 
+ 
++def listar_planes_trabajo(paciente_id):
++    """
++    Planes de trabajo (modelo PlanTrabajo) creados por profesionales del
++    Centro Misael para este paciente. Consulta en vivo, sin persistir
++    nada del lado de Misael Kids — de solo lectura.
++    """
++    data = _get(f'/pacientes/{paciente_id}/planes-trabajo/')
++    return data or []
++
++
+ def descargar_archivo(url, timeout=30):
+     """
+     Descarga el archivo de un documento compartido.
+diff --git a/misael_link/migrations/0004_delete_plantrabajomisael_and_more.py b/misael_link/migrations/0004_delete_plantrabajomisael_and_more.py
+new file mode 100644
+index 0000000..87d08fb
+--- /dev/null
++++ b/misael_link/migrations/0004_delete_plantrabajomisael_and_more.py
+@@ -0,0 +1,28 @@
++from django.db import migrations, models
++
++
++class Migration(migrations.Migration):
++
++    dependencies = [
++        ('misael_link', '0003_vinculocentromisael_and_more'),
++        ('agenda', '0001_initial'),
++    ]
++
++    operations = [
++        # Los planes de trabajo ahora los crea el profesional directamente
++        # en Centro Misael (modelo PlanTrabajo, repo centro_terapias_v2) y
++        # se consultan en vivo, de solo lectura, sin copia local.
++        migrations.DeleteModel(
++            name='PlanTrabajoMisael',
++        ),
++        migrations.AddField(
++            model_name='derivacion',
++            name='vista_por_centro',
++            field=models.BooleanField(default=False),
++        ),
++        migrations.AddField(
++            model_name='derivacion',
++            name='fecha_vista_por_centro',
++            field=models.DateTimeField(blank=True, null=True),
++        ),
++    ]
+diff --git a/misael_link/models.py b/misael_link/models.py
+index 057407e..65e59ca 100644
+--- a/misael_link/models.py
++++ b/misael_link/models.py
+@@ -33,10 +33,25 @@ class Derivacion(ModeloBase):
+     respuesta_centro = models.TextField(blank=True)
+     consentimiento_tutor = models.BooleanField(default=False)
+ 
++    # ── Visto por Centro Misael ─────────────────────────────────────
++    # Se marca cuando Centro Misael consulta esta derivación por primera
++    # vez desde su página de vinculaciones, para poder pintar un aviso
++    # de "nueva" del otro lado sin necesitar una tabla de alertas aparte.
++    vista_por_centro = models.BooleanField(default=False)
++    fecha_vista_por_centro = models.DateTimeField(null=True, blank=True)
++
+     class Meta:
+         verbose_name = 'Derivación al Centro Misael'
+         ordering     = ['-fecha_solicitud']
+ 
++    def clean(self):
++        from django.core.exceptions import ValidationError
++        if self.nino_id and not hasattr(self.nino, 'vinculo_centro_misael'):
++            raise ValidationError(
++                'Este niño todavía no está vinculado con Centro Misael. '
++                'Vincúlalo primero en la pestaña "Vincular con Centro Misael".'
++            )
++
+     def __str__(self):
+         return f'Derivación {self.nino} — {self.area_derivacion} ({self.get_estado_display()})'
+ 
+@@ -77,72 +92,8 @@ class VinculoCentroMisael(ModeloBase):
+     def __str__(self):
+         return f'{self.nino} ↔ paciente #{self.paciente_centro_id} en Centro Misael'
+ 
+-
+-class PlanTrabajoMisael(ModeloBase):
+-    """
+-    Plan de trabajo creado por un profesional del Centro Misael
+-    para ser ejecutado por la educadora del jardín.
+-    Se vincula a un PlanIndividual de la app agenda.
+-
+-    Centro Misael no expone ninguna API para consultar esto en vivo (se
+-    revisó su repo: no hay endpoint de pacientes/evaluaciones/planes), así
+-    que esto sigue siendo un registro manual — pero con más contexto y
+-    con el informe adjunto, para no depender de tener que preguntarle al
+-    profesional cada dato por WhatsApp.
+-    """
+-    nino              = models.ForeignKey('ninos.Nino', on_delete=models.CASCADE, related_name='planes_misael')
+-    derivacion        = models.ForeignKey(Derivacion, on_delete=models.SET_NULL, null=True, blank=True)
+-    plan_individual   = models.OneToOneField(
+-        'agenda.PlanIndividual', on_delete=models.SET_NULL,
+-        null=True, blank=True, related_name='plan_misael'
+-    )
+-    profesional_email    = models.EmailField(help_text='Email del profesional en el Centro Misael')
+-    profesional_nombre   = models.CharField(max_length=200)
+-    profesional_telefono = models.CharField(max_length=20, blank=True)
+-    area_intervencion    = models.CharField(
+-        max_length=150, blank=True,
+-        help_text='Ej: Lenguaje, Terapia ocupacional, Psicología...'
+-    )
+-    frecuencia_sesiones  = models.CharField(
+-        max_length=100, blank=True,
+-        help_text='Ej: 2 veces por semana'
+-    )
+-    descripcion       = models.TextField(help_text='Objetivos y lineamientos del plan')
+-    notas_seguimiento = models.TextField(
+-        blank=True,
+-        help_text='Avances, observaciones de la educadora, ajustes acordados con el profesional'
+-    )
+-    informe_pdf       = models.FileField(
+-        upload_to='planes_misael/', null=True, blank=True,
+-        help_text='Informe o plan de trabajo del Centro Misael, en PDF'
+-    )
+-    fecha_inicio      = models.DateField()
+-    fecha_fin         = models.DateField(null=True, blank=True)
+-    proxima_revision  = models.DateField(
+-        null=True, blank=True,
+-        help_text='Cuándo toca revisar/renovar el plan con el Centro Misael'
+-    )
+-    activo            = models.BooleanField(default=True)
+-    consentimiento_tutor = models.BooleanField(default=False,
+-        help_text='El tutor autorizó compartir información entre ambos centros')
+-
+-    # ── Sincronización automática desde Centro Misael ──────────────
+-    # Si el plan/informe fue traído automáticamente desde la API de
+-    # Centro Misael (en vez de cargado a mano), guardamos el ID del
+-    # documento de origen para no volver a importarlo en cada sync.
+-    documento_centro_id = models.PositiveIntegerField(
+-        null=True, blank=True, unique=True,
+-        help_text='ID del DocumentoPaciente en Centro Misael, si fue traído automáticamente'
+-    )
+-    origen = models.CharField(
+-        max_length=20,
+-        choices=[('manual', 'Cargado manualmente'), ('sincronizado', 'Sincronizado desde Centro Misael')],
+-        default='manual',
+-    )
+-
+-    class Meta:
+-        verbose_name = 'Plan de trabajo Centro Misael'
+-        ordering     = ['-fecha_inicio']
+-
+-    def __str__(self):
+-        return f'Plan Misael — {self.nino} por {self.profesional_nombre}'
++# NOTA: PlanTrabajoMisael se eliminó (ver migración 0004_delete_plantrabajomisael_and_more).
++# Los planes de trabajo ahora los crea el profesional directamente en Centro
++# Misael (modelo PlanTrabajo, repo centro_terapias_v2) y Misael Kids los
++# consulta en vivo, de solo lectura, vía centro_misael_client.listar_planes_trabajo().
++# Ya no hay copia local ni formulario manual del lado de Misael Kids.
+diff --git a/misael_link/serializers.py b/misael_link/serializers.py
+index be53960..8bf7775 100644
+--- a/misael_link/serializers.py
++++ b/misael_link/serializers.py
+@@ -1,26 +1,21 @@
+ from rest_framework import serializers
+-from .models import Derivacion, PlanTrabajoMisael, VinculoCentroMisael
++from .models import Derivacion, VinculoCentroMisael
+ class DerivacionSerializer(serializers.ModelSerializer):
+     nino_nombre      = serializers.CharField(source="nino.nombre_completo", read_only=True)
+     solicitado_por_nombre = serializers.CharField(source="solicitado_por.usuario.nombre_completo", read_only=True)
+     estado_display   = serializers.CharField(source="get_estado_display", read_only=True)
+     class Meta:
+         model  = Derivacion
+-        fields = ["id","nino","nino_nombre","solicitado_por","solicitado_por_nombre","motivo","area_derivacion","estado","estado_display","fecha_solicitud","fecha_respuesta","respuesta_centro","consentimiento_tutor","created_at","updated_at"]
+-        read_only_fields = ["id","fecha_solicitud","created_at","updated_at"]
++        fields = ["id","nino","nino_nombre","solicitado_por","solicitado_por_nombre","motivo","area_derivacion","estado","estado_display","fecha_solicitud","fecha_respuesta","respuesta_centro","consentimiento_tutor","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
++        read_only_fields = ["id","fecha_solicitud","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
+ 
+-class PlanTrabajoMisaelSerializer(serializers.ModelSerializer):
+-    nino_nombre = serializers.CharField(source="nino.nombre_completo", read_only=True)
+-    class Meta:
+-        model  = PlanTrabajoMisael
+-        fields = ["id","nino","nino_nombre","derivacion","plan_individual",
+-                  "profesional_email","profesional_nombre","profesional_telefono",
+-                  "area_intervencion","frecuencia_sesiones",
+-                  "descripcion","notas_seguimiento","informe_pdf",
+-                  "fecha_inicio","fecha_fin","proxima_revision",
+-                  "activo","consentimiento_tutor","origen","documento_centro_id",
+-                  "created_at","updated_at"]
+-        read_only_fields = ["id","origen","documento_centro_id","created_at","updated_at"]
++    def validate_nino(self, nino):
++        if not hasattr(nino, 'vinculo_centro_misael'):
++            raise serializers.ValidationError(
++                'Este niño todavía no está vinculado con Centro Misael. '
++                'Vincúlalo primero en la pestaña "Vincular con Centro Misael".'
++            )
++        return nino
+ 
+ 
+ class VinculoCentroMisaelSerializer(serializers.ModelSerializer):
+@@ -31,4 +26,4 @@ class VinculoCentroMisaelSerializer(serializers.ModelSerializer):
+         fields = ["id","nino","nino_nombre","paciente_centro_id","nombre_paciente_centro",
+                   "estado_centro_cache","vinculado_por","fecha_vinculacion",
+                   "ultima_sincronizacion","created_at","updated_at"]
+-        read_only_fields = ["id","fecha_vinculacion","created_at","updated_at"]
+\ No newline at end of file
++        read_only_fields = ["id","fecha_vinculacion","created_at","updated_at"]
+diff --git a/misael_link/urls.py b/misael_link/urls.py
+index 4b8211a..b0c2d4d 100644
+--- a/misael_link/urls.py
++++ b/misael_link/urls.py
+@@ -1,18 +1,21 @@
+ from django.urls import path, include
+ from rest_framework.routers import DefaultRouter
+ from .views import (
+-    DerivacionViewSet, PlanTrabajoMisaelViewSet, VinculoCentroMisaelViewSet,
++    DerivacionViewSet, VinculoCentroMisaelViewSet,
+     BuscarPacienteCentroMisaelView, VincularCentroMisaelView,
+-    SincronizarDocumentosCentroMisaelView, PendientesCentroMisaelView,
++    PlanesTrabajoCentroMisaelView,
++    ConsultaVinculoCentroMisaelView, DerivacionesCentroMisaelView,
+ )
+ router = DefaultRouter()
+ router.register(r"derivaciones",   DerivacionViewSet,       basename="derivacion")
+-router.register(r"planes-misael",  PlanTrabajoMisaelViewSet, basename="plan-misael")
+ router.register(r"vinculos-centro-misael", VinculoCentroMisaelViewSet, basename="vinculo-centro-misael")
+ urlpatterns = [
++    # Saliente: Misael Kids -> Centro Misael
+     path("centro-misael/buscar/", BuscarPacienteCentroMisaelView.as_view(), name="cm-buscar"),
+     path("centro-misael/vincular/", VincularCentroMisaelView.as_view(), name="cm-vincular"),
+-    path("centro-misael/sincronizar/", SincronizarDocumentosCentroMisaelView.as_view(), name="cm-sincronizar"),
+-    path("centro-misael/pendientes/", PendientesCentroMisaelView.as_view(), name="cm-pendientes"),
++    path("centro-misael/planes-trabajo/", PlanesTrabajoCentroMisaelView.as_view(), name="cm-planes-trabajo"),
++    # Entrante: Centro Misael -> Misael Kids (autenticado con CENTRO_MISAEL_API_KEY)
++    path("consulta/vinculo/", ConsultaVinculoCentroMisaelView.as_view(), name="cm-consulta-vinculo"),
++    path("consulta/derivaciones/", DerivacionesCentroMisaelView.as_view(), name="cm-consulta-derivaciones"),
+     path("", include(router.urls)),
+-]
+\ No newline at end of file
++]
+diff --git a/misael_link/views.py b/misael_link/views.py
+index 22a6e1d..370ccb8 100644
+--- a/misael_link/views.py
++++ b/misael_link/views.py
+@@ -2,17 +2,16 @@ from django.core.files.base import ContentFile
+ from django.db import transaction
+ from django.utils import timezone
+ from rest_framework import viewsets, filters, status
+-from rest_framework.permissions import IsAuthenticated
++from rest_framework.permissions import IsAuthenticated, AllowAny
+ from rest_framework.response import Response
+ from rest_framework.views import APIView
+ from django_filters.rest_framework import DjangoFilterBackend
+ 
+ from ninos.models import Nino, Tutor, NinoTutor
+-from .models import Derivacion, PlanTrabajoMisael, VinculoCentroMisael
+-from .serializers import (
+-    DerivacionSerializer, PlanTrabajoMisaelSerializer, VinculoCentroMisaelSerializer,
+-)
++from .models import Derivacion, VinculoCentroMisael
++from .serializers import DerivacionSerializer, VinculoCentroMisaelSerializer
+ from .import centro_misael_client as cm
++from .authentication import CentroMisaelAPIKeyAuthentication
+ from accounts.permissions import filtrar_por_tutor, NoEsTutor
+ 
+ class DerivacionViewSet(viewsets.ModelViewSet):
+@@ -31,16 +30,6 @@ class DerivacionViewSet(viewsets.ModelViewSet):
+         # adivinar un ID — bastaba con llamar al endpoint sin filtros.
+         return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+ 
+-class PlanTrabajoMisaelViewSet(viewsets.ModelViewSet):
+-    queryset = PlanTrabajoMisael.objects.select_related("nino","derivacion","plan_individual").all()
+-    serializer_class   = PlanTrabajoMisaelSerializer
+-    permission_classes = [IsAuthenticated]
+-    filter_backends    = [DjangoFilterBackend]
+-    filterset_fields   = ["nino","activo","consentimiento_tutor"]
+-
+-    def get_queryset(self):
+-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+-
+ 
+ # ═══════════════════════════════════════════════════════════════════
+ # Integración en vivo con Centro Misael (centro_terapias_v2)
+@@ -255,31 +244,15 @@ def _obtener_vinculo_o_404(nino_id):
+         return None
+ 
+ 
+-def _documentos_y_pendientes(vinculo):
+-    """
+-    Trae los documentos compartidos desde Centro Misael y separa cuáles
+-    ya se importaron antes (por documento_centro_id) de cuáles son nuevos.
+-    Puede lanzar CentroMisaelNoConfigurado / CentroMisaelError: el
+-    llamador decide cómo traducir eso a una respuesta HTTP.
++class PlanesTrabajoCentroMisaelView(APIView):
+     """
+-    documentos = cm.listar_documentos_compartidos(vinculo.paciente_centro_id)
+-    ya_importados = set(
+-        PlanTrabajoMisael.objects.filter(nino=vinculo.nino, documento_centro_id__isnull=False)
+-        .values_list('documento_centro_id', flat=True)
+-    )
+-    pendientes = [doc for doc in documentos if doc['id'] not in ya_importados]
+-    return documentos, ya_importados, pendientes
+-
++    GET /api/misael-link/centro-misael/planes-trabajo/?nino_id=<uuid>
+ 
+-class PendientesCentroMisaelView(APIView):
+-    """
+-    GET /api/misael-link/centro-misael/pendientes/?nino_id=<uuid>
+-
+-    Chequeo liviano de "solo lectura": cuenta cuántos documentos
+-    compartidos desde Centro Misael todavía NO se importaron como
+-    PlanTrabajoMisael, sin descargar archivos ni crear nada. Pensado
+-    para pintar un indicador en la lista de vinculados sin obligar al
+-    usuario a apretar "Sincronizar" a ciegas.
++    Lista en vivo los planes de trabajo (modelo PlanTrabajo) que los
++    profesionales del Centro Misael crearon para este paciente — cada
++    uno con su propio profesional, área, fechas y documento adjunto.
++    Solo lectura: no se descarga ni guarda nada en Misael Kids, se
++    consulta la API de Centro Misael en cada request.
+     """
+     permission_classes = [IsAuthenticated, NoEsTutor]
+ 
+@@ -292,80 +265,86 @@ class PendientesCentroMisaelView(APIView):
+             )
+ 
+         try:
+-            _, _, pendientes = _documentos_y_pendientes(vinculo)
++            planes = cm.listar_planes_trabajo(vinculo.paciente_centro_id)
+         except cm.CentroMisaelNoConfigurado as exc:
+             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+         except cm.CentroMisaelError as exc:
+             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+ 
+-        return Response({'pendientes': len(pendientes)})
++        vinculo.ultima_sincronizacion = timezone.now()
++        vinculo.save(update_fields=['ultima_sincronizacion'])
++
++        return Response({'planes': planes})
++
+ 
++# ═══════════════════════════════════════════════════════════════════
++# Endpoints ENTRANTES: Centro Misael consultando a Misael Kids
++# ═══════════════════════════════════════════════════════════════════
+ 
+-class SincronizarDocumentosCentroMisaelView(APIView):
++class ConsultaVinculoCentroMisaelView(APIView):
+     """
+-    POST /api/misael-link/centro-misael/sincronizar/
+-    body: { "nino_id": 45 }
++    GET /api/misael-link/consulta/vinculo/?paciente_centro_id=<id>
+ 
+-    Trae los documentos que el profesional de Centro Misael marcó como
+-    "Compartir con Misael Kids" y los guarda como PlanTrabajoMisael,
+-    sin duplicar los que ya se hayan importado antes. Funciona igual
+-    si el paciente está inactivo en Centro Misael.
++    Llamado por Centro Misael (con su propia API key) para saber si un
++    paciente suyo ya está vinculado con algún niño de Misael Kids, sin
++    necesidad de mantener una copia de la tabla de vínculos del otro
++    lado — Misael Kids sigue siendo la única fuente de verdad.
+     """
+-    permission_classes = [IsAuthenticated, NoEsTutor]
++    authentication_classes = [CentroMisaelAPIKeyAuthentication]
++    permission_classes = [IsAuthenticated]
+ 
+-    def post(self, request):
+-        nino_id = request.data.get('nino_id')
+-        vinculo = _obtener_vinculo_o_404(nino_id)
+-        if vinculo is None:
+-            return Response(
+-                {'detail': 'Este niño no está vinculado con Centro Misael todavía.'}, status=404
+-            )
++    def get(self, request):
++        paciente_centro_id = request.query_params.get('paciente_centro_id')
++        if not paciente_centro_id:
++            return Response({'detail': 'paciente_centro_id es requerido.'}, status=400)
+ 
+-        try:
+-            documentos, ya_importados, _ = _documentos_y_pendientes(vinculo)
+-        except cm.CentroMisaelNoConfigurado as exc:
+-            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+-        except cm.CentroMisaelError as exc:
+-            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
++        vinculo = VinculoCentroMisael.objects.select_related('nino').filter(
++            paciente_centro_id=paciente_centro_id
++        ).first()
+ 
+-        creados = []
+-        for doc in documentos:
+-            if doc['id'] in ya_importados:
+-                continue
+-            fecha_str = (doc.get('fecha_subida') or '')[:10]
+-            plan = PlanTrabajoMisael(
+-                nino=vinculo.nino,
+-                profesional_email='',
+-                profesional_nombre=doc.get('subido_por_nombre', '') or 'Centro Misael',
+-                descripcion=doc.get('descripcion') or doc.get('titulo', ''),
+-                fecha_inicio=fecha_str or timezone.now().date(),
+-                origen='sincronizado',
+-                documento_centro_id=doc['id'],
+-            )
+-            if doc.get('archivo_url'):
+-                try:
+-                    contenido = cm.descargar_archivo(doc['archivo_url'])
+-                    plan.informe_pdf.save(
+-                        doc.get('nombre_archivo') or f'plan_misael_{doc["id"]}.pdf',
+-                        ContentFile(contenido), save=False,
+-                    )
+-                except cm.CentroMisaelError:
+-                    pass  # el registro igual se crea, sin archivo adjunto
+-            plan.save()
+-            creados.append(plan)
+-
+-        if creados:
+-            vinculo.nino.tiene_plan_misael = True
+-            vinculo.nino.save(update_fields=['tiene_plan_misael'])
+-        vinculo.ultima_sincronizacion = timezone.now()
+-        vinculo.save(update_fields=['ultima_sincronizacion'])
++        if vinculo is None:
++            return Response({'vinculado': False})
+ 
+         return Response({
+-            'importados': len(creados),
+-            'planes': PlanTrabajoMisaelSerializer(creados, many=True).data,
++            'vinculado': True,
++            'nino_id': vinculo.nino_id,
++            'nino_nombre': vinculo.nino.nombre_completo,
++            'fecha_vinculacion': vinculo.fecha_vinculacion,
+         })
+ 
+ 
++class DerivacionesCentroMisaelView(APIView):
++    """
++    GET /api/misael-link/consulta/derivaciones/?paciente_centro_id=<id>
++
++    Llamado por Centro Misael para ver las derivaciones que Misael Kids
++    mandó sobre el paciente vinculado. Marca `vista_por_centro=True` en
++    las que devuelve, para que Misael Kids pueda mostrar más adelante
++    cuáles ya fueron revisadas del otro lado.
++    """
++    authentication_classes = [CentroMisaelAPIKeyAuthentication]
++    permission_classes = [IsAuthenticated]
++
++    def get(self, request):
++        paciente_centro_id = request.query_params.get('paciente_centro_id')
++        if not paciente_centro_id:
++            return Response({'detail': 'paciente_centro_id es requerido.'}, status=400)
++
++        try:
++            vinculo = VinculoCentroMisael.objects.get(paciente_centro_id=paciente_centro_id)
++        except VinculoCentroMisael.DoesNotExist:
++            return Response({'detail': 'Ese paciente no está vinculado con ningún niño.'}, status=404)
++
++        derivaciones = Derivacion.objects.filter(nino=vinculo.nino).order_by('-fecha_solicitud')
++        data = DerivacionSerializer(derivaciones, many=True).data
++
++        no_vistas = derivaciones.filter(vista_por_centro=False)
++        if no_vistas.exists():
++            no_vistas.update(vista_por_centro=True, fecha_vista_por_centro=timezone.now())
++
++        return Response(data)
++
++
+ class VinculoCentroMisaelViewSet(viewsets.ReadOnlyModelViewSet):
+     queryset = VinculoCentroMisael.objects.select_related('nino', 'vinculado_por').all()
+     serializer_class = VinculoCentroMisaelSerializer

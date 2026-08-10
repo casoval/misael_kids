@@ -1,0 +1,176 @@
+diff --git a/frontend/pages/panel/misael-link.html b/frontend/pages/panel/misael-link.html
+index bd5e192..d407769 100644
+--- a/frontend/pages/panel/misael-link.html
++++ b/frontend/pages/panel/misael-link.html
+@@ -826,7 +826,7 @@ async function cargarVinculados() {
+     const lista = vinculos.results || vinculos;
+     if (!lista.length) { UI.vacio(cont, 'Todavía no hay niños vinculados con Centro Misael', '🔗'); return; }
+     cont.innerHTML = lista.map(v => `
+-      <div class="card" style="margin-bottom:var(--gap-sm);padding:var(--gap-md);display:flex;
++      <div class="card" id="vinculo-${v.nino}" style="margin-bottom:var(--gap-sm);padding:var(--gap-md);display:flex;
+         justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--gap-sm)">
+         <div>
+           <strong>${v.nino_nombre}</strong>
+@@ -838,15 +838,45 @@ async function cargarVinculados() {
+             ${v.ultima_sincronizacion ? '· Última sync: '+new Date(v.ultima_sincronizacion).toLocaleString() : '· Sin sincronizar aún'}
+           </div>
+         </div>
+-        <button class="btn btn-outline btn-sm" onclick="sincronizarPlanesMisael(${v.nino})">
+-          🔄 Sincronizar planes/documentos
+-        </button>
++        <div style="display:flex;align-items:center;gap:8px">
++          <span id="pendientes-${v.nino}"></span>
++          <button class="btn btn-outline btn-sm" id="btn-sync-${v.nino}" onclick="sincronizarPlanesMisael('${v.nino}')">
++            🔄 Sincronizar planes/documentos
++          </button>
++        </div>
+       </div>`).join('');
++
++    // Chequeo de pendientes en segundo plano, sin bloquear el render de
++    // la lista: cada card se entera por su cuenta si tiene algo nuevo.
++    lista.forEach(v => verificarPendientes(v.nino));
+   } catch (err) {
+     UI.vacio(cont, 'Error: '+err.message, '⚠️');
+   }
+ }
+ 
++async function verificarPendientes(ninoId) {
++  const badge = document.getElementById(`pendientes-${ninoId}`);
++  const boton = document.getElementById(`btn-sync-${ninoId}`);
++  if (!badge) return; // la card ya no está (se recargó la lista mientras tanto)
++  try {
++    const resp = await API.get(`/misael-link/centro-misael/pendientes/?nino_id=${ninoId}`);
++    if (resp.pendientes > 0) {
++      badge.innerHTML = `<span class="chip chip-coral" title="Hay documentos nuevos en Centro Misael sin importar">
++        🔴 ${resp.pendientes} nuevo${resp.pendientes === 1 ? '' : 's'}
++      </span>`;
++      boton?.classList.remove('btn-outline');
++      boton?.classList.add('btn-primary');
++    }
++    // Si pendientes es 0 no mostramos nada: evita ruido visual en la
++    // mayoría de las cards, que van a estar al día.
++  } catch (err) {
++    // Fallo silencioso a propósito: es solo un indicador informativo,
++    // no queremos tapar la pantalla de toasts de error si Centro Misael
++    // está caído — el botón de sincronizar ya reporta el error real
++    // cuando el usuario efectivamente lo intenta.
++  }
++}
++
+ async function sincronizarPlanesMisael(ninoId) {
+   try {
+     const resp = await API.post('/misael-link/centro-misael/sincronizar/', { nino_id: ninoId });
+diff --git a/misael_link/urls.py b/misael_link/urls.py
+index 2df1df9..4b8211a 100644
+--- a/misael_link/urls.py
++++ b/misael_link/urls.py
+@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
+ from .views import (
+     DerivacionViewSet, PlanTrabajoMisaelViewSet, VinculoCentroMisaelViewSet,
+     BuscarPacienteCentroMisaelView, VincularCentroMisaelView,
+-    SincronizarDocumentosCentroMisaelView,
++    SincronizarDocumentosCentroMisaelView, PendientesCentroMisaelView,
+ )
+ router = DefaultRouter()
+ router.register(r"derivaciones",   DerivacionViewSet,       basename="derivacion")
+@@ -13,5 +13,6 @@ urlpatterns = [
+     path("centro-misael/buscar/", BuscarPacienteCentroMisaelView.as_view(), name="cm-buscar"),
+     path("centro-misael/vincular/", VincularCentroMisaelView.as_view(), name="cm-vincular"),
+     path("centro-misael/sincronizar/", SincronizarDocumentosCentroMisaelView.as_view(), name="cm-sincronizar"),
++    path("centro-misael/pendientes/", PendientesCentroMisaelView.as_view(), name="cm-pendientes"),
+     path("", include(router.urls)),
+ ]
+\ No newline at end of file
+diff --git a/misael_link/views.py b/misael_link/views.py
+index e87a197..22a6e1d 100644
+--- a/misael_link/views.py
++++ b/misael_link/views.py
+@@ -248,6 +248,59 @@ class VincularCentroMisaelView(APIView):
+         }, status=201)
+ 
+ 
++def _obtener_vinculo_o_404(nino_id):
++    try:
++        return VinculoCentroMisael.objects.select_related('nino').get(nino_id=nino_id)
++    except VinculoCentroMisael.DoesNotExist:
++        return None
++
++
++def _documentos_y_pendientes(vinculo):
++    """
++    Trae los documentos compartidos desde Centro Misael y separa cuáles
++    ya se importaron antes (por documento_centro_id) de cuáles son nuevos.
++    Puede lanzar CentroMisaelNoConfigurado / CentroMisaelError: el
++    llamador decide cómo traducir eso a una respuesta HTTP.
++    """
++    documentos = cm.listar_documentos_compartidos(vinculo.paciente_centro_id)
++    ya_importados = set(
++        PlanTrabajoMisael.objects.filter(nino=vinculo.nino, documento_centro_id__isnull=False)
++        .values_list('documento_centro_id', flat=True)
++    )
++    pendientes = [doc for doc in documentos if doc['id'] not in ya_importados]
++    return documentos, ya_importados, pendientes
++
++
++class PendientesCentroMisaelView(APIView):
++    """
++    GET /api/misael-link/centro-misael/pendientes/?nino_id=<uuid>
++
++    Chequeo liviano de "solo lectura": cuenta cuántos documentos
++    compartidos desde Centro Misael todavía NO se importaron como
++    PlanTrabajoMisael, sin descargar archivos ni crear nada. Pensado
++    para pintar un indicador en la lista de vinculados sin obligar al
++    usuario a apretar "Sincronizar" a ciegas.
++    """
++    permission_classes = [IsAuthenticated, NoEsTutor]
++
++    def get(self, request):
++        nino_id = request.query_params.get('nino_id')
++        vinculo = _obtener_vinculo_o_404(nino_id)
++        if vinculo is None:
++            return Response(
++                {'detail': 'Este niño no está vinculado con Centro Misael todavía.'}, status=404
++            )
++
++        try:
++            _, _, pendientes = _documentos_y_pendientes(vinculo)
++        except cm.CentroMisaelNoConfigurado as exc:
++            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
++        except cm.CentroMisaelError as exc:
++            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
++
++        return Response({'pendientes': len(pendientes)})
++
++
+ class SincronizarDocumentosCentroMisaelView(APIView):
+     """
+     POST /api/misael-link/centro-misael/sincronizar/
+@@ -262,25 +315,19 @@ class SincronizarDocumentosCentroMisaelView(APIView):
+ 
+     def post(self, request):
+         nino_id = request.data.get('nino_id')
+-        try:
+-            vinculo = VinculoCentroMisael.objects.select_related('nino').get(nino_id=nino_id)
+-        except VinculoCentroMisael.DoesNotExist:
++        vinculo = _obtener_vinculo_o_404(nino_id)
++        if vinculo is None:
+             return Response(
+                 {'detail': 'Este niño no está vinculado con Centro Misael todavía.'}, status=404
+             )
+ 
+         try:
+-            documentos = cm.listar_documentos_compartidos(vinculo.paciente_centro_id)
++            documentos, ya_importados, _ = _documentos_y_pendientes(vinculo)
+         except cm.CentroMisaelNoConfigurado as exc:
+             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+         except cm.CentroMisaelError as exc:
+             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+ 
+-        ya_importados = set(
+-            PlanTrabajoMisael.objects.filter(nino=vinculo.nino, documento_centro_id__isnull=False)
+-            .values_list('documento_centro_id', flat=True)
+-        )
+-
+         creados = []
+         for doc in documentos:
+             if doc['id'] in ya_importados:

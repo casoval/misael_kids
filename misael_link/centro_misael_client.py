@@ -65,6 +65,16 @@ def listar_documentos_compartidos(paciente_id):
     return data or []
 
 
+def listar_planes_trabajo(paciente_id):
+    """
+    Planes de trabajo (modelo PlanTrabajo) creados por profesionales del
+    Centro Misael para este paciente. Consulta en vivo, sin persistir
+    nada del lado de Misael Kids — de solo lectura.
+    """
+    data = _get(f'/pacientes/{paciente_id}/planes-trabajo/')
+    return data or []
+
+
 def descargar_archivo(url, timeout=30):
     """
     Descarga el archivo de un documento compartido.

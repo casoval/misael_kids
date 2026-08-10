@@ -33,9 +33,24 @@ class Derivacion(ModeloBase):
     respuesta_centro = models.TextField(blank=True)
     consentimiento_tutor = models.BooleanField(default=False)
 
+    # ── Visto por Centro Misael ─────────────────────────────────────
+    # Se marca cuando Centro Misael consulta esta derivación por primera
+    # vez desde su página de vinculaciones, para poder pintar un aviso
+    # de "nueva" del otro lado sin necesitar una tabla de alertas aparte.
+    vista_por_centro = models.BooleanField(default=False)
+    fecha_vista_por_centro = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         verbose_name = 'Derivación al Centro Misael'
         ordering     = ['-fecha_solicitud']
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.nino_id and not hasattr(self.nino, 'vinculo_centro_misael'):
+            raise ValidationError(
+                'Este niño todavía no está vinculado con Centro Misael. '
+                'Vincúlalo primero en la pestaña "Vincular con Centro Misael".'
+            )
 
     def __str__(self):
         return f'Derivación {self.nino} — {self.area_derivacion} ({self.get_estado_display()})'
@@ -77,72 +92,8 @@ class VinculoCentroMisael(ModeloBase):
     def __str__(self):
         return f'{self.nino} ↔ paciente #{self.paciente_centro_id} en Centro Misael'
 
-
-class PlanTrabajoMisael(ModeloBase):
-    """
-    Plan de trabajo creado por un profesional del Centro Misael
-    para ser ejecutado por la educadora del jardín.
-    Se vincula a un PlanIndividual de la app agenda.
-
-    Centro Misael no expone ninguna API para consultar esto en vivo (se
-    revisó su repo: no hay endpoint de pacientes/evaluaciones/planes), así
-    que esto sigue siendo un registro manual — pero con más contexto y
-    con el informe adjunto, para no depender de tener que preguntarle al
-    profesional cada dato por WhatsApp.
-    """
-    nino              = models.ForeignKey('ninos.Nino', on_delete=models.CASCADE, related_name='planes_misael')
-    derivacion        = models.ForeignKey(Derivacion, on_delete=models.SET_NULL, null=True, blank=True)
-    plan_individual   = models.OneToOneField(
-        'agenda.PlanIndividual', on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='plan_misael'
-    )
-    profesional_email    = models.EmailField(help_text='Email del profesional en el Centro Misael')
-    profesional_nombre   = models.CharField(max_length=200)
-    profesional_telefono = models.CharField(max_length=20, blank=True)
-    area_intervencion    = models.CharField(
-        max_length=150, blank=True,
-        help_text='Ej: Lenguaje, Terapia ocupacional, Psicología...'
-    )
-    frecuencia_sesiones  = models.CharField(
-        max_length=100, blank=True,
-        help_text='Ej: 2 veces por semana'
-    )
-    descripcion       = models.TextField(help_text='Objetivos y lineamientos del plan')
-    notas_seguimiento = models.TextField(
-        blank=True,
-        help_text='Avances, observaciones de la educadora, ajustes acordados con el profesional'
-    )
-    informe_pdf       = models.FileField(
-        upload_to='planes_misael/', null=True, blank=True,
-        help_text='Informe o plan de trabajo del Centro Misael, en PDF'
-    )
-    fecha_inicio      = models.DateField()
-    fecha_fin         = models.DateField(null=True, blank=True)
-    proxima_revision  = models.DateField(
-        null=True, blank=True,
-        help_text='Cuándo toca revisar/renovar el plan con el Centro Misael'
-    )
-    activo            = models.BooleanField(default=True)
-    consentimiento_tutor = models.BooleanField(default=False,
-        help_text='El tutor autorizó compartir información entre ambos centros')
-
-    # ── Sincronización automática desde Centro Misael ──────────────
-    # Si el plan/informe fue traído automáticamente desde la API de
-    # Centro Misael (en vez de cargado a mano), guardamos el ID del
-    # documento de origen para no volver a importarlo en cada sync.
-    documento_centro_id = models.PositiveIntegerField(
-        null=True, blank=True, unique=True,
-        help_text='ID del DocumentoPaciente en Centro Misael, si fue traído automáticamente'
-    )
-    origen = models.CharField(
-        max_length=20,
-        choices=[('manual', 'Cargado manualmente'), ('sincronizado', 'Sincronizado desde Centro Misael')],
-        default='manual',
-    )
-
-    class Meta:
-        verbose_name = 'Plan de trabajo Centro Misael'
-        ordering     = ['-fecha_inicio']
-
-    def __str__(self):
-        return f'Plan Misael — {self.nino} por {self.profesional_nombre}'
+# NOTA: PlanTrabajoMisael se eliminó (ver migración 0004_delete_plantrabajomisael_and_more).
+# Los planes de trabajo ahora los crea el profesional directamente en Centro
+# Misael (modelo PlanTrabajo, repo centro_terapias_v2) y Misael Kids los
+# consulta en vivo, de solo lectura, vía centro_misael_client.listar_planes_trabajo().
+# Ya no hay copia local ni formulario manual del lado de Misael Kids.
