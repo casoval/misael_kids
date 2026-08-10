@@ -189,9 +189,9 @@
         </div>
         <div style="display:flex;gap:var(--gap-sm);align-items:flex-end;margin-bottom:var(--gap-md);flex-wrap:wrap">
           <div class="form-grupo" style="margin:0;min-width:220px">
-            <label class="form-label">Ver planes de un niño/a vinculado</label>
+            <label class="form-label">Filtrar por niño/a (opcional)</label>
             <select id="pm-filtro-nino" class="form-select" onchange="cargarPlanesMisael()">
-              <option value="">Seleccionar niño/a...</option>
+              <option value="">Todos los niños vinculados</option>
             </select>
           </div>
         </div>
@@ -367,7 +367,7 @@ function cambiarTab(tab) {
     document.getElementById('tab-'+t).classList.toggle('activo',t===tab);
     document.getElementById('panel-'+t).classList.toggle('activo',t===tab);
   });
-  if (tab==='planes' && document.getElementById('pm-filtro-nino').value) cargarPlanesMisael();
+  if (tab==='planes') cargarPlanesMisael();
   if (tab==='vinculacion') cargarVinculados();
 }
 
@@ -505,38 +505,80 @@ async function eliminarDerivacion(id, nombre) {
 // ── Planes de trabajo Misael ──
 async function cargarPlanesMisael() {
   const cont = document.getElementById('lista-planes-misael');
-  const ninoId = document.getElementById('pm-filtro-nino').value;
-  if (!ninoId) { UI.vacio(cont,'Elige un niño/a vinculado para ver sus planes de trabajo','🧠'); return; }
+  const ninoIdFiltro = document.getElementById('pm-filtro-nino').value;
+
+  // Sin niño elegido en el filtro: traemos los planes de TODOS los
+  // niños vinculados (una llamada en vivo por niño, ya que cada plan
+  // vive en Centro Misael scoped a su paciente). Si hay uno elegido,
+  // solo consultamos ese.
+  const vinculos = ninoIdFiltro
+    ? vinculosCache.filter(v => v.nino === ninoIdFiltro)
+    : vinculosCache;
+
+  if (!vinculos.length) {
+    UI.vacio(cont, 'Todavía no hay niños vinculados con Centro Misael', '🧠');
+    return;
+  }
+
   UI.mostrarLoader(cont,'Consultando planes en Centro Misael...');
   try {
-    const data  = await API.get('/misael-link/centro-misael/planes-trabajo/?nino_id='+ninoId);
-    const lista = data.planes || [];
-    if (!lista.length) { UI.vacio(cont,'Este niño/a todavía no tiene planes de trabajo en Centro Misael','🧠'); return; }
-    cont.innerHTML = lista.map(p => `
-      <div class="plan-misael-card">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--gap-sm)">
-          <div>
-            <div style="font-size:var(--text-sm);font-weight:700;color:var(--violeta-d)">
-              👩‍⚕️ ${p.profesional_nombre}
-              ${p.profesional_telefono?'<span style="font-weight:400;color:var(--texto-suave)"> · '+p.profesional_telefono+'</span>':''}
+    const resultados = await Promise.all(vinculos.map(async v => {
+      try {
+        const data = await API.get('/misael-link/centro-misael/planes-trabajo/?nino_id='+v.nino);
+        return { nino_nombre: v.nino_nombre, planes: data.planes || [], error: null };
+      } catch (err) {
+        return { nino_nombre: v.nino_nombre, planes: [], error: err.message };
+      }
+    }));
+
+    const totalPlanes = resultados.reduce((acc, r) => acc + r.planes.length, 0);
+    const conError = resultados.filter(r => r.error);
+
+    if (totalPlanes === 0 && conError.length === resultados.length) {
+      UI.vacio(cont, 'Error consultando Centro Misael: '+conError[0].error, '⚠️');
+      return;
+    }
+    if (totalPlanes === 0) {
+      UI.vacio(cont, ninoIdFiltro
+        ? 'Este niño/a todavía no tiene planes de trabajo en Centro Misael'
+        : 'Ningún niño vinculado tiene planes de trabajo todavía', '🧠');
+      return;
+    }
+
+    const avisoErrores = conError.length ? `
+      <div class="alerta alerta-warn mb-md">
+        ⚠️ No se pudo consultar el plan de: ${conError.map(r=>r.nino_nombre).join(', ')}. El resto se muestra igual.
+      </div>` : '';
+
+    cont.innerHTML = avisoErrores + resultados.filter(r => r.planes.length).map(r => `
+      <div style="margin-bottom:var(--gap-md)">
+        ${!ninoIdFiltro ? `<div style="font-family:var(--font-display);font-size:var(--text-lg);color:var(--violeta-d);margin-bottom:6px">${r.nino_nombre}</div>` : ''}
+        ${r.planes.map(p => `
+        <div class="plan-misael-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--gap-sm)">
+            <div>
+              <div style="font-size:var(--text-sm);font-weight:700;color:var(--violeta-d)">
+                👩‍⚕️ ${p.profesional_nombre}
+                ${p.profesional_telefono?'<span style="font-weight:400;color:var(--texto-suave)"> · '+p.profesional_telefono+'</span>':''}
+              </div>
+              ${p.area_intervencion || p.frecuencia_sesiones ? `<div style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:2px">
+                ${p.area_intervencion?'🎯 '+p.area_intervencion:''} ${p.frecuencia_sesiones?'· 🔁 '+p.frecuencia_sesiones:''}
+              </div>` : ''}
             </div>
-            ${p.area_intervencion || p.frecuencia_sesiones ? `<div style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:2px">
-              ${p.area_intervencion?'🎯 '+p.area_intervencion:''} ${p.frecuencia_sesiones?'· 🔁 '+p.frecuencia_sesiones:''}
-            </div>` : ''}
+            <span class="chip ${p.activo?'chip-verde':'chip-gris'}">${p.activo?'✅ Activo':'Inactivo'}</span>
           </div>
-          <span class="chip ${p.activo?'chip-verde':'chip-gris'}">${p.activo?'✅ Activo':'Inactivo'}</span>
-        </div>
-        <p style="font-size:var(--text-sm);color:var(--texto);line-height:1.7;
-          background:rgba(255,255,255,.6);padding:var(--gap-sm);border-radius:var(--radio-md);
-          margin-bottom:var(--gap-sm)">${p.descripcion}</p>
-        ${p.notas_seguimiento ? `<p style="font-size:var(--text-sm);color:var(--texto);line-height:1.6;
-          background:var(--amarillo-l);padding:var(--gap-sm);border-radius:var(--radio-md);
-          margin-bottom:var(--gap-sm)"><strong>📝 Seguimiento:</strong> ${p.notas_seguimiento}</p>` : ''}
-        <div style="font-size:var(--text-xs);color:var(--violeta-d)">
-          📅 ${UI.fecha(p.fecha_inicio)} ${p.fecha_fin?'→ '+UI.fecha(p.fecha_fin):'→ Vigente'}
-          ${p.proxima_revision?' · 🔔 Revisión: '+UI.fecha(p.proxima_revision):''}
-          ${p.archivo_url?`· <a href="${p.archivo_url}" target="_blank" style="color:var(--violeta-d)">📄 Ver documento →</a>`:''}
-        </div>
+          <p style="font-size:var(--text-sm);color:var(--texto);line-height:1.7;
+            background:rgba(255,255,255,.6);padding:var(--gap-sm);border-radius:var(--radio-md);
+            margin-bottom:var(--gap-sm)">${p.descripcion}</p>
+          ${p.notas_seguimiento ? `<p style="font-size:var(--text-sm);color:var(--texto);line-height:1.6;
+            background:var(--amarillo-l);padding:var(--gap-sm);border-radius:var(--radio-md);
+            margin-bottom:var(--gap-sm)"><strong>📝 Seguimiento:</strong> ${p.notas_seguimiento}</p>` : ''}
+          <div style="font-size:var(--text-xs);color:var(--violeta-d)">
+            📅 ${UI.fecha(p.fecha_inicio)} ${p.fecha_fin?'→ '+UI.fecha(p.fecha_fin):'→ Vigente'}
+            ${p.proxima_revision?' · 🔔 Revisión: '+UI.fecha(p.proxima_revision):''}
+            ${p.archivo_url?`· <a href="${p.archivo_url}" target="_blank" style="color:var(--violeta-d)">📄 Ver documento →</a>`:''}
+          </div>
+        </div>`).join('')}
       </div>`).join('');
   } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
 }
