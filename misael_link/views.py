@@ -1,7 +1,8 @@
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
-from rest_framework import viewsets, filters, status
+from rest_framework import generics, viewsets, filters, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,7 +10,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from ninos.models import Nino, Tutor, NinoTutor
 from .models import Derivacion, VinculoCentroMisael
-from .serializers import DerivacionSerializer, VinculoCentroMisaelSerializer
+from .serializers import (
+    DerivacionSerializer, VinculoCentroMisaelSerializer,
+    NinoBusquedaCentroMisaelSerializer, NinoDetalleCentroMisaelSerializer,
+    VinculoConDerivacionesSerializer,
+)
 from .import centro_misael_client as cm
 from .authentication import CentroMisaelAPIKeyAuthentication
 from accounts.permissions import filtrar_por_tutor, NoEsTutor
@@ -343,6 +348,116 @@ class DerivacionesCentroMisaelView(APIView):
             no_vistas.update(vista_por_centro=True, fecha_vista_por_centro=timezone.now())
 
         return Response(data)
+
+
+class NinosSinVincularCentroMisaelView(generics.ListAPIView):
+    """
+    GET /api/misael-link/consulta/ninos-sin-vincular/?q=<texto>
+
+    Llamado por Centro Misael para buscar niños de Misael Kids que
+    todavía NO tienen vínculo, desde su propia pantalla de
+    vinculación (espejo de BuscarPacienteCentroMisaelView, pero en
+    sentido inverso). Incluye niños activos e inactivos a propósito.
+    """
+    authentication_classes = [CentroMisaelAPIKeyAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = NinoBusquedaCentroMisaelSerializer
+
+    def get_queryset(self):
+        q = self.request.query_params.get('q', '').strip()
+        qs = Nino.objects.filter(
+            vinculo_centro_misael__isnull=True
+        ).order_by('apellidos', 'nombres')
+        if q:
+            qs = qs.filter(
+                Q(nombres__icontains=q) |
+                Q(apellidos__icontains=q) |
+                Q(tutores__tutor__nombres__icontains=q) |
+                Q(tutores__tutor__apellidos__icontains=q)
+            ).distinct()
+        return qs[:25]
+
+
+class NinoDetalleCentroMisaelView(generics.RetrieveAPIView):
+    """
+    GET /api/misael-link/consulta/ninos/<id>/
+
+    Detalle completo del niño, para que Centro Misael copie los datos
+    al crear el Paciente antes de vincular.
+    """
+    authentication_classes = [CentroMisaelAPIKeyAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = NinoDetalleCentroMisaelSerializer
+    queryset = Nino.objects.all()
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+
+
+class VincularDesdeCentroMisaelView(APIView):
+    """
+    POST /api/misael-link/consulta/vincular/
+    body: {"nino_id": "<uuid>", "paciente_centro_id": 123, "nombre_paciente_centro": "..."}
+
+    Registra el vínculo cuando el flujo se inicia del lado de Centro
+    Misael (a diferencia de VincularCentroMisaelView, acá el niño ya
+    existe en Misael Kids y el Paciente ya existe o se acaba de crear
+    del otro lado — este endpoint solo crea el VinculoCentroMisael).
+    """
+    authentication_classes = [CentroMisaelAPIKeyAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        nino_id = request.data.get('nino_id')
+        paciente_centro_id = request.data.get('paciente_centro_id')
+        nombre_paciente_centro = request.data.get('nombre_paciente_centro', '') or ''
+
+        if not nino_id or not paciente_centro_id:
+            return Response(
+                {'detail': 'nino_id y paciente_centro_id son requeridos.'}, status=400
+            )
+
+        try:
+            nino = Nino.objects.get(pk=nino_id)
+        except (Nino.DoesNotExist, ValueError, TypeError):
+            return Response({'detail': 'Niño no encontrado en Misael Kids.'}, status=404)
+
+        if hasattr(nino, 'vinculo_centro_misael'):
+            return Response(
+                {'detail': 'Este niño ya está vinculado con Centro Misael.'}, status=409
+            )
+
+        if VinculoCentroMisael.objects.filter(paciente_centro_id=paciente_centro_id).exists():
+            return Response(
+                {'detail': 'Ese paciente ya está vinculado a otro niño en Misael Kids.'},
+                status=409,
+            )
+
+        vinculo = VinculoCentroMisael.objects.create(
+            nino=nino,
+            paciente_centro_id=paciente_centro_id,
+            nombre_paciente_centro=nombre_paciente_centro,
+        )
+        return Response(VinculoCentroMisaelSerializer(vinculo).data, status=201)
+
+
+class VinculadosListCentroMisaelView(generics.ListAPIView):
+    """
+    GET /api/misael-link/consulta/vinculados/
+
+    Lista todos los vínculos existentes con un resumen de sus
+    derivaciones, para la pestaña "Niños vinculados" de la pantalla
+    de vinculación en Centro Misael.
+    """
+    authentication_classes = [CentroMisaelAPIKeyAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = VinculoConDerivacionesSerializer
+    queryset = (
+        VinculoCentroMisael.objects
+        .select_related('nino', 'vinculado_por')
+        .order_by('-fecha_vinculacion')
+    )
 
 
 class VinculoCentroMisaelViewSet(viewsets.ReadOnlyModelViewSet):

@@ -5,6 +5,8 @@ from .views import (
     BuscarPacienteCentroMisaelView, VincularCentroMisaelView,
     PlanesTrabajoCentroMisaelView,
     ConsultaVinculoCentroMisaelView, DerivacionesCentroMisaelView,
+    NinosSinVincularCentroMisaelView, NinoDetalleCentroMisaelView,
+    VincularDesdeCentroMisaelView, VinculadosListCentroMisaelView,
 )
 router = DefaultRouter()
 router.register(r"derivaciones",   DerivacionViewSet,       basename="derivacion")
@@ -17,5 +19,9 @@ urlpatterns = [
     # Entrante: Centro Misael -> Misael Kids (autenticado con CENTRO_MISAEL_API_KEY)
     path("consulta/vinculo/", ConsultaVinculoCentroMisaelView.as_view(), name="cm-consulta-vinculo"),
     path("consulta/derivaciones/", DerivacionesCentroMisaelView.as_view(), name="cm-consulta-derivaciones"),
+    path("consulta/ninos-sin-vincular/", NinosSinVincularCentroMisaelView.as_view(), name="cm-ninos-sin-vincular"),
+    path("consulta/ninos/<uuid:pk>/", NinoDetalleCentroMisaelView.as_view(), name="cm-nino-detalle"),
+    path("consulta/vincular/", VincularDesdeCentroMisaelView.as_view(), name="cm-vincular-desde-centro"),
+    path("consulta/vinculados/", VinculadosListCentroMisaelView.as_view(), name="cm-vinculados"),
     path("", include(router.urls)),
 ]
