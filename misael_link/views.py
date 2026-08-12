@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, viewsets, filters, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -34,6 +35,23 @@ class DerivacionViewSet(viewsets.ModelViewSet):
         # derivaciones de TODOS los niños, ni siquiera hacía falta
         # adivinar un ID — bastaba con llamar al endpoint sin filtros.
         return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+
+    def perform_create(self, serializer):
+        # `solicitado_por` es un FK obligatorio (no nulo) a Personal.
+        # Antes el frontend mandaba `solicitado_por: null` a mano, lo
+        # que siempre fallaba con "Este campo no puede ser nulo" — se
+        # quitó del campo editable (ver serializer, es read_only) y
+        # ahora se resuelve acá, del usuario logueado, como ya se hace
+        # en VincularCentroMisaelView con `vinculado_por`.
+        personal = _personal_del_usuario(self.request.user)
+        if personal is None:
+            raise ValidationError({
+                'solicitado_por': 'Tu usuario no tiene un perfil de personal (educadora/directora/etc.) '
+                                   'asociado en Misael Kids, así que no se puede registrar quién solicita '
+                                   'la derivación. Pedile a un administrador que vincule tu cuenta a un '
+                                   'perfil de Personal.'
+            })
+        serializer.save(solicitado_por=personal)
 
 
 # ═══════════════════════════════════════════════════════════════════

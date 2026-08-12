@@ -482,7 +482,6 @@ async function guardarDerivacion() {
     respuesta_centro:   document.getElementById('der-respuesta').value||'',
     fecha_respuesta:    document.getElementById('der-fecha-resp').value||null,
     consentimiento_tutor:document.getElementById('der-consentimiento').checked,
-    solicitado_por:     null,
   };
   try {
     if (editandoDerId) await API.patch('/misael-link/derivaciones/'+editandoDerId+'/',datos);

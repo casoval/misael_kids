@@ -8,7 +8,7 @@ class DerivacionSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Derivacion
         fields = ["id","nino","nino_nombre","solicitado_por","solicitado_por_nombre","motivo","area_derivacion","estado","estado_display","fecha_solicitud","fecha_respuesta","respuesta_centro","consentimiento_tutor","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
-        read_only_fields = ["id","fecha_solicitud","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
+        read_only_fields = ["id","solicitado_por","fecha_solicitud","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
 
     def validate_nino(self, nino):
         if not hasattr(nino, 'vinculo_centro_misael'):

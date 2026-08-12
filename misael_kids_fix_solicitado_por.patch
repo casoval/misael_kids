@@ -1,0 +1,61 @@
+diff --git a/frontend/pages/panel/misael-link.html b/frontend/pages/panel/misael-link.html
+index 821f9d3..9a26115 100644
+--- a/frontend/pages/panel/misael-link.html
++++ b/frontend/pages/panel/misael-link.html
+@@ -482,7 +482,6 @@ async function guardarDerivacion() {
+     respuesta_centro:   document.getElementById('der-respuesta').value||'',
+     fecha_respuesta:    document.getElementById('der-fecha-resp').value||null,
+     consentimiento_tutor:document.getElementById('der-consentimiento').checked,
+-    solicitado_por:     null,
+   };
+   try {
+     if (editandoDerId) await API.patch('/misael-link/derivaciones/'+editandoDerId+'/',datos);
+diff --git a/misael_link/serializers.py b/misael_link/serializers.py
+index 978c233..bf8fbf1 100644
+--- a/misael_link/serializers.py
++++ b/misael_link/serializers.py
+@@ -8,7 +8,7 @@ class DerivacionSerializer(serializers.ModelSerializer):
+     class Meta:
+         model  = Derivacion
+         fields = ["id","nino","nino_nombre","solicitado_por","solicitado_por_nombre","motivo","area_derivacion","estado","estado_display","fecha_solicitud","fecha_respuesta","respuesta_centro","consentimiento_tutor","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
+-        read_only_fields = ["id","fecha_solicitud","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
++        read_only_fields = ["id","solicitado_por","fecha_solicitud","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
+ 
+     def validate_nino(self, nino):
+         if not hasattr(nino, 'vinculo_centro_misael'):
+diff --git a/misael_link/views.py b/misael_link/views.py
+index 8735350..adf9d27 100644
+--- a/misael_link/views.py
++++ b/misael_link/views.py
+@@ -3,6 +3,7 @@ from django.db import transaction
+ from django.db.models import Q
+ from django.utils import timezone
+ from rest_framework import generics, viewsets, filters, status
++from rest_framework.exceptions import ValidationError
+ from rest_framework.permissions import IsAuthenticated, AllowAny
+ from rest_framework.response import Response
+ from rest_framework.views import APIView
+@@ -35,6 +36,23 @@ class DerivacionViewSet(viewsets.ModelViewSet):
+         # adivinar un ID — bastaba con llamar al endpoint sin filtros.
+         return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+ 
++    def perform_create(self, serializer):
++        # `solicitado_por` es un FK obligatorio (no nulo) a Personal.
++        # Antes el frontend mandaba `solicitado_por: null` a mano, lo
++        # que siempre fallaba con "Este campo no puede ser nulo" — se
++        # quitó del campo editable (ver serializer, es read_only) y
++        # ahora se resuelve acá, del usuario logueado, como ya se hace
++        # en VincularCentroMisaelView con `vinculado_por`.
++        personal = _personal_del_usuario(self.request.user)
++        if personal is None:
++            raise ValidationError({
++                'solicitado_por': 'Tu usuario no tiene un perfil de personal (educadora/directora/etc.) '
++                                   'asociado en Misael Kids, así que no se puede registrar quién solicita '
++                                   'la derivación. Pedile a un administrador que vincule tu cuenta a un '
++                                   'perfil de Personal.'
++            })
++        serializer.save(solicitado_por=personal)
++
+ 
+ # ═══════════════════════════════════════════════════════════════════
+ # Integración en vivo con Centro Misael (centro_terapias_v2)
