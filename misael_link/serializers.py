@@ -3,12 +3,20 @@ from ninos.models import Nino
 from .models import Derivacion, VinculoCentroMisael
 class DerivacionSerializer(serializers.ModelSerializer):
     nino_nombre      = serializers.CharField(source="nino.nombre_completo", read_only=True)
-    solicitado_por_nombre = serializers.CharField(source="solicitado_por.usuario.nombre_completo", read_only=True)
+    solicitado_por_nombre = serializers.SerializerMethodField()
     estado_display   = serializers.CharField(source="get_estado_display", read_only=True)
     class Meta:
         model  = Derivacion
         fields = ["id","nino","nino_nombre","solicitado_por","solicitado_por_nombre","motivo","area_derivacion","estado","estado_display","fecha_solicitud","fecha_respuesta","respuesta_centro","consentimiento_tutor","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
         read_only_fields = ["id","solicitado_por","fecha_solicitud","vista_por_centro","fecha_vista_por_centro","created_at","updated_at"]
+
+    def get_solicitado_por_nombre(self, obj):
+        # solicitado_por ahora puede ser None (cuentas sin ficha de
+        # Personal asociada también pueden derivar) — sin este chequeo,
+        # obj.solicitado_por.usuario rompía con AttributeError.
+        if obj.solicitado_por_id and obj.solicitado_por:
+            return obj.solicitado_por.usuario.nombre_completo
+        return None
 
     def validate_nino(self, nino):
         if not hasattr(nino, 'vinculo_centro_misael'):

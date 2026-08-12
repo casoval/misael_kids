@@ -24,7 +24,12 @@ class Derivacion(ModeloBase):
     ]
 
     nino             = models.ForeignKey('ninos.Nino', on_delete=models.CASCADE, related_name='derivaciones')
-    solicitado_por   = models.ForeignKey('personal.Personal', on_delete=models.CASCADE)
+    solicitado_por   = models.ForeignKey(
+        'personal.Personal', on_delete=models.SET_NULL, null=True, blank=True,
+        help_text='Quién de Misael Kids solicitó la derivación. Puede quedar vacío '
+                   'si el usuario no tiene una ficha de Personal asociada — la '
+                   'derivación de todos modos puede crearla cualquier cuenta con permiso.',
+    )
     motivo           = models.TextField(help_text='Señales o comportamientos observados')
     area_derivacion  = models.CharField(max_length=200, help_text='Ej: Terapia del lenguaje, psicología')
     estado           = models.CharField(max_length=20, choices=ESTADOS, default=ESTADO_SOLICITADA)
