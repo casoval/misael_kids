@@ -449,6 +449,37 @@ class VincularDesdeCentroMisaelView(APIView):
         return Response(VinculoCentroMisaelSerializer(vinculo).data, status=201)
 
 
+class DesvincularCentroMisaelView(APIView):
+    """
+    DELETE /api/misael-link/consulta/desvincular/?paciente_centro_id=<id>
+
+    Rompe el vínculo entre un niño de Misael Kids y un paciente de
+    Centro Misael, disparado desde el panel de vinculación de Centro
+    Misael. Solo borra el VinculoCentroMisael (la relación en sí) —
+    NUNCA el niño, ni las derivaciones ya hechas, ni los documentos que
+    ya se sincronizaron: esas son cosas que pasaron de verdad y quedan
+    en el historial. Después de desvincular, el niño vuelve a aparecer
+    como "sin vincular" y se puede volver a vincular (al mismo paciente
+    u otro) desde cero si hace falta.
+    """
+    authentication_classes = [CentroMisaelAPIKeyAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        paciente_centro_id = request.query_params.get('paciente_centro_id')
+        if not paciente_centro_id:
+            return Response({'detail': 'paciente_centro_id es requerido.'}, status=400)
+
+        try:
+            vinculo = VinculoCentroMisael.objects.get(paciente_centro_id=paciente_centro_id)
+        except (VinculoCentroMisael.DoesNotExist, ValueError):
+            return Response({'detail': 'Ese paciente no está vinculado con ningún niño.'}, status=404)
+
+        nino_nombre = str(vinculo.nino)
+        vinculo.delete()
+        return Response({'detail': f'Vínculo con {nino_nombre} eliminado correctamente.'}, status=200)
+
+
 class VinculadosListCentroMisaelView(generics.ListAPIView):
     """
     GET /api/misael-link/consulta/vinculados/

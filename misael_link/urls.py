@@ -7,6 +7,7 @@ from .views import (
     ConsultaVinculoCentroMisaelView, DerivacionesCentroMisaelView,
     NinosSinVincularCentroMisaelView, NinoDetalleCentroMisaelView,
     VincularDesdeCentroMisaelView, VinculadosListCentroMisaelView,
+    DesvincularCentroMisaelView,
 )
 router = DefaultRouter()
 router.register(r"derivaciones",   DerivacionViewSet,       basename="derivacion")
@@ -22,6 +23,7 @@ urlpatterns = [
     path("consulta/ninos-sin-vincular/", NinosSinVincularCentroMisaelView.as_view(), name="cm-ninos-sin-vincular"),
     path("consulta/ninos/<uuid:pk>/", NinoDetalleCentroMisaelView.as_view(), name="cm-nino-detalle"),
     path("consulta/vincular/", VincularDesdeCentroMisaelView.as_view(), name="cm-vincular-desde-centro"),
+    path("consulta/desvincular/", DesvincularCentroMisaelView.as_view(), name="cm-desvincular"),
     path("consulta/vinculados/", VinculadosListCentroMisaelView.as_view(), name="cm-vinculados"),
     path("", include(router.urls)),
 ]
