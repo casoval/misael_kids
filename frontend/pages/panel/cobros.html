@@ -413,18 +413,22 @@ async function cargarStats() {
     const sumVencido   = (vencidos.results||vencidos).reduce((s,c)=>s+parseFloat(c.monto_final),0);
     // Solo del mes actual
     const pagadosMes    = (pagados.results||pagados).filter(c => c.fecha_pago?.startsWith(mesISO));
-    // OJO: se suma monto_pagado (lo que realmente entró a caja), NO monto_final.
-    // Un cobro puede quedar "pagado" habiendo cobrado solo una parte y
-    // condonado el resto (botón "Cerrar con lo pagado"); sumar monto_final
-    // ahí infla el recaudado con dinero que nunca se cobró.
-    const sumPagado     = pagadosMes.reduce((s,c)=>s+parseFloat(c.monto_pagado||0),0);
     const sumCondonado  = pagadosMes.reduce((s,c)=>s+parseFloat(c.monto_condonado||0),0);
 
-    // Devoluciones registradas este mes, en cualquier cobro (ver nota arriba).
+    // Caja real del mes = pagos con fecha de este mes - devoluciones con fecha
+    // de este mes, recorriendo TODOS los cobros. OJO: NO se usa c.monto_pagado
+    // porque ese campo ya viene neto de devoluciones (pagos - devoluciones);
+    // restar luego las devoluciones otra vez las descontaba dos veces.
+    // Tampoco se filtra por estado: un cobro cerrado con condonación, o reabierto
+    // por una devolución, igual movió dinero real este mes (ver nota arriba).
     const todosLosCobros = todos.results || todos;
+    const pagosMes = todosLosCobros
+      .flatMap(c => c.pagos || [])
+      .filter(p => p.fecha_pago?.startsWith(mesISO));
     const devolucionesMes = todosLosCobros
       .flatMap(c => c.devoluciones || [])
       .filter(d => d.fecha?.startsWith(mesISO));
+    const sumPagado   = pagosMes.reduce((s,p) => s + parseFloat(p.monto||0), 0);
     const sumDevuelto = devolucionesMes.reduce((s,d) => s + parseFloat(d.monto||0), 0);
 
     document.getElementById('stat-monto-pendiente').textContent = UI.moneda(sumPendiente);
@@ -435,7 +439,7 @@ async function cargarStats() {
     // devuelto), y el detalle chico desglosa pagos, condonado y devuelto.
     document.getElementById('stat-monto-pagado').textContent    = UI.moneda(sumPagado - sumDevuelto);
     document.getElementById('stat-cant-pagado').textContent     = [
-      `${pagadosMes.length} pagos`,
+      `${pagosMes.length} pagos`,
       sumCondonado > 0 ? `${UI.moneda(sumCondonado)} condonado` : null,
       sumDevuelto  > 0 ? `${UI.moneda(sumDevuelto)} devuelto`   : null,
     ].filter(Boolean).join(' · ');
