@@ -1,0 +1,26 @@
+diff --git a/frontend/pages/panel/cobros.html b/frontend/pages/panel/cobros.html
+index 4e33d44..47a1852 100644
+--- a/frontend/pages/panel/cobros.html
++++ b/frontend/pages/panel/cobros.html
+@@ -539,12 +539,17 @@ async function cargarStats() {
+     document.getElementById('stat-monto-vencido').textContent   = UI.moneda(r.vencido.monto);
+     document.getElementById('stat-cant-vencido').textContent    = `${r.vencido.cantidad} cobros`;
+     // El monto grande de la tarjeta es lo neto en caja este mes (pagado -
+-    // devuelto), y el detalle chico desglosa pagos, condonado y devuelto.
++    // devuelto). El detalle chico antes solo mostraba la CANTIDAD de pagos
++    // sin su monto (ej. "2 pagos"), lo que no reflejaba que esos 2 pagos
++    // sumaron Bs. 450 ni que hubo 2 devoluciones sumando Bs. 150 — ahora se
++    // muestra el monto bruto junto a la cantidad de cada movimiento.
+     document.getElementById('stat-monto-pagado').textContent    = UI.moneda(r.caja_mes.neto);
+     document.getElementById('stat-cant-pagado').textContent     = [
+-      `${r.caja_mes.cantidad_pagos} pagos`,
+-      parseFloat(r.caja_mes.condonado)             > 0 ? `${UI.moneda(r.caja_mes.condonado)} condonado` : null,
+-      parseFloat(r.caja_mes.devoluciones)          > 0 ? `${UI.moneda(r.caja_mes.devoluciones)} devuelto` : null,
++      `${UI.moneda(r.caja_mes.ingresos)} en ${r.caja_mes.cantidad_pagos} pago${r.caja_mes.cantidad_pagos===1?'':'s'}`,
++      parseFloat(r.caja_mes.devoluciones) > 0
++        ? `${UI.moneda(r.caja_mes.devoluciones)} devueltos en ${r.caja_mes.cantidad_devoluciones} devolución${r.caja_mes.cantidad_devoluciones===1?'':'es'}`
++        : null,
++      parseFloat(r.caja_mes.condonado) > 0 ? `${UI.moneda(r.caja_mes.condonado)} condonado` : null,
+     ].filter(Boolean).join(' · ');
+   } catch (err) { console.warn('Stats error:', err.message); }
+ }
