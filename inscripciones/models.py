@@ -166,6 +166,15 @@ class Cobro(ModeloBase):
     # decide dar por saldada la deuda aunque no se haya pagado el 100%.
     monto_condonado    = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     motivo_condonacion = models.TextField(blank=True)
+    # Foto del monto condonado tal como quedó al momento del cierre (acción
+    # "Cerrar con lo pagado"). NUNCA se vuelve a tocar después. Sirve para que
+    # el frontend pueda mostrar "condonado originalmente X, ahora Y" cuando
+    # una devolución posterior ajusta `monto_condonado` (ver
+    # `registrar_devolucion` en views.py) — así queda visible que el cierre
+    # cambió y no se pierde de vista el valor con el que se cerró la primera vez.
+    monto_condonado_inicial = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True
+    )
 
     registrado_por    = models.ForeignKey(
         'accounts.Usuario', on_delete=models.SET_NULL, null=True, blank=True
@@ -267,10 +276,17 @@ class Devolucion(ModeloBase):
     Ej: se cobró de más, la familia se da de baja y se le devuelve el saldo
     a favor, un error de cobro, etc.
 
-    Resta de `Cobro.monto_pagado`, así que si el cobro estaba "pagado" y se
-    devuelve una parte, `recalcular_estado()` lo vuelve a abrir solo —
-    consistente con la regla de "cerrar en orden": ese mes bloqueará de
-    nuevo a los siguientes hasta que se resuelva otra vez.
+    Resta de `Cobro.monto_pagado`, así que si el cobro estaba "pagado" por
+    pago real (sin condonación) y se devuelve una parte, `recalcular_estado()`
+    lo vuelve a abrir solo — consistente con la regla de "cerrar en orden":
+    ese mes bloqueará de nuevo a los siguientes hasta que se resuelva otra vez.
+
+    Excepción: si el cobro fue cerrado con condonación (`monto_condonado > 0`,
+    vía la acción "Cerrar con lo pagado"), la devolución NO reabre el mes.
+    En ese caso `registrar_devolucion` (ver views.py) incrementa
+    `monto_condonado` en el mismo monto devuelto, para que el mes siga
+    "pagado" — la decisión de dar el mes por saldado ya se tomó, y una
+    devolución posterior no debe resucitar un cobro que se había perdonado.
     """
     cobro          = models.ForeignKey(Cobro, on_delete=models.CASCADE, related_name='devoluciones')
     monto          = models.DecimalField(max_digits=8, decimal_places=2)

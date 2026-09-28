@@ -51,11 +51,11 @@ class CobroSerializer(serializers.ModelSerializer):
             'fecha_emision', 'fecha_vencimiento',
             'estado', 'estado_display',
             'fecha_pago', 'metodo_pago', 'comprobante',
-            'monto_condonado', 'motivo_condonacion',
+            'monto_condonado', 'monto_condonado_inicial', 'motivo_condonacion',
             'registrado_por', 'observacion', 'pagos', 'devoluciones',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'fecha_emision', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'fecha_emision', 'created_at', 'updated_at', 'monto_condonado_inicial']
 
     def validate(self, data):
         # La creación directa por este endpoint solo está permitida para

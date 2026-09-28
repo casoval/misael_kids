@@ -100,6 +100,8 @@
         </div>
         <div style="display:flex;align-items:flex-end;gap:6px">
           <button class="btn btn-primary" onclick="cargarAsistencia()">Cargar</button>
+          <button class="btn btn-outline" onclick="abrirHistorial()">📅 Historial</button>
+          <button class="btn btn-outline" onclick="abrirResumenMensual()">📊 Resumen mensual</button>
           <button class="btn btn-outline" onclick="exportarCSV()">📥 CSV</button>
         </div>
       </div>
@@ -139,11 +141,61 @@
         </div>
       </div>
 
+      <!-- Resumen mensual (usa el endpoint resumen-mensual, que ya existía
+           en el backend pero antes ninguna pantalla lo consumía) -->
+      <div class="card mt-lg" id="card-resumen-mensual" style="display:none">
+        <div class="card-header">
+          <h3 class="card-titulo">📊 Resumen mensual</h3>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('card-resumen-mensual').style.display='none'">✕</button>
+        </div>
+        <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--gap-md)">
+          <div class="form-grupo" style="margin:0;min-width:150px">
+            <label class="form-label">Mes</label>
+            <select id="rm-mes" class="form-select">
+              <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+              <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+              <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div class="form-grupo" style="margin:0;min-width:110px">
+            <label class="form-label">Año</label>
+            <input type="number" id="rm-anio" class="form-input">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="cargarResumenMensual()">🔍 Ver</button>
+          <span style="font-size:var(--text-xs);color:var(--texto-suave);font-weight:600">
+            Usa la sala seleccionada arriba en los filtros (o todas, si no elegiste ninguna)
+          </span>
+        </div>
+        <div id="rm-resultado"></div>
+      </div>
+
       <!-- Historial -->
       <div class="card mt-lg" id="card-historial" style="display:none">
         <div class="card-header">
           <h3 class="card-titulo">📅 Historial de asistencia</h3>
           <button class="btn btn-outline btn-sm" onclick="document.getElementById('card-historial').style.display='none'">✕</button>
+        </div>
+        <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--gap-md)">
+          <div class="form-grupo" style="margin:0;min-width:150px">
+            <label class="form-label">Desde</label>
+            <input type="date" id="h-desde" class="form-input">
+          </div>
+          <div class="form-grupo" style="margin:0;min-width:150px">
+            <label class="form-label">Hasta</label>
+            <input type="date" id="h-hasta" class="form-input">
+          </div>
+          <div class="form-grupo" style="margin:0;min-width:170px">
+            <label class="form-label">Estado</label>
+            <select id="h-estado" class="form-select">
+              <option value="">Todos</option>
+              <option value="presente">✅ Presente</option>
+              <option value="ausente">❌ Ausente</option>
+              <option value="ausente_justificado">📄 Ausente justificado</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="cargarHistorial()">🔍 Buscar</button>
+          <span style="font-size:var(--text-xs);color:var(--texto-suave);font-weight:600" id="h-info"></span>
         </div>
         <div class="tabla-wrap">
           <table>
@@ -396,12 +448,27 @@ function actualizarResumen() {
 }
 
 async function guardarTodo() {
-  const sinEstado = Object.values(registros).filter(r=>!r.estado);
+  const lista = Object.values(registros);
+  const sinEstado = lista.filter(r=>!r.estado);
   if (sinEstado.length) { UI.toast(sinEstado.length+' niño(s) sin estado asignado','warn'); return; }
+
+  // Validación local (además de la que ya hace el backend): evita mandar
+  // registros con la hora de salida antes o igual que la de entrada, y
+  // dice de entrada a quién hay que corregir en vez de esperar el error
+  // genérico del servidor.
+  const horasInvalidas = lista.filter(r =>
+    r.hora_entrada && r.hora_salida && r.hora_salida <= r.hora_entrada
+  );
+  if (horasInvalidas.length) {
+    UI.toast('⚠️ Hora de salida inválida: '+horasInvalidas.map(r=>r.nino_nombre).join(', '),'warn',5000);
+    return;
+  }
+
   const btn = document.getElementById('btn-guardar');
   btn.disabled=true; btn.textContent='⏳ Guardando...';
-  let ok=0, err=0;
-  for (const r of Object.values(registros)) {
+  let ok=0;
+  const fallidos = [];
+  for (const r of lista) {
     try {
       const payload = {
         inscripcion:r.inscripcion, fecha:r.fecha, estado:r.estado,
@@ -417,11 +484,21 @@ async function guardarTodo() {
         registros[r.inscripcion].asistencia_id = nuevo.id;
       }
       ok++;
-    } catch { err++; }
+    } catch (err) {
+      // Antes solo se contaban los errores (err++); ahora se guarda quién
+      // falló y por qué, para no tener que adivinar cuál de los N niños
+      // quedó sin guardar.
+      fallidos.push({ nombre: r.nino_nombre, motivo: err.message || 'Error desconocido' });
+    }
   }
   btn.disabled=false; btn.textContent='💾 Guardar todo';
-  if (err===0) { UI.toast('✅ '+ok+' registros guardados correctamente','exito'); renderGrid(); }
-  else         { UI.toast('⚠️ '+ok+' guardados, '+err+' con error','warn'); }
+  renderGrid();
+  if (!fallidos.length) {
+    UI.toast('✅ '+ok+' registros guardados correctamente','exito');
+  } else {
+    const detalle = fallidos.map(f => `${f.nombre}: ${f.motivo}`).join(' · ');
+    UI.toast(`⚠️ ${ok} guardados, ${fallidos.length} con error — ${detalle}`, 'warn', 7000);
+  }
 }
 
 // ── Modal detalle ──
@@ -470,17 +547,124 @@ async function cargarPersonasAutorizadas(ninoId) {
 
 function guardarDetalleModal() {
   const inscId = document.getElementById('da-inscripcion-id').value;
+  const horaEntrada = document.getElementById('da-hora-entrada').value;
+  const horaSalida  = document.getElementById('da-hora-salida').value;
+  if (horaEntrada && horaSalida && horaSalida <= horaEntrada) {
+    UI.toast('⚠️ La hora de salida debe ser posterior a la de entrada','warn');
+    return;
+  }
   registros[inscId].estado           = document.getElementById('da-estado').value;
   registros[inscId].entregado_por    = document.getElementById('da-entregado').value;
-  registros[inscId].hora_entrada     = document.getElementById('da-hora-entrada').value;
+  registros[inscId].hora_entrada     = horaEntrada;
   registros[inscId].retirado_por     = document.getElementById('da-retirado').value;
-  registros[inscId].hora_salida      = document.getElementById('da-hora-salida').value;
+  registros[inscId].hora_salida      = horaSalida;
   registros[inscId].retiro_autorizado= document.getElementById('da-autorizado').value==='true';
   registros[inscId].motivo_ausencia  = document.getElementById('da-motivo').value;
   registros[inscId].obs_entrada      = document.getElementById('da-obs-entrada').value;
   UI.cerrarModal('modal-detalle-asist');
   renderGrid();
   UI.toast('Detalle actualizado (recuerda guardar todo)','info');
+}
+
+// ── Resumen mensual ──
+function abrirResumenMensual() {
+  const hoy = new Date();
+  document.getElementById('rm-mes').value  = hoy.getMonth() + 1;
+  document.getElementById('rm-anio').value = hoy.getFullYear();
+  document.getElementById('card-resumen-mensual').style.display = 'block';
+  cargarResumenMensual();
+  document.getElementById('card-resumen-mensual').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function cargarResumenMensual() {
+  const mes    = document.getElementById('rm-mes').value;
+  const anio   = document.getElementById('rm-anio').value;
+  const salaId = document.getElementById('f-sala').value;
+  const cont   = document.getElementById('rm-resultado');
+  cont.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try {
+    // URLSearchParams para que "año" (con ñ) quede bien codificado en la URL.
+    const params = new URLSearchParams({mes, 'año': anio});
+    if (salaId) params.set('sala', salaId);
+    const r = await API.get(`/asistencia/asistencia/resumen-mensual/?${params.toString()}`);
+    const registrosConEstado = r.presentes + r.ausentes + r.justificados;
+    const pctAsistencia = registrosConEstado ? Math.round((r.presentes / registrosConEstado) * 100) : 0;
+    if (!r.total) {
+      cont.innerHTML = '<p style="color:var(--texto-suave);font-weight:600">No hay registros de asistencia para ese mes/sala.</p>';
+      return;
+    }
+    cont.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:var(--gap-md)">
+        <div class="resumen-chip"><span>👶</span><span class="num">${r.total}</span><span>Total registros</span></div>
+        <div class="resumen-chip" style="border-color:var(--verde)">
+          <span>✅</span><span class="num" style="color:var(--verde-d)">${r.presentes}</span><span>Presentes</span>
+        </div>
+        <div class="resumen-chip" style="border-color:var(--coral)">
+          <span>❌</span><span class="num" style="color:var(--coral-d)">${r.ausentes}</span><span>Ausentes</span>
+        </div>
+        <div class="resumen-chip" style="border-color:var(--amarillo)">
+          <span>📄</span><span class="num" style="color:var(--amarillo-d)">${r.justificados}</span><span>Justificados</span>
+        </div>
+        <div class="resumen-chip" style="border-color:var(--turquesa)">
+          <span>📊</span><span class="num" style="color:var(--turquesa-d)">${pctAsistencia}%</span><span>% Asistencia</span>
+        </div>
+      </div>`;
+  } catch (err) {
+    cont.innerHTML = `<p style="color:var(--coral-d)">Error: ${err.message}</p>`;
+  }
+}
+
+// ── Historial ──
+function abrirHistorial() {
+  const hoy = new Date();
+  const hace30 = new Date(hoy);
+  hace30.setDate(hace30.getDate() - 30);
+  document.getElementById('h-desde').value  = UI.fechaHoyISO(hace30);
+  document.getElementById('h-hasta').value  = UI.fechaHoyISO(hoy);
+  document.getElementById('h-estado').value = '';
+  document.getElementById('card-historial').style.display = 'block';
+  cargarHistorial();
+  document.getElementById('card-historial').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function cargarHistorial() {
+  const desde  = document.getElementById('h-desde').value;
+  const hasta  = document.getElementById('h-hasta').value;
+  const estado = document.getElementById('h-estado').value;
+  const salaId = document.getElementById('f-sala').value;
+  const turnoId= document.getElementById('f-turno').value;
+  const tbody  = document.getElementById('tbody-historial');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--texto-suave)">Cargando…</td></tr>';
+  try {
+    let url = `/asistencia/asistencia/historial/?desde=${desde}&hasta=${hasta}`;
+    if (estado)  url += `&estado=${estado}`;
+    if (salaId)  url += `&sala=${salaId}`;
+    if (turnoId) url += `&turno=${turnoId}`;
+    const lista = await API.get(url);
+    document.getElementById('h-info').textContent = `${lista.length} registro(s)`;
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--texto-suave)">Sin registros en ese rango</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(a => `
+      <tr>
+        <td style="font-weight:700">${a.nino_nombre}</td>
+        <td>${UI.fecha(a.fecha)}</td>
+        <td>${UI.chipAsistencia(a.estado)}</td>
+        <td>${a.hora_entrada ? a.hora_entrada.slice(0,5) : '—'}</td>
+        <td>${a.hora_salida  ? a.hora_salida.slice(0,5)  : '—'}</td>
+        <td style="font-size:var(--text-xs);color:var(--texto-suave)">${a.motivo_ausencia || '—'}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="irADia('${a.fecha}')" title="Cargar ese día en la grilla de arriba para editarlo">🗓️ Ir a ese día</button></td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--coral-d)">Error: ${err.message}</td></tr>`;
+  }
+}
+
+function irADia(fecha) {
+  document.getElementById('f-fecha').value = fecha;
+  cargarAsistencia();
+  document.getElementById('ninos-grid').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 // ── Exportar CSV ──

@@ -397,10 +397,16 @@ async function cargarInscripcionesParaModal() {
 
 async function cargarStats() {
   try {
-    const [pendientes, vencidos, pagados] = await Promise.all([
+    const [pendientes, vencidos, pagados, todos] = await Promise.all([
       API.get('/inscripciones/cobros/?estado=pendiente&page_size=500'),
       API.get('/inscripciones/cobros/?estado=vencido&page_size=500'),
       API.get(`/inscripciones/cobros/?estado=pagado&page_size=500`),
+      // Para devoluciones del mes: no basta con mirar los "pagado" de arriba.
+      // Una devolución puede caer sobre un cobro que se pagó (fecha_pago) en
+      // OTRO mes, o puede haberlo reabierto a "parcial" — en ambos casos
+      // desaparecería de `pagados` y el dinero que salió de caja este mes
+      // quedaría invisible. Por eso se recorren TODOS los cobros aquí.
+      API.get('/inscripciones/cobros/?page_size=1000'),
     ]);
 
     const sumPendiente = (pendientes.results||pendientes).reduce((s,c)=>s+parseFloat(c.monto_final),0);
@@ -414,14 +420,25 @@ async function cargarStats() {
     const sumPagado     = pagadosMes.reduce((s,c)=>s+parseFloat(c.monto_pagado||0),0);
     const sumCondonado  = pagadosMes.reduce((s,c)=>s+parseFloat(c.monto_condonado||0),0);
 
+    // Devoluciones registradas este mes, en cualquier cobro (ver nota arriba).
+    const todosLosCobros = todos.results || todos;
+    const devolucionesMes = todosLosCobros
+      .flatMap(c => c.devoluciones || [])
+      .filter(d => d.fecha?.startsWith(mesISO));
+    const sumDevuelto = devolucionesMes.reduce((s,d) => s + parseFloat(d.monto||0), 0);
+
     document.getElementById('stat-monto-pendiente').textContent = UI.moneda(sumPendiente);
     document.getElementById('stat-cant-pendiente').textContent  = `${(pendientes.count||0)} cobros`;
     document.getElementById('stat-monto-vencido').textContent   = UI.moneda(sumVencido);
     document.getElementById('stat-cant-vencido').textContent    = `${(vencidos.count||0)} cobros`;
-    document.getElementById('stat-monto-pagado').textContent    = UI.moneda(sumPagado);
-    document.getElementById('stat-cant-pagado').textContent     = sumCondonado > 0
-      ? `${pagadosMes.length} pagos · ${UI.moneda(sumCondonado)} condonado`
-      : `${pagadosMes.length} pagos`;
+    // El monto grande de la tarjeta es lo neto en caja este mes (pagado -
+    // devuelto), y el detalle chico desglosa pagos, condonado y devuelto.
+    document.getElementById('stat-monto-pagado').textContent    = UI.moneda(sumPagado - sumDevuelto);
+    document.getElementById('stat-cant-pagado').textContent     = [
+      `${pagadosMes.length} pagos`,
+      sumCondonado > 0 ? `${UI.moneda(sumCondonado)} condonado` : null,
+      sumDevuelto  > 0 ? `${UI.moneda(sumDevuelto)} devuelto`   : null,
+    ].filter(Boolean).join(' · ');
   } catch (err) { console.warn('Stats error:', err.message); }
 }
 
@@ -459,6 +476,11 @@ async function cargarCobros() {
     tbody.innerHTML = lista.map(c => {
       const hoy      = new Date().toISOString().split('T')[0];
       const vencido  = c.estado === 'pendiente' && c.fecha_vencimiento < hoy;
+      // Si el cobro se cerró con "Cerrar con lo pagado" y luego una
+      // devolución ajustó el condonado, monto_condonado_inicial (foto del
+      // momento del cierre) ya no coincide con monto_condonado (vigente).
+      const condonadoAjustado = c.monto_condonado_inicial != null
+        && parseFloat(c.monto_condonado_inicial) !== parseFloat(c.monto_condonado);
       return `
         <tr>
           <td>
@@ -470,6 +492,11 @@ async function cargarCobros() {
             <div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(c.monto_final)}</div>
             ${c.monto_base !== c.monto_final
               ? `<div style="font-size:var(--text-xs);color:var(--texto-suave);text-decoration:line-through">${UI.moneda(c.monto_base)}</div>`
+              : ''}
+            ${condonadoAjustado
+              ? `<div style="font-size:var(--text-xs);font-weight:700;color:var(--coral-d)" title="Se ajustó el monto condonado por una devolución posterior al cierre">
+                  🔄 Cierre ajustado: ahora se condona ${UI.moneda(c.monto_condonado)} (antes ${UI.moneda(c.monto_condonado_inicial)})
+                 </div>`
               : ''}
             ${c.estado === 'parcial'
               ? `<div style="font-size:var(--text-xs);color:var(--violeta-d,#7c3aed);font-weight:700">

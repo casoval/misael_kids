@@ -19,3 +19,16 @@ class AsistenciaSerializer(serializers.ModelSerializer):
             'registrado_por', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        # En un PATCH parcial, el campo que no viene en `attrs` hay que
+        # tomarlo de la instancia ya guardada (si existe), si no un cambio
+        # de una sola hora podría comparase contra None y nunca detectar
+        # una salida antes que la entrada ya guardada.
+        hora_entrada = attrs.get('hora_entrada', getattr(self.instance, 'hora_entrada', None))
+        hora_salida  = attrs.get('hora_salida',  getattr(self.instance, 'hora_salida', None))
+        if hora_entrada and hora_salida and hora_salida <= hora_entrada:
+            raise serializers.ValidationError({
+                'hora_salida': 'La hora de salida debe ser posterior a la hora de entrada.'
+            })
+        return attrs

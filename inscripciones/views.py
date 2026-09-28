@@ -333,10 +333,14 @@ class CobroViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Debes indicar el motivo para cerrar el cobro con lo pagado.'},
                              status=status.HTTP_400_BAD_REQUEST)
 
-        cobro.monto_condonado    = cobro.saldo_pendiente
-        cobro.motivo_condonacion = motivo
-        cobro.registrado_por     = request.user
-        cobro.save(update_fields=['monto_condonado', 'motivo_condonacion', 'registrado_por'])
+        cobro.monto_condonado         = cobro.saldo_pendiente
+        cobro.monto_condonado_inicial = cobro.saldo_pendiente
+        cobro.motivo_condonacion      = motivo
+        cobro.registrado_por          = request.user
+        cobro.save(update_fields=[
+            'monto_condonado', 'monto_condonado_inicial',
+            'motivo_condonacion', 'registrado_por',
+        ])
         cobro.recalcular_estado()
         cobro.refresh_from_db()
 
@@ -347,10 +351,15 @@ class CobroViewSet(viewsets.ModelViewSet):
         """
         Registra una devolución de dinero sobre este cobro (ej. se cobró de
         más, la familia se dio de baja y hay saldo a favor, un error de
-        cobro). Resta de lo pagado: si el cobro estaba "pagado" y se
-        devuelve una parte, recalcular_estado() lo reabre solo — y a partir
-        de ahí vuelve a aplicar la regla de "cerrar en orden" con los
-        cobros posteriores, como corresponde.
+        cobro). Resta de lo pagado: si el cobro estaba "pagado" por pago
+        real (sin condonación) y se devuelve una parte, recalcular_estado()
+        lo reabre solo — y a partir de ahí vuelve a aplicar la regla de
+        "cerrar en orden" con los cobros posteriores, como corresponde.
+
+        Excepción: si el cobro ya se había cerrado con "Cerrar con lo
+        pagado" (monto_condonado > 0), la devolución NO reabre el mes —
+        el monto condonado se incrementa en el mismo monto devuelto para
+        que el mes se mantenga "pagado" (ver ajuste más abajo).
 
         No se puede devolver más de lo que efectivamente se pagó (lo
         condonado nunca fue dinero real, no hay nada que devolver de eso).
@@ -385,6 +394,23 @@ class CobroViewSet(viewsets.ModelViewSet):
             registrado_por = request.user,
         )
         asignar_numero_recibo(devolucion)
+
+        # Si el mes ya se había cerrado con "Cerrar con lo pagado" (tiene
+        # condonación), esta devolución NO debe reabrirlo: la decisión de
+        # darlo por saldado ya se tomó. El monto condonado absorbe la
+        # diferencia devuelta, así el mes se mantiene "pagado" y no vuelve
+        # a pedir un pago que ya se había perdonado.
+        if cobro.monto_condonado > 0:
+            nota_ajuste = (
+                f'Ajuste {date.today().isoformat()}: +{monto} Bs. condonados '
+                f'por devolución (motivo devolución: {motivo}).'
+            )
+            cobro.monto_condonado    = cobro.monto_condonado + monto
+            cobro.motivo_condonacion = (
+                f'{cobro.motivo_condonacion}\n{nota_ajuste}'.strip()
+                if cobro.motivo_condonacion else nota_ajuste
+            )
+            cobro.save(update_fields=['monto_condonado', 'motivo_condonacion'])
 
         cobro.recalcular_estado()
         cobro.refresh_from_db()

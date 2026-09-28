@@ -146,6 +146,9 @@ def _serializar_cobro_resumen(cobro):
         'monto_pagado':      str(cobro.monto_pagado),
         'saldo_pendiente':   str(cobro.saldo_pendiente),
         'monto_condonado':   str(cobro.monto_condonado),
+        'monto_condonado_inicial': (
+            str(cobro.monto_condonado_inicial) if cobro.monto_condonado_inicial is not None else None
+        ),
         'motivo_condonacion': cobro.motivo_condonacion,
         'fecha_emision':     cobro.fecha_emision.isoformat(),
         'fecha_vencimiento': cobro.fecha_vencimiento.isoformat(),

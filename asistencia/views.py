@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -11,7 +11,7 @@ from .models import Asistencia
 from .serializers import AsistenciaSerializer
 from inscripciones.models import Cobro, Inscripcion
 from inscripciones.services import generar_ciclo_mensual
-from accounts.permissions import filtrar_por_tutor
+from accounts.permissions import filtrar_por_tutor, NoEsTutor
 
 
 class AsistenciaViewSet(viewsets.ModelViewSet):
@@ -20,7 +20,13 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         'inscripcion__turno', 'registrado_por'
     ).all()
     serializer_class   = AsistenciaSerializer
-    permission_classes = [IsAuthenticated]
+    # Lectura para cualquier autenticado (un tutor solo ve la asistencia de
+    # su propio hijo, filtrado en get_queryset). Escritura solo personal del
+    # centro: sin NoEsTutor, cualquier tutor podía marcar/editar asistencia
+    # de CUALQUIER niño (el `inscripcion` del POST nunca se validaba contra
+    # sus propios hijos) — y eso además puede disparar la generación
+    # automática de un cobro de mensualidad para una familia ajena.
+    permission_classes = [IsAuthenticated, NoEsTutor]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields   = [
         'fecha', 'estado', 'retiro_autorizado',
@@ -112,3 +118,38 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
             'total': total, 'presentes': presentes,
             'ausentes': ausentes, 'justificados': justif,
         })
+
+    @action(detail=False, methods=['get'], url_path='historial')
+    def historial(self, request):
+        """
+        Historial de asistencia en un rango de fechas (por defecto, los
+        últimos 30 días), filtrable por niño/sala/turno/estado. Alimenta la
+        tarjeta "Historial de asistencia" del frontend — antes esa tarjeta
+        existía en el HTML pero no tenía ningún endpoint ni función que la
+        llenara, así que era imposible ver ausencias o retrasos de un niño
+        más allá del día que se tiene cargado en pantalla.
+
+        Respeta el mismo filtro de tutores que el resto del ViewSet: un
+        tutor solo puede pedir el historial de su propio hijo (vía `nino`).
+        """
+        hoy   = date.today()
+        desde = request.query_params.get('desde') or (hoy - timedelta(days=30)).isoformat()
+        hasta = request.query_params.get('hasta') or hoy.isoformat()
+        nino  = request.query_params.get('nino')
+        sala  = request.query_params.get('sala')
+        turno = request.query_params.get('turno')
+        estado = request.query_params.get('estado')
+
+        qs = self.get_queryset().filter(fecha__gte=desde, fecha__lte=hasta)
+        if nino:
+            qs = qs.filter(inscripcion__nino=nino)
+        if sala:
+            qs = qs.filter(inscripcion__sala=sala)
+        if turno:
+            qs = qs.filter(inscripcion__turno=turno)
+        if estado:
+            qs = qs.filter(estado=estado)
+        qs = qs.order_by('-fecha', 'inscripcion__nino__apellidos')[:500]
+
+        serializer = AsistenciaSerializer(qs, many=True, context={'request': request})
+        return Response(serializer.data)
