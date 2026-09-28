@@ -115,6 +115,15 @@
         </div>
       </div>
 
+      <!-- Pestañas: cobros programados vs. movimiento real de caja -->
+      <div class="tabs-cobros" style="display:flex;gap:var(--gap-sm);margin-bottom:var(--gap-lg)">
+        <button class="btn btn-primary tab-cobros-btn" id="tab-btn-cobros" onclick="cambiarVista('cobros')">📋 Cobros</button>
+        <button class="btn btn-outline tab-cobros-btn" id="tab-btn-movimientos" onclick="cambiarVista('movimientos')">🧾 Movimientos (pagos y devoluciones)</button>
+      </div>
+
+      <!-- ══ VISTA: Cobros ══ -->
+      <div id="vista-cobros">
+
       <!-- Filtros -->
       <div class="filtros-bar">
         <div class="form-grupo">
@@ -143,7 +152,7 @@
         </div>
         <div class="form-grupo">
           <label class="form-label">🏢 Sucursal</label>
-          <select class="form-select" id="filtro-sucursal-cobro">
+          <select class="form-select" id="filtro-sucursal-cobro" onchange="cargarStats()">
             <option value="">Todas</option>
           </select>
         </div>
@@ -182,8 +191,114 @@
         <div class="paginacion" id="paginacion-cobros"></div>
       </div>
 
+      </div>
+
+      <!-- ══ VISTA: Movimientos (libro de caja) ══ -->
+      <div id="vista-movimientos" style="display:none">
+
+      <div class="filtros-bar">
+        <div class="form-grupo">
+          <label class="form-label">Desde</label>
+          <input type="date" id="mov-desde" class="form-input">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Hasta</label>
+          <input type="date" id="mov-hasta" class="form-input">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Tipo</label>
+          <select class="form-select" id="mov-tipo">
+            <option value="">Todos</option>
+            <option value="pago">💵 Ingresos (pagos)</option>
+            <option value="devolucion">↩️ Devoluciones</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Método</label>
+          <select class="form-select" id="mov-metodo">
+            <option value="">Todos</option>
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="transferencia">🏦 Transferencia</option>
+            <option value="qr">📱 QR</option>
+          </select>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">🔍 Buscar niño</label>
+          <input type="text" id="mov-buscar" class="form-input" placeholder="Nombre...">
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">🏢 Sucursal</label>
+          <select class="form-select" id="mov-sucursal">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="movPaginaActual=1; cargarMovimientos()">🔍 Buscar</button>
+        <button class="btn btn-outline" onclick="limpiarFiltrosMov()">✕ Limpiar</button>
+      </div>
+
+      <div class="grid-3 mb-lg" id="mov-totales">
+        <div class="cobro-stat" style="border-color:var(--verde)">
+          <div class="etiqueta">💵 Ingresos (pagos)</div>
+          <div class="monto" id="mov-tot-ingresos" style="color:var(--verde-d)">Bs. —</div>
+          <div class="cantidad" id="mov-tot-cant-pagos">— pagos</div>
+        </div>
+        <div class="cobro-stat" style="border-color:var(--coral)">
+          <div class="etiqueta">↩️ Devoluciones</div>
+          <div class="monto" id="mov-tot-devoluciones" style="color:var(--coral-d)">Bs. —</div>
+          <div class="cantidad" id="mov-tot-cant-devs">— devoluciones</div>
+        </div>
+        <div class="cobro-stat" style="border-color:var(--turquesa)">
+          <div class="etiqueta">🧮 Neto en caja</div>
+          <div class="monto" id="mov-tot-neto">Bs. —</div>
+          <div class="cantidad">En el rango filtrado</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-titulo">Movimiento de caja</h3>
+          <span id="total-movimientos" style="font-size:var(--text-sm);font-weight:700;color:var(--texto-suave)"></span>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Niño/a</th>
+                <th>Concepto</th>
+                <th>Tipo</th>
+                <th>Monto</th>
+                <th>Método</th>
+                <th>Registrado por</th>
+                <th>Recibo</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-movimientos">
+              <tr><td colspan="8"><div class="loader"><div class="spinner"></div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="paginacion" id="paginacion-movimientos"></div>
+      </div>
+
+      </div>
+
     </div>
   </main>
+</div>
+
+<!-- ══ MODAL: Ver recibo (usado desde Movimientos) ══ -->
+<div class="modal-overlay" id="modal-recibo">
+  <div class="modal" style="max-width:min(95vw,1150px);width:95vw;height:90vh;display:flex;flex-direction:column;padding:0">
+    <div class="modal-header" style="padding:var(--gap-md) var(--gap-lg)">
+      <h3 class="modal-titulo">🧾 Recibo</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-outline btn-sm" onclick="reciboAbrirEnPestana()">↗️ Abrir en pestaña nueva</button>
+        <button class="modal-cerrar">✕</button>
+      </div>
+    </div>
+    <iframe id="recibo-iframe" style="flex:1;width:100%;border:none;background:#94a3b8"></iframe>
+  </div>
 </div>
 
 <!-- ══ MODAL: Registrar pago ══ -->
@@ -380,7 +495,21 @@ async function cargarSucursalesFiltros() {
     const lista = data.results || data;
     UI.llenarSelect(document.getElementById('filtro-sucursal-cobro'), lista, 'id', 'nombre');
     UI.llenarSelect(document.getElementById('gm-sucursal'), lista, 'id', 'nombre');
+    UI.llenarSelect(document.getElementById('mov-sucursal'), lista, 'id', 'nombre');
   } catch {}
+}
+
+// ── Pestañas: Cobros vs. Movimientos ──
+function cambiarVista(vista) {
+  const esCobros = vista === 'cobros';
+  document.getElementById('vista-cobros').style.display       = esCobros ? '' : 'none';
+  document.getElementById('vista-movimientos').style.display  = esCobros ? 'none' : '';
+  document.getElementById('tab-btn-cobros').className        = `btn ${esCobros ? 'btn-primary' : 'btn-outline'} tab-cobros-btn`;
+  document.getElementById('tab-btn-movimientos').className   = `btn ${esCobros ? 'btn-outline' : 'btn-primary'} tab-cobros-btn`;
+  if (!esCobros && !movimientosCargados) {
+    movimientosCargados = true;
+    cargarMovimientos();
+  }
 }
 
 async function cargarInscripcionesParaModal() {
@@ -396,54 +525,151 @@ async function cargarInscripcionesParaModal() {
 }
 
 async function cargarStats() {
+  // Las tarjetas se calculan en el servidor (endpoint /resumen/), no sumando
+  // páginas en el navegador: la API pagina en bloques de 25, así que sumar
+  // aquí truncaba los totales apenas había más de 25 cobros o pagos.
   try {
-    const [pendientes, vencidos, pagados, todos] = await Promise.all([
-      API.get('/inscripciones/cobros/?estado=pendiente&page_size=500'),
-      API.get('/inscripciones/cobros/?estado=vencido&page_size=500'),
-      API.get(`/inscripciones/cobros/?estado=pagado&page_size=500`),
-      // Para devoluciones del mes: no basta con mirar los "pagado" de arriba.
-      // Una devolución puede caer sobre un cobro que se pagó (fecha_pago) en
-      // OTRO mes, o puede haberlo reabierto a "parcial" — en ambos casos
-      // desaparecería de `pagados` y el dinero que salió de caja este mes
-      // quedaría invisible. Por eso se recorren TODOS los cobros aquí.
-      API.get('/inscripciones/cobros/?page_size=1000'),
-    ]);
+    const suc = document.getElementById('filtro-sucursal-cobro').value;
+    let url = `/inscripciones/cobros/resumen/?mes=${mesISO}`;
+    if (suc) url += `&sucursal=${suc}`;
+    const r = await API.get(url);
 
-    const sumPendiente = (pendientes.results||pendientes).reduce((s,c)=>s+parseFloat(c.monto_final),0);
-    const sumVencido   = (vencidos.results||vencidos).reduce((s,c)=>s+parseFloat(c.monto_final),0);
-    // Solo del mes actual
-    const pagadosMes    = (pagados.results||pagados).filter(c => c.fecha_pago?.startsWith(mesISO));
-    const sumCondonado  = pagadosMes.reduce((s,c)=>s+parseFloat(c.monto_condonado||0),0);
-
-    // Caja real del mes = pagos con fecha de este mes - devoluciones con fecha
-    // de este mes, recorriendo TODOS los cobros. OJO: NO se usa c.monto_pagado
-    // porque ese campo ya viene neto de devoluciones (pagos - devoluciones);
-    // restar luego las devoluciones otra vez las descontaba dos veces.
-    // Tampoco se filtra por estado: un cobro cerrado con condonación, o reabierto
-    // por una devolución, igual movió dinero real este mes (ver nota arriba).
-    const todosLosCobros = todos.results || todos;
-    const pagosMes = todosLosCobros
-      .flatMap(c => c.pagos || [])
-      .filter(p => p.fecha_pago?.startsWith(mesISO));
-    const devolucionesMes = todosLosCobros
-      .flatMap(c => c.devoluciones || [])
-      .filter(d => d.fecha?.startsWith(mesISO));
-    const sumPagado   = pagosMes.reduce((s,p) => s + parseFloat(p.monto||0), 0);
-    const sumDevuelto = devolucionesMes.reduce((s,d) => s + parseFloat(d.monto||0), 0);
-
-    document.getElementById('stat-monto-pendiente').textContent = UI.moneda(sumPendiente);
-    document.getElementById('stat-cant-pendiente').textContent  = `${(pendientes.count||0)} cobros`;
-    document.getElementById('stat-monto-vencido').textContent   = UI.moneda(sumVencido);
-    document.getElementById('stat-cant-vencido').textContent    = `${(vencidos.count||0)} cobros`;
+    document.getElementById('stat-monto-pendiente').textContent = UI.moneda(r.pendiente.monto);
+    document.getElementById('stat-cant-pendiente').textContent  = `${r.pendiente.cantidad} cobros`;
+    document.getElementById('stat-monto-vencido').textContent   = UI.moneda(r.vencido.monto);
+    document.getElementById('stat-cant-vencido').textContent    = `${r.vencido.cantidad} cobros`;
     // El monto grande de la tarjeta es lo neto en caja este mes (pagado -
     // devuelto), y el detalle chico desglosa pagos, condonado y devuelto.
-    document.getElementById('stat-monto-pagado').textContent    = UI.moneda(sumPagado - sumDevuelto);
+    document.getElementById('stat-monto-pagado').textContent    = UI.moneda(r.caja_mes.neto);
     document.getElementById('stat-cant-pagado').textContent     = [
-      `${pagosMes.length} pagos`,
-      sumCondonado > 0 ? `${UI.moneda(sumCondonado)} condonado` : null,
-      sumDevuelto  > 0 ? `${UI.moneda(sumDevuelto)} devuelto`   : null,
+      `${r.caja_mes.cantidad_pagos} pagos`,
+      parseFloat(r.caja_mes.condonado)             > 0 ? `${UI.moneda(r.caja_mes.condonado)} condonado` : null,
+      parseFloat(r.caja_mes.devoluciones)          > 0 ? `${UI.moneda(r.caja_mes.devoluciones)} devuelto` : null,
     ].filter(Boolean).join(' · ');
   } catch (err) { console.warn('Stats error:', err.message); }
+}
+
+// ── Movimientos (libro de caja: pagos + devoluciones) ──
+let movimientosCargados = false;
+let movPaginaActual     = 1;
+const MOV_POR_PAGINA    = 25;
+
+function limpiarFiltrosMov() {
+  ['mov-desde','mov-hasta','mov-tipo','mov-metodo','mov-buscar','mov-sucursal']
+    .forEach(id => { document.getElementById(id).value = ''; });
+  movPaginaActual = 1;
+  cargarMovimientos();
+}
+
+function cambiarPagMov(p) { movPaginaActual = p; cargarMovimientos(); }
+
+async function cargarMovimientos() {
+  const tbody = document.getElementById('tbody-movimientos');
+  tbody.innerHTML = '<tr><td colspan="8"><div class="loader"><div class="spinner"></div></div></td></tr>';
+
+  const desde   = document.getElementById('mov-desde').value;
+  const hasta   = document.getElementById('mov-hasta').value;
+  const tipo    = document.getElementById('mov-tipo').value;
+  const metodo  = document.getElementById('mov-metodo').value;
+  const buscar  = document.getElementById('mov-buscar').value.trim();
+  const suc     = document.getElementById('mov-sucursal').value;
+
+  let url = `/inscripciones/cobros/movimientos/?page=${movPaginaActual}&page_size=${MOV_POR_PAGINA}`;
+  if (desde)  url += `&desde=${desde}`;
+  if (hasta)  url += `&hasta=${hasta}`;
+  if (tipo)   url += `&tipo=${tipo}`;
+  if (metodo) url += `&metodo_pago=${metodo}`;
+  if (buscar) url += `&search=${encodeURIComponent(buscar)}`;
+  if (suc)    url += `&sucursal=${suc}`;
+
+  try {
+    const data = await API.get(url);
+
+    document.getElementById('mov-tot-ingresos').textContent     = UI.moneda(data.totales.ingresos);
+    document.getElementById('mov-tot-cant-pagos').textContent   = `${data.totales.cantidad_pagos} pagos`;
+    document.getElementById('mov-tot-devoluciones').textContent = UI.moneda(data.totales.devoluciones);
+    document.getElementById('mov-tot-cant-devs').textContent    = `${data.totales.cantidad_devoluciones} devoluciones`;
+    document.getElementById('mov-tot-neto').textContent         = UI.moneda(data.totales.neto);
+    document.getElementById('total-movimientos').textContent    = `${data.count} movimiento(s)`;
+
+    if (!data.results.length) {
+      tbody.innerHTML = `<tr><td colspan="8">
+        <div class="loader"><div style="font-size:2rem">🧾</div>
+        <p style="color:var(--texto-suave);font-weight:600">Sin movimientos con esos filtros</p></div>
+      </td></tr>`;
+      document.getElementById('paginacion-movimientos').innerHTML = '';
+      return;
+    }
+
+    tbody.innerHTML = data.results.map(m => {
+      const esPago = m.tipo === 'pago';
+      return `
+        <tr>
+          <td style="font-size:var(--text-sm);font-weight:600">${UI.fecha(m.fecha)}</td>
+          <td style="font-weight:700;font-size:var(--text-sm)">${m.nino_nombre}</td>
+          <td style="font-size:var(--text-sm)">
+            ${m.concepto}
+            ${m.detalle ? `<div style="font-size:var(--text-xs);color:var(--texto-suave)">${m.detalle}</div>` : ''}
+          </td>
+          <td>
+            <span class="chip ${esPago ? 'chip-verde' : 'chip-coral'}">
+              ${esPago ? '💵 Pago' : '↩️ Devolución'}
+            </span>
+          </td>
+          <td style="font-family:var(--font-display);font-weight:700;color:${esPago ? 'var(--verde-d)' : 'var(--coral-d)'}">
+            ${esPago ? '+' : '−'} ${UI.moneda(m.monto)}
+          </td>
+          <td><span class="chip chip-gris">${m.metodo_display}</span></td>
+          <td style="font-size:var(--text-sm);color:var(--texto-suave)">${m.registrado_por || '—'}</td>
+          <td>
+            ${m.numero_recibo
+              ? `<button class="btn btn-outline btn-sm" onclick="verRecibo('${m.tipo}','${m.id}')">Ver recibo</button>`
+              : '—'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const totalPags = data.total_pages;
+    const pagCont    = document.getElementById('paginacion-movimientos');
+    if (totalPags <= 1) { pagCont.innerHTML = ''; return; }
+    pagCont.innerHTML = `
+      <button class="pag-btn" ${movPaginaActual===1?'disabled':''} onclick="cambiarPagMov(${movPaginaActual-1})">←</button>
+      <span style="font-weight:700;font-size:var(--text-sm);color:var(--texto-suave)">
+        Página ${movPaginaActual} de ${totalPags}
+      </span>
+      <button class="pag-btn" ${movPaginaActual===totalPags?'disabled':''} onclick="cambiarPagMov(${movPaginaActual+1})">→</button>
+    `;
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8">
+      <div class="loader"><p style="color:var(--coral);font-weight:700">Error: ${err.message}</p></div>
+    </td></tr>`;
+  }
+}
+
+// ── Visor de recibo (PDF) ──
+let reciboBlobUrlActual = null;
+
+async function verRecibo(tipo, id) {
+  const url = tipo === 'pago'
+    ? `/inscripciones/recibos/pago/${id}/`
+    : `/inscripciones/recibos/devolucion/${id}/`;
+  try {
+    const resp = await fetch(API_BASE + url, {
+      headers: { Authorization: `Bearer ${Auth.getToken()}` },
+    });
+    if (!resp.ok) { UI.toast('No se pudo abrir el recibo', 'error'); return; }
+    const blob = await resp.blob();
+    if (reciboBlobUrlActual) URL.revokeObjectURL(reciboBlobUrlActual);
+    reciboBlobUrlActual = URL.createObjectURL(blob);
+    document.getElementById('recibo-iframe').src = reciboBlobUrlActual;
+    UI.abrirModal('modal-recibo');
+  } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+}
+
+function reciboAbrirEnPestana() {
+  if (!reciboBlobUrlActual) return;
+  window.open(reciboBlobUrlActual, '_blank');
 }
 
 async function cargarCobros() {

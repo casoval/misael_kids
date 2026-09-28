@@ -4,7 +4,9 @@ inscripciones/views.py
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from dateutil.relativedelta import relativedelta
+from django.db.models import Count, Q, Sum
 from rest_framework import viewsets, filters, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -19,6 +21,7 @@ from .serializers import (
 from .services import (
     generar_ciclo_mensual, calendario_pagos_mensual, calendario_pagos_diario,
     cobro_anterior_pendiente, etiqueta_periodo, asignar_numero_recibo,
+    ESTADOS_ABIERTOS,
 )
 
 
@@ -243,6 +246,180 @@ class CobroViewSet(viewsets.ModelViewSet):
         # pagado si alguna vez se relaja el permiso de escritura) el cobro
         # de cualquier niño, no solo el suyo.
         return filtrar_por_tutor(super().get_queryset(), self.request.user, 'inscripcion__nino')
+
+    # ── Estadísticas y movimientos de caja ────────────────────────────────
+    # Se calculan aquí (servidor) y no en el navegador: la paginación de DRF
+    # ignora `page_size` (fija 25), así que sumar desde el front truncaba los
+    # totales en cuanto había más de 25 cobros.
+    ROLES_CAJA = ('admin', 'directora', 'administrativo')
+
+    def _exigir_rol_caja(self, request):
+        if request.user.rol not in self.ROLES_CAJA:
+            raise PermissionDenied('No tienes permiso para ver la caja.')
+
+    @action(detail=False, methods=['get'], url_path='resumen')
+    def resumen(self, request):
+        """
+        Tarjetas de la pantalla de Cobros.
+        - pendiente: saldo por cobrar de todos los cobros abiertos (pendiente,
+          parcial o vencido), NO anulados, ya descontando pagos, devoluciones
+          y condonado. Incluye a los vencidos.
+        - vencido: la parte de lo pendiente cuyo vencimiento ya pasó.
+        - mes: caja real del mes = pagos con fecha del mes - devoluciones con
+          fecha del mes (en cualquier cobro, sin importar su estado).
+        Parámetros opcionales: `mes` (YYYY-MM, por defecto el actual), `sucursal`.
+        """
+        self._exigir_rol_caja(request)
+        hoy = date.today()
+        sucursal = request.query_params.get('sucursal')
+        try:
+            anio, mes = (int(x) for x in (request.query_params.get('mes') or hoy.strftime('%Y-%m')).split('-'))
+            date(anio, mes, 1)
+        except (ValueError, TypeError):
+            return Response({'error': 'El mes debe tener formato YYYY-MM.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cobros = Cobro.objects.all()
+        pagos  = Pago.objects.filter(fecha_pago__year=anio, fecha_pago__month=mes)
+        devs   = Devolucion.objects.filter(fecha__year=anio, fecha__month=mes)
+        if sucursal:
+            cobros = cobros.filter(inscripcion__sucursal=sucursal)
+            pagos  = pagos.filter(cobro__inscripcion__sucursal=sucursal)
+            devs   = devs.filter(cobro__inscripcion__sucursal=sucursal)
+
+        cero = Decimal('0')
+        pend_monto = venc_monto = cero
+        pend_n = venc_n = 0
+        abiertos = cobros.filter(estado__in=ESTADOS_ABIERTOS).prefetch_related('pagos', 'devoluciones')
+        for c in abiertos:
+            pagado = sum((p.monto for p in c.pagos.all()), cero) - sum((d.monto for d in c.devoluciones.all()), cero)
+            saldo = c.monto_final - pagado - c.monto_condonado
+            if saldo <= 0:
+                continue
+            pend_monto += saldo
+            pend_n += 1
+            if c.fecha_vencimiento < hoy:
+                venc_monto += saldo
+                venc_n += 1
+
+        p = pagos.aggregate(total=Sum('monto'), n=Count('id'))
+        d = devs.aggregate(total=Sum('monto'), n=Count('id'))
+        total_pagos = p['total'] or cero
+        total_devs  = d['total'] or cero
+        condonado = cobros.filter(
+            monto_condonado__gt=0, fecha_pago__year=anio, fecha_pago__month=mes,
+        ).aggregate(t=Sum('monto_condonado'))['t'] or cero
+
+        return Response({
+            'mes': f'{anio:04d}-{mes:02d}',
+            'pendiente': {'monto': pend_monto, 'cantidad': pend_n},
+            'vencido':   {'monto': venc_monto, 'cantidad': venc_n},
+            'caja_mes': {
+                'ingresos':            total_pagos,
+                'cantidad_pagos':      p['n'],
+                'devoluciones':        total_devs,
+                'cantidad_devoluciones': d['n'],
+                'neto':                total_pagos - total_devs,
+                'condonado':           condonado,
+            },
+        })
+
+    @action(detail=False, methods=['get'], url_path='movimientos')
+    def movimientos(self, request):
+        """
+        Libro de caja: pagos (ingresos) y devoluciones (egresos) mezclados en
+        orden cronológico inverso, con totales de TODO el filtro (no solo de
+        la página). Filtros: desde, hasta (YYYY-MM-DD), tipo (pago|devolucion),
+        metodo_pago, sucursal, search (nombre del niño). Paginado con
+        `page` y `page_size` (máx. 100).
+        """
+        self._exigir_rol_caja(request)
+        qp = request.query_params
+        try:
+            desde = date.fromisoformat(qp['desde']) if qp.get('desde') else None
+            hasta = date.fromisoformat(qp['hasta']) if qp.get('hasta') else None
+            page      = max(int(qp.get('page', 1)), 1)
+            page_size = min(max(int(qp.get('page_size', 25)), 1), 100)
+        except ValueError:
+            return Response({'error': 'Fechas (YYYY-MM-DD) o paginación inválidas.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        tipo, metodo = qp.get('tipo', ''), qp.get('metodo_pago', '')
+        sucursal, search = qp.get('sucursal', ''), qp.get('search', '').strip()
+
+        def filtrar(qs, campo_fecha):
+            if desde:    qs = qs.filter(**{f'{campo_fecha}__gte': desde})
+            if hasta:    qs = qs.filter(**{f'{campo_fecha}__lte': hasta})
+            if metodo:   qs = qs.filter(metodo_pago=metodo)
+            if sucursal: qs = qs.filter(cobro__inscripcion__sucursal=sucursal)
+            for palabra in search.split():
+                qs = qs.filter(
+                    Q(cobro__inscripcion__nino__nombres__icontains=palabra) |
+                    Q(cobro__inscripcion__nino__apellidos__icontains=palabra)
+                )
+            return qs
+
+        rel = ('cobro__inscripcion__nino', 'registrado_por')
+        pagos = filtrar(Pago.objects.select_related(*rel), 'fecha_pago')
+        devs  = filtrar(Devolucion.objects.select_related(*rel), 'fecha')
+        if tipo == 'pago':
+            devs = devs.none()
+        elif tipo == 'devolucion':
+            pagos = pagos.none()
+
+        cero = Decimal('0')
+        tp = pagos.aggregate(t=Sum('monto'), n=Count('id'))
+        td = devs.aggregate(t=Sum('monto'), n=Count('id'))
+        por_metodo = {}
+        for m, _ in Cobro.METODOS_PAGO:
+            por_metodo[m] = {'ingresos': cero, 'devoluciones': cero, 'neto': cero}
+        for fila in pagos.values('metodo_pago').annotate(t=Sum('monto')):
+            por_metodo.setdefault(fila['metodo_pago'], {'ingresos': cero, 'devoluciones': cero, 'neto': cero})['ingresos'] = fila['t']
+        for fila in devs.values('metodo_pago').annotate(t=Sum('monto')):
+            por_metodo.setdefault(fila['metodo_pago'], {'ingresos': cero, 'devoluciones': cero, 'neto': cero})['devoluciones'] = fila['t']
+        for v in por_metodo.values():
+            v['neto'] = v['ingresos'] - v['devoluciones']
+
+        # Se traen solo las filas necesarias de cada lado (hasta el final de la
+        # página pedida) y se mezclan por fecha.
+        limite = page * page_size
+        filas = []
+        for x in pagos.order_by('-fecha_pago', '-created_at')[:limite]:
+            filas.append(('pago', x, x.fecha_pago, x.observacion))
+        for x in devs.order_by('-fecha', '-created_at')[:limite]:
+            filas.append(('devolucion', x, x.fecha, x.motivo))
+        filas.sort(key=lambda f: (f[2], f[1].created_at), reverse=True)
+        pagina = filas[(page - 1) * page_size: page * page_size]
+
+        results = []
+        for kind, x, fecha, detalle in pagina:
+            c = x.cobro
+            results.append({
+                'tipo':           kind,
+                'id':             str(x.id),
+                'fecha':          fecha.isoformat(),
+                'monto':          x.monto,
+                'nino_nombre':    c.inscripcion.nino.nombre_completo,
+                'concepto':       f'{c.get_tipo_display()} {c.periodo}'.strip(),
+                'metodo_pago':    x.metodo_pago,
+                'metodo_display': x.get_metodo_pago_display(),
+                'detalle':        detalle,
+                'numero_recibo':  x.numero_recibo,
+                'registrado_por': x.registrado_por.nombre_completo if x.registrado_por else None,
+            })
+
+        count = (tp['n'] or 0) + (td['n'] or 0)
+        return Response({
+            'count': count, 'page': page, 'page_size': page_size,
+            'total_pages': max((count + page_size - 1) // page_size, 1),
+            'results': results,
+            'totales': {
+                'ingresos':              tp['t'] or cero,
+                'cantidad_pagos':        tp['n'],
+                'devoluciones':          td['t'] or cero,
+                'cantidad_devoluciones': td['n'],
+                'neto':                  (tp['t'] or cero) - (td['t'] or cero),
+                'por_metodo':            por_metodo,
+            },
+        })
 
     @action(detail=True, methods=['post'], url_path='registrar-pago')
     def registrar_pago(self, request, pk=None):
