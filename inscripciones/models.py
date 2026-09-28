@@ -227,6 +227,16 @@ class Cobro(ModeloBase):
         """
         if self.estado == Cobro.ESTADO_ANULADO:
             return
+        # Un cobro cerrado con "Cerrar con lo pagado" (tiene foto de condonación
+        # inicial) es una decisión ya tomada: siempre debe quedar exactamente
+        # cubierto = pagado neto + condonado. Si por devoluciones, ajustes o
+        # datos previos el condonado quedó desfasado, se reconcilia aquí para
+        # que el mes no vuelva a quedar "parcial" pidiendo un cierre que ya se hizo.
+        if self.monto_condonado_inicial is not None:
+            condonado_correcto = max(self.monto_final - self.monto_pagado, 0)
+            if condonado_correcto != self.monto_condonado:
+                self.monto_condonado = condonado_correcto
+                self.save(update_fields=['monto_condonado'])
         cubierto = self.monto_pagado + self.monto_condonado
         if cubierto <= 0:
             nuevo_estado = Cobro.ESTADO_PENDIENTE

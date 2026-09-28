@@ -400,12 +400,17 @@ class CobroViewSet(viewsets.ModelViewSet):
         # darlo por saldado ya se tomó. El monto condonado absorbe la
         # diferencia devuelta, así el mes se mantiene "pagado" y no vuelve
         # a pedir un pago que ya se había perdonado.
-        if cobro.monto_condonado > 0:
+        if cobro.monto_condonado > 0 or cobro.monto_condonado_inicial is not None:
+            # Se recalcula el condonado para que pagado neto + condonado siga
+            # sumando el monto final (en vez de sumar a ciegas lo devuelto,
+            # que dejaba el mes en "parcial" si los números ya estaban desfasados).
+            nuevo_condonado = max(cobro.monto_final - cobro.monto_pagado, 0)
             nota_ajuste = (
-                f'Ajuste {date.today().isoformat()}: +{monto} Bs. condonados '
-                f'por devolución (motivo devolución: {motivo}).'
+                f'Ajuste {date.today().isoformat()}: condonado {cobro.monto_condonado} → '
+                f'{nuevo_condonado} Bs. por devolución de {monto} Bs. '
+                f'(motivo devolución: {motivo}).'
             )
-            cobro.monto_condonado    = cobro.monto_condonado + monto
+            cobro.monto_condonado    = nuevo_condonado
             cobro.motivo_condonacion = (
                 f'{cobro.motivo_condonacion}\n{nota_ajuste}'.strip()
                 if cobro.motivo_condonacion else nota_ajuste
