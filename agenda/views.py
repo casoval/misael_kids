@@ -2,10 +2,13 @@ from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from django.db.models import Prefetch
 from personal.models import Personal
+from inscripciones.models import Inscripcion
 from .models import PlanificacionGrupal, PlanIndividual, ObjetivoIndividual, RegistroObjetivo
+from .filters import PlanificacionFilter, PlanIndividualFilter
 from .serializers import PlanificacionGrupalSerializer, PlanIndividualSerializer, ObjetivoIndividualSerializer, RegistroObjetivoSerializer
-from accounts.permissions import filtrar_por_tutor
+from accounts.permissions import filtrar_por_tutor, NoEsTutor
 
 
 def _personal_del_usuario(request):
@@ -21,9 +24,9 @@ def _personal_del_usuario(request):
 class PlanificacionGrupalViewSet(viewsets.ModelViewSet):
     queryset = PlanificacionGrupal.objects.select_related("sala","turno","educadora__usuario").all()
     serializer_class   = PlanificacionGrupalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, NoEsTutor]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields   = ["sala","turno","fecha","visible_padres"]
+    filterset_class    = PlanificacionFilter
     ordering           = ["-fecha"]
 
     def get_queryset(self):
@@ -51,12 +54,19 @@ class PlanificacionGrupalViewSet(viewsets.ModelViewSet):
         serializer.save(educadora=_personal_del_usuario(self.request))
 
 class PlanIndividualViewSet(viewsets.ModelViewSet):
-    queryset = PlanIndividual.objects.select_related("nino","creado_por__usuario").prefetch_related("objetivos__registros").all()
+    queryset = PlanIndividual.objects.select_related("nino","creado_por__usuario").prefetch_related(
+        "objetivos__registros__educadora__usuario",
+        Prefetch(
+            "nino__inscripciones",
+            queryset=Inscripcion.objects.filter(activa=True).select_related("sala", "turno"),
+            to_attr="inscripciones_activas",
+        ),
+    ).all()
     serializer_class   = PlanIndividualSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, NoEsTutor]
     filter_backends    = [DjangoFilterBackend, filters.SearchFilter]
     search_fields      = ["nino__nombres","nino__apellidos"]
-    filterset_fields   = ["nino","origen","activo"]
+    filterset_class    = PlanIndividualFilter
 
     def get_queryset(self):
         return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
@@ -67,7 +77,7 @@ class PlanIndividualViewSet(viewsets.ModelViewSet):
 class ObjetivoIndividualViewSet(viewsets.ModelViewSet):
     queryset           = ObjetivoIndividual.objects.select_related("plan").prefetch_related("registros").all()
     serializer_class   = ObjetivoIndividualSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, NoEsTutor]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ["plan","area","estado"]
 
@@ -77,7 +87,7 @@ class ObjetivoIndividualViewSet(viewsets.ModelViewSet):
 class RegistroObjetivoViewSet(viewsets.ModelViewSet):
     queryset           = RegistroObjetivo.objects.select_related("objetivo","educadora__usuario").all()
     serializer_class   = RegistroObjetivoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, NoEsTutor]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields   = ["objetivo","educadora","fecha","resultado"]
     ordering           = ["-fecha"]
@@ -85,5 +95,28 @@ class RegistroObjetivoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return filtrar_por_tutor(super().get_queryset(), self.request.user, 'objetivo__plan__nino')
 
+    @staticmethod
+    def _avanzar_objetivo(registro):
+        """
+        El estado del objetivo sigue a los avances que se registran (antes
+        quedaba en "Pendiente" para siempre aunque se trabajara todos los días):
+        un avance "trabajado" pasa un objetivo pendiente a "en proceso", y un
+        avance "logrado" lo pasa a "logrado". Solo avanza; nunca retrocede.
+        """
+        objetivo = registro.objetivo
+        nuevo = None
+        if registro.resultado == RegistroObjetivo.RESULTADO_LOGRADO:
+            nuevo = ObjetivoIndividual.ESTADO_LOGRADO
+        elif (registro.resultado == RegistroObjetivo.RESULTADO_TRABAJADO
+              and objetivo.estado == ObjetivoIndividual.ESTADO_PENDIENTE):
+            nuevo = ObjetivoIndividual.ESTADO_EN_PROCESO
+        if nuevo and objetivo.estado != nuevo:
+            objetivo.estado = nuevo
+            objetivo.save(update_fields=["estado"])
+
     def perform_create(self, serializer):
-        serializer.save(educadora=_personal_del_usuario(self.request))
+        registro = serializer.save(educadora=_personal_del_usuario(self.request))
+        self._avanzar_objetivo(registro)
+
+    def perform_update(self, serializer):
+        self._avanzar_objetivo(serializer.save())
