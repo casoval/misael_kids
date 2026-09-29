@@ -255,3 +255,104 @@ class HistorialYResumenTests(AsistenciaTestBase):
         # (el de hace 5 días también, si cae en el mismo mes calendario).
         self.assertGreaterEqual(resp.data['total'], 2)
         self.assertGreaterEqual(resp.data['presentes'], 2)
+
+
+class PlanillaAsistenciaTests(AsistenciaTestBase):
+    """Endpoint /planilla/: niños + personas autorizadas + educadoras del día."""
+
+    def url_planilla(self, **params):
+        from urllib.parse import urlencode
+        return '/api/asistencia/asistencia/planilla/?' + urlencode(params)
+
+    def _educadora(self, nombres, apellidos, ci, **asig_kwargs):
+        from personal.models import Personal, AsignacionPersonal
+        usr = Usuario.objects.create_user(
+            email=f'{nombres.lower()}@misaelkids.test', password='clave12345',
+            nombres=nombres, apellidos=apellidos, rol=Usuario.ROL_EDUCADORA,
+        )
+        per = Personal.objects.create(
+            usuario=usr, ci=ci, rol=Personal.ROL_EDUCADORA, fecha_ingreso=date(2025, 1, 1),
+        )
+        datos = dict(
+            personal=per, sucursal=self.sucursal, sala=self.sala, turno=self.turno,
+            fecha_inicio=date(2025, 1, 1),
+        )
+        datos.update(asig_kwargs)
+        return AsignacionPersonal.objects.create(**datos)
+
+    def test_devuelve_ninos_con_tutores_y_autorizados_vigentes(self):
+        from ninos.models import PersonaAutorizada
+        hoy = date.today()
+        PersonaAutorizada.objects.create(
+            nino=self.nino_a, nombres='Rosa', apellidos='Hurtado', ci='999', telefono='71111111',
+            parentesco='Abuela', vigencia_desde=hoy - timedelta(days=5),
+        )
+        PersonaAutorizada.objects.create(  # vencida: no debe aparecer
+            nino=self.nino_a, nombres='Pedro', apellidos='Vencido', ci='888', telefono='72222222',
+            parentesco='Tío', vigencia_desde=hoy - timedelta(days=30),
+            vigencia_hasta=hoy - timedelta(days=1),
+        )
+        PersonaAutorizada.objects.create(  # desactivada: no debe aparecer
+            nino=self.nino_a, nombres='Luis', apellidos='Inactivo', ci='777', telefono='73333333',
+            parentesco='Tío', vigencia_desde=hoy - timedelta(days=30), activa=False,
+        )
+        self.client.force_authenticate(self.staff)
+        r = self.client.get(self.url_planilla(sala=self.sala.id, turno=self.turno.id))
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data['ninos']), 2)
+        anthony = next(n for n in r.data['ninos'] if n['nino'] == self.nino_a.id)
+        nombres = [p['nombre'] for p in anthony['personas']]
+        self.assertEqual(nombres, ['Karina Castro', 'Rosa Hurtado'])
+        self.assertEqual(anthony['personas'][0]['tipo'], 'tutor')
+        self.assertEqual(anthony['personas'][0]['parentesco'], 'Madre')
+        self.assertEqual(anthony['personas'][1]['tipo'], 'autorizado')
+        self.assertIn('nino_foto', anthony)
+
+    def test_tutor_sin_permiso_de_retiro_puede_entregar_pero_marcado(self):
+        NinoTutor.objects.filter(nino=self.nino_a, tutor=self.tutor).update(puede_retirar=False)
+        self.client.force_authenticate(self.staff)
+        r = self.client.get(self.url_planilla(sala=self.sala.id))
+        anthony = next(n for n in r.data['ninos'] if n['nino'] == self.nino_a.id)
+        self.assertEqual(len(anthony['personas']), 1)
+        self.assertFalse(anthony['personas'][0]['puede_retirar'])
+
+    def test_persona_duplicada_como_tutor_y_autorizada_aparece_una_vez(self):
+        from ninos.models import PersonaAutorizada
+        PersonaAutorizada.objects.create(
+            nino=self.nino_a, nombres='karina', apellidos='CASTRO', ci='1234567', telefono='70000000',
+            parentesco='Madre', vigencia_desde=date.today(),
+        )
+        self.client.force_authenticate(self.staff)
+        r = self.client.get(self.url_planilla(sala=self.sala.id))
+        anthony = next(n for n in r.data['ninos'] if n['nino'] == self.nino_a.id)
+        self.assertEqual(len(anthony['personas']), 1)
+
+    def test_educadoras_asignadas_vigentes(self):
+        self._educadora('Ana', 'López', '111')
+        self._educadora('Marta', 'Suplente', '222', es_titular=False)
+        self._educadora('Vieja', 'Asignacion', '333', fecha_fin=date.today() - timedelta(days=1))
+        self._educadora('Nunca', 'Activa', '444', activa=False)
+        self.client.force_authenticate(self.staff)
+        r = self.client.get(self.url_planilla(sala=self.sala.id, turno=self.turno.id))
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        nombres = [e['nombre'] for e in r.data['educadoras']]
+        self.assertEqual(len(nombres), 2)
+        self.assertTrue(nombres[0].startswith('Ana'))       # titular primero
+        self.assertTrue(r.data['educadoras'][0]['es_titular'])
+        self.assertFalse(r.data['educadoras'][1]['es_titular'])
+        self.assertEqual(r.data['educadoras'][0]['sala_nombre'], 'Sala Cuna')
+
+    def test_sin_educadora_devuelve_lista_vacia(self):
+        self.client.force_authenticate(self.staff)
+        r = self.client.get(self.url_planilla(sala=self.sala.id))
+        self.assertEqual(r.data['educadoras'], [])
+
+    def test_tutor_no_puede_ver_la_planilla(self):
+        self.client.force_authenticate(self.usuario_tutor)
+        r = self.client.get(self.url_planilla(sala=self.sala.id))
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_fecha_invalida_devuelve_400(self):
+        self.client.force_authenticate(self.staff)
+        r = self.client.get(self.url_planilla(fecha='28-09-2026'))
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)

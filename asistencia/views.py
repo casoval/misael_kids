@@ -10,6 +10,7 @@ from django.db import IntegrityError
 from .models import Asistencia
 from .serializers import AsistenciaSerializer
 from inscripciones.models import Cobro, Inscripcion
+from personal.models import AsignacionPersonal
 from inscripciones.services import generar_ciclo_mensual
 from accounts.permissions import filtrar_por_tutor, NoEsTutor
 
@@ -153,3 +154,137 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
 
         serializer = AsistenciaSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
+
+    # ── Planilla de asistencia del día ────────────────────────────────
+    @staticmethod
+    def _url_media(request, archivo):
+        """URL absoluta de un ImageField (o None si no hay archivo / falla el storage)."""
+        if not archivo:
+            return None
+        try:
+            url = archivo.url
+        except Exception:
+            return None
+        return request.build_absolute_uri(url) if url.startswith('/') else url
+
+    @staticmethod
+    def _personas_del_nino(nino, fecha):
+        """
+        Personas que pueden aparecer como "quién entregó / quién retiró" para
+        un niño: sus tutores activos y las personas autorizadas vigentes en
+        `fecha`. Cada una lleva `puede_retirar`: un tutor marcado con
+        puede_retirar=False sí puede traer al niño, pero no aparece como
+        opción de retiro. Se elimina el duplicado si la misma persona figura
+        como tutor y como autorizada.
+        """
+        personas, vistos = [], set()
+
+        def agregar(nombre, parentesco, tipo, puede_retirar):
+            clave = ' '.join(nombre.lower().split())
+            if not clave or clave in vistos:
+                return
+            vistos.add(clave)
+            personas.append({
+                'nombre': nombre, 'parentesco': parentesco,
+                'tipo': tipo, 'puede_retirar': puede_retirar,
+            })
+
+        relaciones = sorted(nino.tutores.all(), key=lambda nt: not nt.es_principal)
+        for nt in relaciones:
+            t = nt.tutor
+            if t.activo:
+                agregar(f'{t.nombres} {t.apellidos}'.strip(), t.get_parentesco_display(),
+                        'tutor', nt.puede_retirar)
+        for a in nino.autorizados.all():
+            vigente = (
+                a.activa
+                and a.vigencia_desde <= fecha
+                and (a.vigencia_hasta is None or a.vigencia_hasta >= fecha)
+            )
+            if vigente:
+                agregar(f'{a.nombres} {a.apellidos}'.strip(), a.parentesco, 'autorizado', True)
+        return personas
+
+    @action(detail=False, methods=['get'], url_path='planilla')
+    def planilla(self, request):
+        """
+        Todo lo que la pantalla de asistencia necesita para armar la lista del
+        día en UNA sola llamada:
+
+          - `educadoras`: el personal con asignación vigente en la
+            sucursal/sala/turno elegidos (titulares primero).
+          - `ninos`: los niños con inscripción activa en esos filtros, con su
+            foto y la lista de personas que pueden entregarlos/retirarlos
+            (para el selector rápido de las tarjetas y del detalle).
+
+        Antes la pantalla traía la inscripción y luego pedía la ficha completa
+        del niño cada vez que se abría el detalle; además las educadoras no
+        se mostraban en ninguna parte de la asistencia.
+
+        Solo personal del centro: un tutor no debe ver datos de otros niños ni
+        de sus autorizados.
+        """
+        if request.user.rol == 'tutor':
+            return Response({'detail': 'No tienes permiso para ver esta información.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            fecha = date.fromisoformat(request.query_params.get('fecha') or date.today().isoformat())
+        except ValueError:
+            return Response({'fecha': 'Formato inválido, usa AAAA-MM-DD.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        sucursal = request.query_params.get('sucursal')
+        sala     = request.query_params.get('sala')
+        turno    = request.query_params.get('turno')
+
+        # ── Educadoras responsables ──
+        asignaciones = AsignacionPersonal.objects.select_related(
+            'personal__usuario', 'sala', 'turno', 'sucursal'
+        ).filter(
+            activa=True, personal__activo=True, fecha_inicio__lte=fecha,
+        ).filter(Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=fecha))
+        if sucursal:
+            asignaciones = asignaciones.filter(sucursal=sucursal)
+        if sala:
+            asignaciones = asignaciones.filter(sala=sala)
+        if turno:
+            asignaciones = asignaciones.filter(turno=turno)
+        asignaciones = asignaciones.order_by(
+            'sala__nombre', 'turno__hora_inicio', '-es_titular', 'personal__usuario__apellidos'
+        )
+        educadoras = [{
+            'id': a.id,
+            'personal_id': a.personal_id,
+            'nombre': a.personal.usuario.nombre_completo,
+            'rol': a.personal.get_rol_display(),
+            'es_titular': a.es_titular,
+            'foto': self._url_media(request, a.personal.foto),
+            'sala': a.sala_id, 'sala_nombre': a.sala.nombre,
+            'turno': a.turno_id, 'turno_nombre': a.turno.nombre,
+        } for a in asignaciones]
+
+        # ── Niños inscritos ──
+        inscripciones = Inscripcion.objects.select_related(
+            'nino', 'sala', 'turno'
+        ).prefetch_related(
+            'nino__tutores__tutor', 'nino__autorizados'
+        ).filter(activa=True)
+        if sucursal:
+            inscripciones = inscripciones.filter(sucursal=sucursal)
+        if sala:
+            inscripciones = inscripciones.filter(sala=sala)
+        if turno:
+            inscripciones = inscripciones.filter(turno=turno)
+        inscripciones = inscripciones.order_by('nino__apellidos', 'nino__nombres')
+
+        ninos = [{
+            'inscripcion': i.id,
+            'nino': i.nino_id,
+            'nino_nombre': i.nino.nombre_completo,
+            'nino_foto': self._url_media(request, i.nino.foto),
+            'sala': i.sala_id, 'sala_nombre': i.sala.nombre,
+            'turno': i.turno_id, 'turno_nombre': i.turno.nombre,
+            'personas': self._personas_del_nino(i.nino, fecha),
+        } for i in inscripciones]
+
+        return Response({'fecha': fecha.isoformat(), 'educadoras': educadoras, 'ninos': ninos})
