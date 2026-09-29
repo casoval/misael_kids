@@ -659,7 +659,11 @@ function motivoHTML(r) {
 }
 
 function chipsPieHTML(r) {
-  const guardado = !r.asistencia_id
+  const guardado = r.guardando
+    ? '<span class="chip chip-amarillo">⏳ Guardando…</span>'
+    : r.error
+    ? `<button type="button" class="chip chip-coral" style="border:0;cursor:pointer" onclick="guardarRegistro('${r.inscripcion}')">⚠️ No se guardó · Reintentar</button>`
+    : !r.asistencia_id
     ? '<span class="chip chip-gris">Sin guardar</span>'
     : r.sucio ? '<span class="chip chip-amarillo">Cambios sin guardar</span>'
               : '<span class="chip chip-turquesa">✓ Guardado</span>';
@@ -668,11 +672,53 @@ function chipsPieHTML(r) {
   return guardado + noAut;
 }
 
-function marcarSucio(inscId) {
-  const r = registros[inscId];
-  r.sucio = true;
+function refrescarPie(inscId) {
   const pie = document.getElementById('pie-' + inscId);   // solo el chip: no se redibuja la fila
-  if (pie) pie.innerHTML = chipsPieHTML(r);
+  if (pie) pie.innerHTML = chipsPieHTML(registros[inscId]);
+}
+
+function marcarSucio(inscId) {
+  registros[inscId].sucio = true;
+  refrescarPie(inscId);
+}
+
+// ── Guardado automático de UN niño ──
+// Se llama después de cada acción (estado, hora, quién entregó/retiró, detalle).
+// Crea el registro la primera vez y luego lo actualiza. Si llega otra acción
+// mientras hay un guardado en curso, se encola y se vuelve a guardar al terminar
+// (así nunca se intenta crear dos veces el mismo registro).
+async function guardarRegistro(inscId) {
+  const r = registros[inscId];
+  if (!r || !r.estado) return;               // sin estado todavía no hay nada que guardar
+  if (r.hora_entrada && r.hora_salida && r.hora_salida <= r.hora_entrada) {
+    UI.toast('⚠️ '+r.nino_nombre+': la hora de salida debe ser posterior a la de entrada (no se guardó)','warn',5000);
+    return;
+  }
+  if (r.guardando) { r.repetir = true; return; }
+  r.guardando = true; r.error = false;
+  refrescarPie(inscId);
+  try {
+    const payload = {
+      inscripcion:r.inscripcion, fecha:r.fecha, estado:r.estado,
+      hora_entrada:r.hora_entrada||null, hora_salida:r.hora_salida||null,
+      entregado_por:r.entregado_por||'', retirado_por:r.retirado_por||'',
+      retiro_autorizado:r.retiro_autorizado,
+      obs_entrada:r.obs_entrada||'', motivo_ausencia:r.motivo_ausencia||'',
+    };
+    if (r.asistencia_id) {
+      await API.patch('/asistencia/asistencia/'+r.asistencia_id+'/', payload);
+    } else {
+      const nuevo = await API.post('/asistencia/asistencia/', payload);
+      r.asistencia_id = nuevo.id;
+    }
+    r.sucio = false;
+  } catch (err) {
+    r.error = true;
+    UI.toast('⚠️ '+r.nino_nombre+': no se guardó — '+(err.message||'error desconocido'),'warn',6000);
+  }
+  r.guardando = false;
+  if (r.repetir) { r.repetir = false; refrescarPie(inscId); return guardarRegistro(inscId); }
+  refrescarPie(inscId);
 }
 
 // ── Vista tarjetas ──
@@ -762,11 +808,13 @@ function setEstado(inscId, estado) {
   r.estado = estado; r.sucio = true;
   if (estado==='presente' && !r.hora_entrada) r.hora_entrada = horaActual();
   renderGrid();
+  guardarRegistro(inscId);
 }
 
 function cambiarHora(inscId, campo, valor) {
   registros[inscId][campo] = valor;
   marcarSucio(inscId);
+  guardarRegistro(inscId);
 }
 
 function marcarTodos(estado) {
@@ -775,7 +823,13 @@ function marcarTodos(estado) {
     if (estado==='presente' && !registros[id].hora_entrada) registros[id].hora_entrada = horaActual();
   });
   renderGrid();
-  UI.toast('Todos marcados como '+estado,'info');
+  UI.toast('Todos marcados como '+estado+' — guardando…','info');
+  (async () => {
+    for (const id of Object.keys(registros)) await guardarRegistro(id);
+    const fallidos = Object.values(registros).filter(r => r.error).length;
+    UI.toast(fallidos ? '⚠️ '+fallidos+' no se pudieron guardar (toca "Reintentar")' : '✅ Guardado',
+             fallidos ? 'warn' : 'exito');
+  })();
 }
 
 function actualizarResumen() {
@@ -870,6 +924,7 @@ function aplicarPersona(nombre, enLista, quitar = false) {
   r.sucio = true;
   UI.cerrarModal('modal-picker');
   renderGrid();
+  guardarRegistro(inscId);
 }
 
 async function guardarTodo() {
@@ -891,39 +946,15 @@ async function guardarTodo() {
 
   const btn = document.getElementById('btn-guardar');
   btn.disabled=true; btn.textContent='⏳ Guardando...';
-  let ok=0;
-  const fallidos = [];
-  for (const r of lista) {
-    try {
-      const payload = {
-        inscripcion:r.inscripcion, fecha:r.fecha, estado:r.estado,
-        hora_entrada:r.hora_entrada||null, hora_salida:r.hora_salida||null,
-        entregado_por:r.entregado_por||'', retirado_por:r.retirado_por||'',
-        retiro_autorizado:r.retiro_autorizado,
-        obs_entrada:r.obs_entrada||'', motivo_ausencia:r.motivo_ausencia||'',
-      };
-      if (r.asistencia_id) {
-        await API.patch('/asistencia/asistencia/'+r.asistencia_id+'/',payload);
-      } else {
-        const nuevo = await API.post('/asistencia/asistencia/',payload);
-        registros[r.inscripcion].asistencia_id = nuevo.id;
-      }
-      registros[r.inscripcion].sucio = false;
-      ok++;
-    } catch (err) {
-      // Antes solo se contaban los errores (err++); ahora se guarda quién
-      // falló y por qué, para no tener que adivinar cuál de los N niños
-      // quedó sin guardar.
-      fallidos.push({ nombre: r.nino_nombre, motivo: err.message || 'Error desconocido' });
-    }
-  }
+  // Mismo camino que el guardado automático (evita crear un registro dos veces).
+  for (const r of lista) await guardarRegistro(r.inscripcion);
   btn.disabled=false; btn.textContent='💾 Guardar todo';
-  renderGrid();
+  const fallidos = lista.filter(r => registros[r.inscripcion].error);
   if (!fallidos.length) {
-    UI.toast('✅ '+ok+' registros guardados correctamente','exito');
+    UI.toast('✅ '+lista.length+' registros guardados correctamente','exito');
   } else {
-    const detalle = fallidos.map(f => `${f.nombre}: ${f.motivo}`).join(' · ');
-    UI.toast(`⚠️ ${ok} guardados, ${fallidos.length} con error — ${detalle}`, 'warn', 7000);
+    UI.toast('⚠️ '+(lista.length-fallidos.length)+' guardados, '+fallidos.length+' con error: '+
+             fallidos.map(f=>f.nino_nombre).join(', '),'warn',7000);
   }
 }
 
@@ -1019,7 +1050,8 @@ function guardarDetalleModal() {
   r.sucio            = true;
   UI.cerrarModal('modal-detalle-asist');
   renderGrid();
-  UI.toast('Detalle actualizado (recuerda guardar todo)','info');
+  guardarRegistro(inscId);
+  UI.toast('Detalle actualizado','info');
 }
 
 // ── Resumen mensual ──
