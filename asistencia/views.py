@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 
 from .models import Asistencia
 from .serializers import AsistenciaSerializer
@@ -40,20 +40,31 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         # cualquier niño de cualquier sala, no solo la de su propio hijo.
         return filtrar_por_tutor(super().get_queryset(), self.request.user, 'inscripcion__nino')
 
-    def perform_create(self, serializer):
-        asistencia  = serializer.save(registrado_por=self.request.user)
+    # Texto que queda en `Cobro.observacion` cuando el sistema anula un cobro
+    # diario por un cambio de asistencia. Sirve de marca: solo se reactiva un
+    # cobro que anuló el sistema, nunca uno que anuló una persona a mano.
+    MARCA_ANULACION_AUTO = 'Anulado automáticamente'
+
+    def _anotar(self, cobro, texto):
+        cobro.observacion = (cobro.observacion + '\n' if cobro.observacion else '') + texto
+
+    def _generar_cobros_por_presencia(self, asistencia):
+        """
+        Genera (o reactiva) el cobro que corresponde a un niño que está presente.
+        Devuelve 'reactivado' si volvió a abrir un cobro diario que el sistema
+        había anulado, o None en cualquier otro caso.
+        """
         inscripcion = asistencia.inscripcion
         if asistencia.estado != Asistencia.ESTADO_PRESENTE:
-            return
+            return None
 
         if inscripcion.modalidad_pago == Inscripcion.MODALIDAD_DIARIA:
-            # Cobro diario: uno por cada día que asiste (comportamiento existente)
+            # Cobro diario: uno por cada día que asiste
             periodo = asistencia.fecha.strftime('%Y-%m-%d')
-            if not Cobro.objects.filter(
-                inscripcion=inscripcion,
-                periodo=periodo,
-                tipo=Cobro.TIPO_DIARIO
-            ).exists():
+            cobro = Cobro.objects.filter(
+                inscripcion=inscripcion, periodo=periodo, tipo=Cobro.TIPO_DIARIO
+            ).first()
+            if cobro is None:
                 try:
                     Cobro.objects.create(
                         inscripcion       = inscripcion,
@@ -68,6 +79,16 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
                     # Mismo caso que en generar_ciclo_mensual: dos marcas de
                     # asistencia casi simultáneas para el mismo niño y día.
                     pass
+            elif (cobro.estado == Cobro.ESTADO_ANULADO
+                  and self.MARCA_ANULACION_AUTO in (cobro.observacion or '')):
+                # El niño volvió a quedar "presente" tras haberse anulado el
+                # cobro por error de marcado: se reabre el mismo cobro (la
+                # restricción de "un cobro diario por día" impide crear otro).
+                cobro.estado = Cobro.ESTADO_PENDIENTE
+                self._anotar(cobro, 'Reactivado: la asistencia volvió a marcarse como presente.')
+                cobro.save(update_fields=['estado', 'observacion'])
+                cobro.recalcular_estado()   # lo pasa a "vencido" si corresponde
+                return 'reactivado'
 
         elif inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
             # Mensualidad: la primera vez que el niño asiste dentro de un
@@ -86,6 +107,77 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
             ).exists()
             if not cubierto:
                 generar_ciclo_mensual(inscripcion, usuario=self.request.user)
+        return None
+
+    def _anular_cobro_diario(self, asistencia):
+        """
+        El niño dejó de estar "presente" (se marcó por error, o cambió a
+        ausente/justificado): se anula el cobro diario de ese día, pero SOLO
+        si nadie ha tocado plata todavía. Devuelve 'anulado', 'con_pagos'
+        (había un cobro pero no se pudo anular) o None (no había nada que hacer).
+        La mensualidad no se toca: no depende de los días que asista.
+        """
+        inscripcion = asistencia.inscripcion
+        if inscripcion.modalidad_pago != Inscripcion.MODALIDAD_DIARIA:
+            return None
+        cobro = Cobro.objects.filter(
+            inscripcion=inscripcion, tipo=Cobro.TIPO_DIARIO,
+            periodo=asistencia.fecha.strftime('%Y-%m-%d'),
+        ).first()
+        if cobro is None or cobro.estado == Cobro.ESTADO_ANULADO:
+            return None
+        con_movimientos = (
+            cobro.estado in (Cobro.ESTADO_PARCIAL, Cobro.ESTADO_PAGADO)
+            or cobro.pagos.exists() or cobro.devoluciones.exists()
+            or cobro.monto_condonado > 0
+        )
+        if con_movimientos:
+            return 'con_pagos'
+        cobro.estado = Cobro.ESTADO_ANULADO
+        self._anotar(cobro, f'{self.MARCA_ANULACION_AUTO}: la asistencia del '
+                            f'{asistencia.fecha:%d/%m/%Y} cambió a "{asistencia.get_estado_display()}".')
+        cobro.save(update_fields=['estado', 'observacion'])
+        return 'anulado'
+
+    def perform_create(self, serializer):
+        asistencia = serializer.save(registrado_por=self.request.user)
+        self._generar_cobros_por_presencia(asistencia)
+
+    def perform_update(self, serializer):
+        """
+        Antes solo `perform_create` tocaba cobros, así que corregir una
+        asistencia ya guardada dejaba el cobro desfasado: pasar de Presente a
+        Ausente no anulaba el cobro del día, y pasar de Ausente a Presente
+        nunca lo generaba. Ahora el cobro sigue al cambio de estado.
+        """
+        with transaction.atomic():
+            anterior   = serializer.instance.estado
+            asistencia = serializer.save()
+            self._cobro_info = None
+            if anterior != asistencia.estado:
+                if asistencia.estado == Asistencia.ESTADO_PRESENTE:
+                    if self._generar_cobros_por_presencia(asistencia) == 'reactivado':
+                        self._cobro_info = {
+                            'accion': 'reactivado',
+                            'mensaje': 'Se reactivó el cobro del día que se había anulado.'}
+                elif anterior == Asistencia.ESTADO_PRESENTE:
+                    resultado = self._anular_cobro_diario(asistencia)
+                    if resultado == 'anulado':
+                        self._cobro_info = {
+                            'accion': 'anulado',
+                            'mensaje': 'Se anuló el cobro del día porque ya no está presente.'}
+                    elif resultado == 'con_pagos':
+                        self._cobro_info = {
+                            'accion': 'no_anulado',
+                            'mensaje': 'El cobro del día NO se anuló porque ya tiene pagos, devoluciones '
+                                       'o condonación. Revísalo en Cobros.'}
+
+    def update(self, request, *args, **kwargs):
+        self._cobro_info = None
+        response = super().update(request, *args, **kwargs)
+        if getattr(self, '_cobro_info', None):
+            response.data = {**response.data, 'cobro_info': self._cobro_info}
+        return response
 
     @action(detail=False, methods=['get'], url_path='hoy')
     def hoy(self, request):

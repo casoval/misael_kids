@@ -356,3 +356,102 @@ class PlanillaAsistenciaTests(AsistenciaTestBase):
         self.client.force_authenticate(self.staff)
         r = self.client.get(self.url_planilla(fecha='28-09-2026'))
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class CobroSigueAlEstadoTests(AsistenciaTestBase):
+    """Al corregir una asistencia ya guardada, el cobro diario del día la sigue."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_authenticate(self.staff)
+        self.hoy = date.today()
+
+    def _crear(self, insc, estado='presente'):
+        r = self.client.post(self.url_lista(), {
+            'inscripcion': insc.id, 'fecha': self.hoy.isoformat(), 'estado': estado,
+        }, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        return r.data['id']
+
+    def _cambiar(self, asist_id, estado):
+        return self.client.patch(f'{self.url_lista()}{asist_id}/', {'estado': estado}, format='json')
+
+    def _cobro_diario(self):
+        return Cobro.objects.filter(
+            inscripcion=self.insc_diaria, tipo=Cobro.TIPO_DIARIO,
+            periodo=self.hoy.strftime('%Y-%m-%d'),
+        ).first()
+
+    def test_presente_a_ausente_anula_cobro_sin_pagos(self):
+        aid = self._crear(self.insc_diaria)
+        self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PENDIENTE)
+        r = self._cambiar(aid, 'ausente')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data['cobro_info']['accion'], 'anulado')
+        cobro = self._cobro_diario()
+        self.assertEqual(cobro.estado, Cobro.ESTADO_ANULADO)
+        self.assertIn('Anulado automáticamente', cobro.observacion)
+
+    def test_tambien_anula_al_pasar_a_justificado(self):
+        aid = self._crear(self.insc_diaria)
+        self._cambiar(aid, 'ausente_justificado')
+        self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_ANULADO)
+
+    def test_con_pago_parcial_no_se_anula_y_avisa(self):
+        from inscripciones.models import Pago
+        aid = self._crear(self.insc_diaria)
+        cobro = self._cobro_diario()
+        Pago.objects.create(cobro=cobro, monto='10.00', registrado_por=self.staff)
+        cobro.recalcular_estado()
+        r = self._cambiar(aid, 'ausente')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data['cobro_info']['accion'], 'no_anulado')
+        self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PARCIAL)
+
+    def test_cobro_pagado_completo_no_se_anula(self):
+        from inscripciones.models import Pago
+        aid = self._crear(self.insc_diaria)
+        cobro = self._cobro_diario()
+        Pago.objects.create(cobro=cobro, monto=cobro.monto_final, registrado_por=self.staff)
+        cobro.recalcular_estado()
+        self._cambiar(aid, 'ausente')
+        self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PAGADO)
+
+    def test_ausente_a_presente_genera_el_cobro_que_antes_faltaba(self):
+        aid = self._crear(self.insc_diaria, estado='ausente')
+        self.assertIsNone(self._cobro_diario())
+        self._cambiar(aid, 'presente')
+        self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PENDIENTE)
+
+    def test_presente_ausente_presente_reactiva_el_mismo_cobro(self):
+        aid = self._crear(self.insc_diaria)
+        cobro_id = self._cobro_diario().id
+        self._cambiar(aid, 'ausente')
+        r = self._cambiar(aid, 'presente')
+        self.assertEqual(r.data['cobro_info']['accion'], 'reactivado')
+        self.assertEqual(Cobro.objects.filter(inscripcion=self.insc_diaria, tipo=Cobro.TIPO_DIARIO).count(), 1)
+        cobro = self._cobro_diario()
+        self.assertEqual(cobro.id, cobro_id)
+        self.assertEqual(cobro.estado, Cobro.ESTADO_PENDIENTE)
+
+    def test_cobro_anulado_a_mano_no_se_reactiva(self):
+        aid = self._crear(self.insc_diaria)
+        Cobro.objects.filter(id=self._cobro_diario().id).update(
+            estado=Cobro.ESTADO_ANULADO, observacion='Anulado por la directora')
+        self._cambiar(aid, 'ausente')
+        self._cambiar(aid, 'presente')
+        self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_ANULADO)
+
+    def test_editar_sin_cambiar_estado_no_toca_el_cobro(self):
+        aid = self._crear(self.insc_diaria)
+        r = self.client.patch(f'{self.url_lista()}{aid}/', {'entregado_por': 'Mamá'}, format='json')
+        self.assertNotIn('cobro_info', r.data)
+        self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PENDIENTE)
+
+    def test_mensualidad_no_se_anula_al_pasar_a_ausente(self):
+        aid = self._crear(self.insc_mensual)
+        self.assertTrue(Cobro.objects.filter(inscripcion=self.insc_mensual, tipo=Cobro.TIPO_MENSUALIDAD).exists())
+        r = self._cambiar(aid, 'ausente')
+        self.assertNotIn('cobro_info', r.data)
+        self.assertFalse(Cobro.objects.filter(
+            inscripcion=self.insc_mensual, estado=Cobro.ESTADO_ANULADO).exists())

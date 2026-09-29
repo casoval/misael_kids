@@ -706,7 +706,13 @@ async function guardarRegistro(inscId) {
       obs_entrada:r.obs_entrada||'', motivo_ausencia:r.motivo_ausencia||'',
     };
     if (r.asistencia_id) {
-      await API.patch('/asistencia/asistencia/'+r.asistencia_id+'/', payload);
+      const resp = await API.patch('/asistencia/asistencia/'+r.asistencia_id+'/', payload);
+      // El servidor avisa si al cambiar el estado se anuló o reactivó el cobro del día.
+      if (resp && resp.cobro_info) {
+        const ci = resp.cobro_info;
+        UI.toast((ci.accion === 'no_anulado' ? '⚠️ ' : '💰 ') + r.nino_nombre + ': ' + ci.mensaje,
+                 ci.accion === 'no_anulado' ? 'warn' : 'info', 6000);
+      }
     } else {
       const nuevo = await API.post('/asistencia/asistencia/', payload);
       r.asistencia_id = nuevo.id;
