@@ -425,7 +425,6 @@ async function guardarIncidente() {
     notificado_tutor:        notificado,
     hora_notificacion:       notificado ? document.getElementById('inc-hora-notif').value : null,
     requirio_atencion_medica:document.getElementById('inc-medico').checked,
-    reportado_por:           null,
   };
   try {
     if (editandoId) await API.patch('/salud/incidentes/'+editandoId+'/',datos);

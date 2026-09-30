@@ -19,7 +19,11 @@ class IncidenteSalud(ModeloBase):
     ]
 
     nino              = models.ForeignKey('ninos.Nino', on_delete=models.CASCADE, related_name='incidentes_salud')
-    reportado_por     = models.ForeignKey('personal.Personal', on_delete=models.CASCADE)
+    # Quién lo registró: lo completa el servidor con la ficha de Personal del usuario
+    # logueado. Puede quedar vacío (p. ej. un admin sin ficha) y, si se elimina esa
+    # ficha, el incidente se conserva en vez de borrarse en cascada.
+    reportado_por     = models.ForeignKey('personal.Personal', on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name='incidentes_reportados')
     sucursal          = models.ForeignKey('core.Sucursal', on_delete=models.CASCADE)
     fecha             = models.DateField()
     hora              = models.TimeField()
