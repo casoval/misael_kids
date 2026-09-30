@@ -1,0 +1,65 @@
+diff --git a/frontend/pages/panel/personal.html b/frontend/pages/panel/personal.html
+index e561302..01d7246 100644
+--- a/frontend/pages/panel/personal.html
++++ b/frontend/pages/panel/personal.html
+@@ -150,9 +150,6 @@
+           <option value="">Seleccionar...</option>
+           <option value="educadora">Educadora</option>
+           <option value="ayudante">Ayudante</option>
+-          <option value="directora">Directora</option>
+-          <option value="recepcionista">Recepcionista</option>
+-          <option value="cocina">Cocina</option>
+         </select>
+         <span class="form-error" data-error="p-rol"></span>
+       </div>
+@@ -369,6 +366,22 @@ function renderAcceso(p) {
+     </div>`;
+ }
+ 
++// El formulario solo ofrece Educadora y Ayudante. Si la ficha (o el usuario
++// elegido) ya tiene otro rol (directora, recepcionista, cocina), se agrega esa
++// única opción para no borrarlo ni cambiárselo sin querer al guardar.
++const ROLES_FORM = ['educadora','ayudante'];
++const ROLES_EXTRA_LABEL = {directora:'Directora', recepcionista:'Recepcionista', cocina:'Cocina'};
++function opcionesRol(rolActual) {
++  const sel = document.getElementById('p-rol');
++  sel.querySelectorAll('option[data-extra]').forEach(o => o.remove());
++  if (rolActual && !ROLES_FORM.includes(rolActual) && ROLES_EXTRA_LABEL[rolActual]) {
++    const o = document.createElement('option');
++    o.value = rolActual; o.textContent = ROLES_EXTRA_LABEL[rolActual];
++    o.setAttribute('data-extra','1');
++    sel.appendChild(o);
++  }
++}
++
+ let usuariosSinFicha = [];
+ async function cargarUsuariosSinFicha(preseleccion) {
+   const sel = document.getElementById('p-usuario-existente');
+@@ -396,8 +409,11 @@ function elegirUsuarioExistente() {
+     document.getElementById('p-nombres').value   = u.nombres || '';
+     document.getElementById('p-apellidos').value = u.apellidos || '';
+     document.getElementById('p-telefono').value  = u.telefono || '';
++    opcionesRol(u.rol);
+     if (['educadora','ayudante','directora','recepcionista','cocina'].includes(u.rol))
+       document.getElementById('p-rol').value = u.rol;
++  } else {
++    opcionesRol(null);
+   }
+ }
+ 
+@@ -409,6 +425,7 @@ function abrirNuevo(usuarioPreseleccionado) {
+   document.getElementById('acceso-bloque').style.display='';
+   renderAcceso(null);
+   ['p-id','p-usuario-id','p-nombres','p-apellidos','p-telefono','p-ci','p-especialidad'].forEach(id=>document.getElementById(id).value='');
++  opcionesRol(null);
+   document.getElementById('p-rol').value='';
+   document.getElementById('p-fecha-ingreso').value=hoy;
+   document.getElementById('p-foto').value='';
+@@ -432,6 +449,7 @@ async function editar(id) {
+     renderAcceso(p);
+     document.getElementById('p-ci').value=p.ci||'';
+     document.getElementById('p-telefono').value=p.telefono||'';
++    opcionesRol(p.rol);
+     document.getElementById('p-rol').value=p.rol||'';
+     document.getElementById('p-fecha-ingreso').value=p.fecha_ingreso||hoy;
+     document.getElementById('p-especialidad').value=p.especialidad||'';
