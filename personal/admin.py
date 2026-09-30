@@ -5,13 +5,13 @@ from .models import Personal, AsignacionPersonal, AsistenciaPersonal
 class PersonalAdmin(admin.ModelAdmin):
     list_display  = ['__str__', 'ci', 'telefono', 'fecha_ingreso', 'activo']
     list_filter   = ['rol', 'activo']
-    search_fields = ['usuario__nombres', 'usuario__apellidos', 'ci']
+    search_fields = ['nombres', 'apellidos', 'ci']
 
 @admin.register(AsignacionPersonal)
 class AsignacionPersonalAdmin(admin.ModelAdmin):
     list_display  = ['personal', 'sucursal', 'sala', 'turno', 'es_titular', 'fecha_inicio', 'fecha_fin', 'activa']
     list_filter   = ['sucursal', 'sala', 'activa', 'es_titular']
-    search_fields = ['personal__usuario__nombres', 'personal__usuario__apellidos']
+    search_fields = ['personal__nombres', 'personal__apellidos']
 
 @admin.register(AsistenciaPersonal)
 class AsistenciaPersonalAdmin(admin.ModelAdmin):

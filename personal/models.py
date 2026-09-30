@@ -9,7 +9,8 @@ from core.models import ModeloBase
 class Personal(ModeloBase):
     """
     Perfil del personal del jardín (educadoras, ayudantes, etc.)
-    Vinculado al Usuario del sistema para login.
+    El acceso al sistema (Usuario) es OPCIONAL, igual que en Tutor: la ficha
+    existe por sí sola y luego se le "da acceso" con usuario y contraseña.
     """
     ROL_EDUCADORA   = 'educadora'
     ROL_AYUDANTE    = 'ayudante'
@@ -26,8 +27,11 @@ class Personal(ModeloBase):
     ]
 
     usuario       = models.OneToOneField(
-        'accounts.Usuario', on_delete=models.CASCADE, related_name='perfil_personal'
+        'accounts.Usuario', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='perfil_personal'
     )
+    nombres       = models.CharField(max_length=100)
+    apellidos     = models.CharField(max_length=100)
     ci            = models.CharField(max_length=20, unique=True, verbose_name='CI')
     telefono      = models.CharField(max_length=20, blank=True)
     rol           = models.CharField(max_length=20, choices=ROLES)
@@ -39,20 +43,37 @@ class Personal(ModeloBase):
     class Meta:
         verbose_name        = 'Personal'
         verbose_name_plural = 'Personal'
-        ordering            = ['usuario__apellidos']
+        ordering            = ['apellidos', 'nombres']
+
+    @property
+    def nombre_completo(self):
+        return f'{self.nombres} {self.apellidos}'.strip()
 
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        # Los permisos se deciden con el rol del USUARIO; si la ficha cambia de
-        # rol (educadora -> ayudante, etc.) el usuario lo sigue. Un admin nunca
-        # se degrada por tener ficha de personal.
         u = self.usuario
+        # Fichas nuevas ligadas a un usuario sin nombres propios: se copian de él.
+        if u and not (self.nombres and self.apellidos):
+            self.nombres   = self.nombres   or u.nombres
+            self.apellidos = self.apellidos or u.apellidos
+        super().save(*args, **kwargs)
+        if not u:
+            return
+        # Ficha y usuario siempre coinciden en nombre y rol (los permisos usan el
+        # rol del USUARIO). Un admin nunca se degrada por tener ficha.
+        campos = []
+        if u.nombres != self.nombres:
+            u.nombres = self.nombres; campos.append('nombres')
+        if u.apellidos != self.apellidos:
+            u.apellidos = self.apellidos; campos.append('apellidos')
+        if self.telefono and u.telefono != self.telefono:
+            u.telefono = self.telefono; campos.append('telefono')
         if u.rol != self.rol and u.rol != 'admin':
-            u.rol = self.rol
-            u.save(update_fields=['rol'])
+            u.rol = self.rol; campos.append('rol')
+        if campos:
+            u.save(update_fields=campos)
 
     def __str__(self):
-        return f'{self.usuario.nombre_completo} — {self.get_rol_display()}'
+        return f'{self.nombre_completo} — {self.get_rol_display()}'
 
 
 class AsignacionPersonal(ModeloBase):

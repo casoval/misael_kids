@@ -47,10 +47,67 @@ class SincroniaPersonalUsuarioTests(APITestCase):
         self.assertEqual(r.status_code, 400)
         self.assertFalse(Personal.objects.filter(ci='999').exists())
 
-    def test_sin_acceso_ni_usuario_pide_los_datos(self):
+    def test_sin_nombres_ni_usuario_pide_los_datos(self):
         r = self.client.post('/api/personal/personal/', DATOS, format='json')
         self.assertEqual(r.status_code, 400)
-        self.assertIn('username', r.data)
+        self.assertIn('nombres', r.data)
+
+    # ── Acceso opcional, como en Tutor ("dar usuario") ─────────────────
+    def test_ficha_sin_acceso_es_valida_y_no_crea_usuario(self):
+        antes = Usuario.objects.count()
+        r = self.client.post('/api/personal/personal/',
+                             dict(DATOS, nombres='Sin', apellidos='Acceso'), format='json')
+        self.assertEqual(r.status_code, 201, r.data)
+        self.assertFalse(r.data['tiene_acceso'])
+        self.assertIsNone(r.data['usuario'])
+        self.assertEqual(r.data['nombre_completo'], 'Sin Acceso')
+        self.assertEqual(Usuario.objects.count(), antes)
+
+    def test_dar_acceso_despues_al_editar(self):
+        r = self.client.post('/api/personal/personal/',
+                             dict(DATOS, nombres='Mar', apellidos='Gil', telefono='70'), format='json')
+        pid = r.data['id']
+        r = self.client.patch(f'/api/personal/personal/{pid}/',
+                              {'username': 'mar', 'password': 'MisaelKids2025!'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertTrue(r.data['tiene_acceso'])
+        u = Personal.objects.get(id=pid).usuario
+        self.assertEqual((u.username, u.rol, u.nombres, u.apellidos), ('mar', 'educadora', 'Mar', 'Gil'))
+        self.assertTrue(u.check_password('MisaelKids2025!'))
+
+    def test_dar_acceso_exige_usuario_y_contrasena(self):
+        pid = self.client.post('/api/personal/personal/',
+                               dict(DATOS, nombres='A', apellidos='B'), format='json').data['id']
+        r = self.client.patch(f'/api/personal/personal/{pid}/', {'username': 'solo'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('password', r.data)
+        self.assertFalse(Usuario.objects.filter(username='solo').exists())
+
+    def test_no_se_puede_dar_acceso_dos_veces(self):
+        self._alta()
+        pid = Personal.objects.get(ci='123').id
+        r = self.client.patch(f'/api/personal/personal/{pid}/',
+                              {'username': 'otro', 'password': 'MisaelKids2025!'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertFalse(Usuario.objects.filter(username='otro').exists())
+
+    def test_editar_nombre_en_usuarios_actualiza_la_ficha(self):
+        self._alta()
+        ficha = Personal.objects.get(ci='123')
+        self.client.patch(f'/api/auth/usuarios/{ficha.usuario_id}/',
+                          {'nombres': 'Lauris', 'apellidos': 'Paz'}, format='json')
+        ficha.refresh_from_db()
+        self.assertEqual(ficha.nombre_completo, 'Lauris Paz')
+
+    def test_alta_desde_usuarios_envia_el_mismo_payload_y_crea_ambos(self):
+        """Payload exacto de la pantalla Usuarios (con password2 sobrante)."""
+        r = self.client.post('/api/personal/personal/', dict(
+            nombres='Rosa', apellidos='Quispe', telefono='7', rol='recepcionista',
+            password='MisaelKids2025!', password2='MisaelKids2025!', username='rosa',
+            ci='777', fecha_ingreso='2026-02-01'), format='json')
+        self.assertEqual(r.status_code, 201, r.data)
+        ficha = Personal.objects.get(ci='777')
+        self.assertEqual((ficha.usuario.username, ficha.usuario.rol), ('rosa', 'recepcionista'))
 
     # ── Vincular un usuario que ya existía ─────────────────────────────
     def test_vincula_usuario_existente_sin_crear_otro(self):

@@ -15,7 +15,7 @@ class DerivacionSerializer(serializers.ModelSerializer):
         # Personal asociada también pueden derivar) — sin este chequeo,
         # obj.solicitado_por.usuario rompía con AttributeError.
         if obj.solicitado_por_id and obj.solicitado_por:
-            return obj.solicitado_por.usuario.nombre_completo
+            return obj.solicitado_por.nombre_completo
         return None
 
     def validate_nino(self, nino):

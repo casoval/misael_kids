@@ -57,6 +57,12 @@ class UsuarioSerializer(serializers.ModelSerializer):
             ficha.save()
 
         instance = super().update(instance, validated_data)
+        # Nombre/teléfono editados aquí también se reflejan en la ficha de personal.
+        if ficha and any(k in validated_data for k in ('nombres', 'apellidos', 'telefono')):
+            ficha.nombres, ficha.apellidos = instance.nombres, instance.apellidos
+            if instance.telefono:
+                ficha.telefono = instance.telefono
+            ficha.save()
         if 'activo' in validated_data:
             instance.is_active = validated_data['activo']
             instance.save(update_fields=['is_active'])

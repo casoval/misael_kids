@@ -24,7 +24,7 @@ class HitoDesarrolloViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class EvaluacionNinoViewSet(viewsets.ModelViewSet):
-    queryset = EvaluacionNino.objects.select_related("nino","educadora__usuario","hito").all()
+    queryset = EvaluacionNino.objects.select_related("nino","educadora","hito").all()
     serializer_class   = EvaluacionNinoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]

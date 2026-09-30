@@ -25,7 +25,7 @@ def _personal_del_usuario(request):
 
 
 class PlanificacionGrupalViewSet(viewsets.ModelViewSet):
-    queryset = PlanificacionGrupal.objects.select_related("sala","turno","educadora__usuario").all()
+    queryset = PlanificacionGrupal.objects.select_related("sala","turno","educadora").all()
     serializer_class   = PlanificacionGrupalSerializer
     permission_classes = [IsAuthenticated, NoEsTutor]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
@@ -61,8 +61,8 @@ class PlanificacionGrupalViewSet(viewsets.ModelViewSet):
         serializer.save(educadora=_personal_del_usuario(self.request))
 
 class PlanIndividualViewSet(viewsets.ModelViewSet):
-    queryset = PlanIndividual.objects.select_related("nino","creado_por__usuario").prefetch_related(
-        "objetivos__registros__educadora__usuario",
+    queryset = PlanIndividual.objects.select_related("nino","creado_por").prefetch_related(
+        "objetivos__registros__educadora",
         Prefetch(
             "nino__inscripciones",
             queryset=Inscripcion.objects.filter(activa=True).select_related("sala", "turno"),
@@ -97,7 +97,7 @@ class ObjetivoIndividualViewSet(viewsets.ModelViewSet):
         serializer.save()
 
 class RegistroObjetivoViewSet(viewsets.ModelViewSet):
-    queryset           = RegistroObjetivo.objects.select_related("objetivo","educadora__usuario").all()
+    queryset           = RegistroObjetivo.objects.select_related("objetivo","educadora").all()
     serializer_class   = RegistroObjetivoSerializer
     permission_classes = [IsAuthenticated, NoEsTutor]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]

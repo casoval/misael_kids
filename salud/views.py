@@ -5,7 +5,7 @@ from .models import IncidenteSalud
 from .serializers import IncidenteSaludSerializer
 from accounts.permissions import filtrar_por_alcance, exigir_nino_en_alcance
 class IncidenteSaludViewSet(viewsets.ModelViewSet):
-    queryset = IncidenteSalud.objects.select_related("nino","reportado_por__usuario","sucursal").all()
+    queryset = IncidenteSalud.objects.select_related("nino","reportado_por","sucursal").all()
     serializer_class   = IncidenteSaludSerializer
     permission_classes = [IsAuthenticated]
     filter_backends    = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

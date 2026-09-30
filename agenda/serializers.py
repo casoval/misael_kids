@@ -5,7 +5,7 @@ from .models import PlanificacionGrupal, PlanIndividual, ObjetivoIndividual, Reg
 
 class RegistroObjetivoSerializer(serializers.ModelSerializer):
     resultado_display = serializers.CharField(source="get_resultado_display", read_only=True)
-    educadora_nombre  = serializers.CharField(source="educadora.usuario.nombre_completo", read_only=True, default=None)
+    educadora_nombre  = serializers.CharField(source="educadora.nombre_completo", read_only=True, default=None)
 
     class Meta:
         model  = RegistroObjetivo
@@ -36,7 +36,7 @@ class PlanIndividualSerializer(serializers.ModelSerializer):
     nino_foto         = serializers.ImageField(source="nino.foto", read_only=True)
     nino_sala         = serializers.SerializerMethodField()
     origen_display    = serializers.CharField(source="get_origen_display", read_only=True)
-    creado_por_nombre = serializers.CharField(source="creado_por.usuario.nombre_completo", read_only=True, default=None)
+    creado_por_nombre = serializers.CharField(source="creado_por.nombre_completo", read_only=True, default=None)
     objetivos         = ObjetivoIndividualSerializer(many=True, read_only=True)
 
     class Meta:
@@ -63,7 +63,7 @@ class PlanIndividualSerializer(serializers.ModelSerializer):
 class PlanificacionGrupalSerializer(serializers.ModelSerializer):
     sala_nombre      = serializers.CharField(source="sala.nombre", read_only=True)
     turno_nombre     = serializers.CharField(source="turno.nombre", read_only=True)
-    educadora_nombre = serializers.CharField(source="educadora.usuario.nombre_completo", read_only=True, default=None)
+    educadora_nombre = serializers.CharField(source="educadora.nombre_completo", read_only=True, default=None)
 
     class Meta:
         model  = PlanificacionGrupal

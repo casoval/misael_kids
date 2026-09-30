@@ -132,7 +132,7 @@
       </div>
       <div class="form-grupo">
         <label class="form-label">Rol *</label>
-        <select id="u-rol" class="form-select">
+        <select id="u-rol" class="form-select" onchange="alternarFicha()">
           <option value="">Seleccionar...</option>
           <option value="admin">Administrador</option>
           <option value="directora">Directora</option>
@@ -144,6 +144,27 @@
           <option value="profesional">Profesional Misael</option>
         </select>
         <span class="form-error" data-error="u-rol"></span>
+      </div>
+    </div>
+
+    <!-- Solo al crear un usuario de PERSONAL: completa la ficha en el mismo paso
+         (nombres, apellidos, teléfono y rol ya se escribieron arriba). -->
+    <div id="bloque-ficha" style="display:none;background:var(--gris-50);border-radius:var(--radio-lg);
+      padding:var(--gap-md);margin-top:var(--gap-sm)">
+      <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
+        text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">
+        Ficha de personal (se crea junto con el usuario)</p>
+      <div class="grid-2">
+        <div class="form-grupo">
+          <label class="form-label">CI *</label>
+          <input type="text" id="u-ci" class="form-input" placeholder="Número de CI">
+          <span class="form-error" data-error="u-ci"></span>
+        </div>
+        <div class="form-grupo">
+          <label class="form-label">Fecha de ingreso *</label>
+          <input type="date" id="u-fecha-ingreso" class="form-input">
+          <span class="form-error" data-error="u-fecha-ingreso"></span>
+        </div>
       </div>
     </div>
 
@@ -277,8 +298,18 @@ function limpiarFiltros() {
   cargar();
 }
 
+const ROLES_PERSONAL = ['educadora','ayudante','directora','recepcionista','cocina'];
+function alternarFicha() {
+  // La ficha solo se pide al CREAR y si el rol es de personal del centro.
+  const mostrar = !editandoId && ROLES_PERSONAL.includes(document.getElementById('u-rol').value);
+  document.getElementById('bloque-ficha').style.display = mostrar ? '' : 'none';
+}
+
 function abrirNuevo() {
   editandoId = null;
+  ['u-ci'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('u-fecha-ingreso').value = new Date().toISOString().split('T')[0];
+  document.getElementById('bloque-ficha').style.display = 'none';
   document.getElementById('titulo-modal-usr').textContent = 'Nuevo usuario';
   ['u-id','u-nombres','u-apellidos','u-telefono','u-username'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('u-rol').value = '';
@@ -292,6 +323,7 @@ function abrirNuevo() {
 
 async function editar(id) {
   editandoId = id;
+  document.getElementById('bloque-ficha').style.display = 'none';
   document.getElementById('titulo-modal-usr').textContent = 'Editar usuario';
   try {
     const u = await API.get('/auth/usuarios/'+id+'/');
@@ -318,6 +350,11 @@ async function guardarUsuario() {
     'u-rol':       [()=>Validar.requerido(document.getElementById('u-rol').value,'Rol')],
     'u-username':  [()=>Validar.requerido(document.getElementById('u-username').value,'Nombre de usuario')],
   };
+  const esPersonal = !editandoId && ROLES_PERSONAL.includes(document.getElementById('u-rol').value);
+  if (esPersonal) {
+    reglas['u-ci'] = [()=>Validar.requerido(document.getElementById('u-ci').value,'CI')];
+    reglas['u-fecha-ingreso'] = [()=>Validar.fecha(document.getElementById('u-fecha-ingreso').value,'Fecha de ingreso')];
+  }
   if (!editandoId) {
     reglas['u-password'] = [()=>Validar.minLength(document.getElementById('u-password').value,8,'La contraseña')];
   }
@@ -346,8 +383,18 @@ async function guardarUsuario() {
         password2: document.getElementById('u-password').value,
         username:  document.getElementById('u-username').value.trim(),
       };
-      await API.post('/auth/usuarios/', datos);
-      UI.toast('✅ Usuario creado correctamente','exito');
+      if (esPersonal) {
+        // Usuario + ficha en UNA operación (sin volver a pedir nombres en Personal).
+        await API.post('/personal/personal/', {
+          ...datos,
+          ci: document.getElementById('u-ci').value.trim(),
+          fecha_ingreso: document.getElementById('u-fecha-ingreso').value,
+        });
+        UI.toast('✅ Usuario y ficha de personal creados','exito');
+      } else {
+        await API.post('/auth/usuarios/', datos);
+        UI.toast('✅ Usuario creado correctamente','exito');
+      }
     }
     UI.cerrarModal('modal-usr');
     cargar();

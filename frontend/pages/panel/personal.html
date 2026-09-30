@@ -168,30 +168,9 @@
       </div>
     </div>
 
-    <div id="bloque-acceso">
-      <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
-      <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
-        text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">Acceso al sistema</p>
-      <div class="grid-2">
-        <div class="form-grupo">
-          <label class="form-label">Nombre de usuario *</label>
-          <input type="text" id="p-username" class="form-input" placeholder="Nombre de usuario">
-          <span class="form-error" data-error="p-username"></span>
-          <span style="font-size:var(--text-xs);color:var(--texto-suave)">Se usará para iniciar sesión.</span>
-        </div>
-        <div class="form-grupo">
-          <label class="form-label">Contraseña inicial *</label>
-          <input type="text" id="p-password" class="form-input" value="MisaelKids2025!">
-          <span class="form-error" data-error="p-password"></span>
-          <span style="font-size:var(--text-xs);color:var(--texto-suave)">Podrá cambiarla luego desde su perfil.</span>
-        </div>
-      </div>
-    </div>
-    <div id="nota-acceso-editar" style="display:none;background:var(--gris-50);border-radius:var(--radio-lg);
-      padding:var(--gap-md);margin-bottom:var(--gap-md);font-size:var(--text-sm);color:var(--texto-suave)">
-      Para cambiar el nombre de usuario o restablecer la contraseña de acceso,
-      hazlo desde <a href="/panel/usuarios/" style="color:var(--turquesa-d);font-weight:700">Usuarios</a>.
-    </div>
+    <!-- Acceso al sistema: igual que en Tutor, una casilla "Darle acceso" -->
+    <hr style="border:none;border-top:2px dashed var(--gris-100);margin:var(--gap-md) 0">
+    <div id="acceso-bloque"></div>
 
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-md)">
       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-personal')">Cancelar</button>
@@ -302,7 +281,10 @@ async function cargar() {
       <td><div style="display:flex;align-items:center;gap:var(--gap-sm)">
         <div class="avatar-personal" style="${p.foto ? `background-image:url('${p.foto}');background-size:cover;background-position:center;` : ''}">${p.foto ? '' : UI.iniciales(p.nombre_completo)}</div>
         <div><div style="font-weight:700">${p.nombre_completo}</div>
-        <div style="font-size:var(--text-xs);color:var(--texto-suave)">CI: ${p.ci}</div></div>
+        <div style="font-size:var(--text-xs);color:var(--texto-suave)">CI: ${p.ci}</div>
+        ${p.tiene_acceso
+          ? '<span class="chip chip-verde" style="font-size:.65rem">🔑 Con acceso</span>'
+          : '<span class="chip chip-amarillo" style="font-size:.65rem">Sin acceso</span>'}</div>
       </div></td>
       <td style="font-weight:600">${p.ci}</td>
       <td><span class="rol-badge rol-${p.rol}">${p.rol_display}</span></td>
@@ -354,6 +336,39 @@ function previsualizarFotoPersonal(input) {
   lector.readAsDataURL(archivo);
 }
 
+function renderAcceso(p) {
+  // p = ficha existente (editar) o null (nueva).
+  const cont = document.getElementById('acceso-bloque');
+  if (p && p.tiene_acceso) {
+    cont.innerHTML = `<p style="font-size:var(--text-sm);color:var(--verde-d);font-weight:600">
+      ✅ Ya tiene acceso al sistema${p.usuario_username ? ' (usuario: <strong>'+p.usuario_username+'</strong>)' : ''}</p>
+      <p style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:4px">
+      Para cambiar su usuario o restablecer la contraseña ve a
+      <a href="/panel/usuarios/" style="color:var(--turquesa-d);font-weight:700">Usuarios</a>.</p>`;
+    return;
+  }
+  cont.innerHTML = `
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--text-sm);font-weight:600">
+      <input type="checkbox" id="p-dar-acceso" style="width:13px;height:13px"
+        onchange="document.getElementById('p-acceso-campos').style.display=this.checked?'grid':'none'">
+      🔑 Darle acceso al sistema (usuario y contraseña)
+    </label>
+    <div id="p-acceso-campos" class="grid-2" style="display:none;margin-top:var(--gap-sm)">
+      <div class="form-grupo">
+        <label class="form-label">Nombre de usuario *</label>
+        <input type="text" id="p-username" class="form-input" placeholder="Nombre de usuario">
+        <span class="form-error" data-error="p-username"></span>
+        <span style="font-size:var(--text-xs);color:var(--texto-suave)">Se usará para iniciar sesión.</span>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Contraseña inicial *</label>
+        <input type="text" id="p-password" class="form-input" value="MisaelKids2025!">
+        <span class="form-error" data-error="p-password"></span>
+        <span style="font-size:var(--text-xs);color:var(--texto-suave)">Podrá cambiarla luego desde su perfil.</span>
+      </div>
+    </div>`;
+}
+
 let usuariosSinFicha = [];
 async function cargarUsuariosSinFicha(preseleccion) {
   const sel = document.getElementById('p-usuario-existente');
@@ -376,7 +391,7 @@ function elegirUsuarioExistente() {
   const id = document.getElementById('p-usuario-existente').value;
   const u  = usuariosSinFicha.find(x => x.id === id);
   // Con usuario existente no se pide acceso nuevo; los datos se toman de él.
-  document.getElementById('bloque-acceso').style.display = u ? 'none' : '';
+  document.getElementById('acceso-bloque').style.display = u ? 'none' : '';
   if (u) {
     document.getElementById('p-nombres').value   = u.nombres || '';
     document.getElementById('p-apellidos').value = u.apellidos || '';
@@ -391,11 +406,10 @@ function abrirNuevo(usuarioPreseleccionado) {
   document.getElementById('bloque-usuario-existente').style.display='';
   cargarUsuariosSinFicha(typeof usuarioPreseleccionado === 'string' ? usuarioPreseleccionado : null);
   document.getElementById('titulo-modal-personal').textContent='Nuevo personal';
-  document.getElementById('bloque-acceso').style.display='';
-  document.getElementById('nota-acceso-editar').style.display='none';
-  ['p-id','p-usuario-id','p-nombres','p-apellidos','p-telefono','p-ci','p-especialidad','p-username'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('acceso-bloque').style.display='';
+  renderAcceso(null);
+  ['p-id','p-usuario-id','p-nombres','p-apellidos','p-telefono','p-ci','p-especialidad'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('p-rol').value='';
-  document.getElementById('p-password').value='MisaelKids2025!';
   document.getElementById('p-fecha-ingreso').value=hoy;
   document.getElementById('p-foto').value='';
   document.getElementById('p-foto-preview').style.backgroundImage='';
@@ -408,14 +422,14 @@ async function editar(id) {
   editandoId=id;
   document.getElementById('bloque-usuario-existente').style.display='none';
   document.getElementById('titulo-modal-personal').textContent='Editar personal';
-  document.getElementById('bloque-acceso').style.display='none';
-  document.getElementById('nota-acceso-editar').style.display='';
+  document.getElementById('acceso-bloque').style.display='';
   try {
     const p = await API.get('/personal/personal/'+id+'/');
     document.getElementById('p-id').value=id;
     document.getElementById('p-usuario-id').value=p.usuario;
-    document.getElementById('p-nombres').value=p.usuario_nombres||'';
-    document.getElementById('p-apellidos').value=p.usuario_apellidos||'';
+    document.getElementById('p-nombres').value=p.nombres||'';
+    document.getElementById('p-apellidos').value=p.apellidos||'';
+    renderAcceso(p);
     document.getElementById('p-ci').value=p.ci||'';
     document.getElementById('p-telefono').value=p.telefono||'';
     document.getElementById('p-rol').value=p.rol||'';
@@ -439,7 +453,8 @@ async function guardarPersonal() {
     'p-fecha-ingreso':[()=>Validar.fecha(document.getElementById('p-fecha-ingreso').value,'Fecha de ingreso')],
   };
   const usuarioExistente = document.getElementById('p-usuario-existente').value;
-  if (!editandoId && !usuarioExistente) {
+  const darAcceso = document.getElementById('p-dar-acceso');
+  if (darAcceso && darAcceso.checked && !usuarioExistente) {
     reglas['p-username'] = [()=>Validar.requerido(document.getElementById('p-username').value,'Nombre de usuario')];
     reglas['p-password'] = [()=>Validar.minLength(document.getElementById('p-password').value,8,'La contraseña')];
   }
@@ -454,34 +469,37 @@ async function guardarPersonal() {
   try {
     let personalId = editandoId;
     if (!editandoId) {
-      // UNA sola operación: el servidor crea el usuario y la ficha juntos (o
-      // vincula el usuario elegido). Si algo falla no queda nada a medias.
+      // UNA sola operación: el servidor crea la ficha y, si se marcó "darle
+      // acceso", también el usuario (o vincula el elegido). Nada queda a medias.
       const datos = {
         ci:document.getElementById('p-ci').value,
         telefono, rol,
         fecha_ingreso:document.getElementById('p-fecha-ingreso').value,
         especialidad:document.getElementById('p-especialidad').value,
       };
+      datos.nombres = nombres; datos.apellidos = apellidos;
       if (usuarioExistente) {
-        datos.usuario = usuarioExistente;
-      } else {
-        Object.assign(datos, {
-          nombres, apellidos,
-          username: document.getElementById('p-username').value.trim(),
-          password: document.getElementById('p-password').value,
-        });
+        datos.usuario = usuarioExistente;          // vincular usuario que ya existía
+      } else if (darAcceso && darAcceso.checked) {  // "darle acceso": crea el usuario
+        datos.username = document.getElementById('p-username').value.trim();
+        datos.password = document.getElementById('p-password').value;
       }
       const nuevo = await API.post('/personal/personal/', datos);
       personalId = nuevo.id;
       UI.toast('Personal creado correctamente','exito');
     } else {
-      await API.patch('/personal/personal/'+editandoId+'/', {
+      const cambios = {
         nombres, apellidos,
         ci:document.getElementById('p-ci').value,
         telefono, rol,
         fecha_ingreso:document.getElementById('p-fecha-ingreso').value,
         especialidad:document.getElementById('p-especialidad').value,
-      });
+      };
+      if (darAcceso && darAcceso.checked) {
+        cambios.username = document.getElementById('p-username').value.trim();
+        cambios.password = document.getElementById('p-password').value;
+      }
+      await API.patch('/personal/personal/'+editandoId+'/', cambios);
       UI.toast('Personal actualizado correctamente','exito');
     }
     const archivoFoto = document.getElementById('p-foto').files[0];

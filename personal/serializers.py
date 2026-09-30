@@ -7,95 +7,118 @@ from .models import Personal, AsignacionPersonal, AsistenciaPersonal
 
 
 class PersonalSerializer(serializers.ModelSerializer):
-    nombre_completo  = serializers.CharField(source='usuario.nombre_completo', read_only=True)
-    email            = serializers.CharField(source='usuario.email', read_only=True)
-    usuario_nombres  = serializers.CharField(source='usuario.nombres', read_only=True)
-    usuario_apellidos= serializers.CharField(source='usuario.apellidos', read_only=True)
-    usuario_username = serializers.CharField(source='usuario.username', read_only=True)
+    """
+    Ficha del personal. Igual que Tutor, el ACCESO al sistema es opcional:
+    se crea la ficha y, si se quiere, se le "da acceso" indicando usuario y
+    contraseña (al crear o luego al editar). También se puede vincular un
+    usuario que ya existía enviando `usuario`.
+    """
+    nombre_completo  = serializers.CharField(read_only=True)
+    email            = serializers.CharField(source='usuario.email', read_only=True, default=None)
+    usuario_username = serializers.CharField(source='usuario.username', read_only=True, default=None)
+    tiene_acceso     = serializers.SerializerMethodField()
     rol_display      = serializers.CharField(source='get_rol_display', read_only=True)
 
-    # Solo de escritura: permiten crear el usuario junto con la ficha, en UNA
-    # sola operación (si algo falla no queda un usuario huérfano), o editar
-    # los datos personales que viven en el usuario.
-    nombres   = serializers.CharField(write_only=True, required=False, max_length=100)
-    apellidos = serializers.CharField(write_only=True, required=False, max_length=100)
-    username  = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=50)
-    password  = serializers.CharField(write_only=True, required=False, min_length=8)
+    # Solo escritura: "dar acceso" (se crea el Usuario y se vincula, atómicamente).
+    username = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=50)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True, min_length=8)
 
     class Meta:
         model  = Personal
         fields = [
-            'id', 'usuario', 'nombre_completo', 'email',
-            'usuario_nombres', 'usuario_apellidos', 'usuario_username',
-            'nombres', 'apellidos', 'username', 'password',
+            'id', 'usuario', 'tiene_acceso', 'nombre_completo', 'nombres', 'apellidos',
+            'email', 'usuario_username', 'username', 'password',
             'ci', 'telefono', 'rol', 'rol_display', 'foto',
             'especialidad', 'fecha_ingreso', 'activo',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-        # `usuario` es opcional al crear: si no viene, se crea uno nuevo con
-        # username/password; si viene, se VINCULA ese usuario existente.
-        extra_kwargs = {'usuario': {'required': False}}
+        extra_kwargs = {
+            'usuario':   {'required': False, 'allow_null': True},
+            'nombres':   {'required': False},
+            'apellidos': {'required': False},
+        }
 
+    def get_tiene_acceso(self, obj):
+        return obj.usuario_id is not None
+
+    # ── Validación ─────────────────────────────────────────────────────
     def validate(self, data):
-        if self.instance is not None:
-            if 'usuario' in data and data['usuario'] != self.instance.usuario:
-                raise serializers.ValidationError(
-                    {'usuario': 'No se puede cambiar el usuario de una ficha existente.'})
-            return data
+        instancia = self.instance
+        usuario_actual = instancia.usuario if instancia else None
+        usuario = data.get('usuario', usuario_actual)
+        username = (data.get('username') or '').strip()
+        password = data.get('password') or ''
 
-        usuario = data.get('usuario')
-        if usuario is not None:
-            if usuario.rol in ('tutor', 'profesional'):
+        if instancia is not None and 'usuario' in data and usuario_actual is not None \
+                and data['usuario'] != usuario_actual:
+            raise serializers.ValidationError(
+                {'usuario': 'Esta ficha ya tiene un usuario; se gestiona desde Usuarios.'})
+
+        if usuario is not None and usuario.rol in ('tutor', 'profesional'):
+            raise serializers.ValidationError(
+                {'usuario': 'Ese usuario es un tutor/profesional, no personal del centro.'})
+
+        if username or password:
+            if usuario is not None:
                 raise serializers.ValidationError(
-                    {'usuario': 'Ese usuario es un tutor/profesional, no personal del centro.'})
-        else:
-            faltan = [c for c in ('nombres', 'apellidos', 'username', 'password') if not data.get(c)]
+                    {'username': 'Esta persona ya tiene acceso; su usuario y contraseña '
+                                 'se gestionan desde Usuarios.'})
+            faltan = {c: 'Obligatorio para dar acceso al sistema.'
+                      for c, v in (('username', username), ('password', password)) if not v}
             if faltan:
-                raise serializers.ValidationError(
-                    {c: 'Obligatorio para crear el acceso al sistema.' for c in faltan})
+                raise serializers.ValidationError(faltan)
+
+        # Nombres: propios de la ficha; al vincular un usuario se toman de él.
+        nombres   = data.get('nombres',   instancia.nombres   if instancia else None)
+        apellidos = data.get('apellidos', instancia.apellidos if instancia else None)
+        if not nombres and usuario is not None:
+            nombres = usuario.nombres
+        if not apellidos and usuario is not None:
+            apellidos = usuario.apellidos
+        errores = {c: 'Este campo es obligatorio.'
+                   for c, v in (('nombres', nombres), ('apellidos', apellidos)) if not v}
+        if errores:
+            raise serializers.ValidationError(errores)
+        data['nombres'], data['apellidos'] = nombres, apellidos
         return data
 
+    # ── Dar acceso (crear + vincular el usuario) ───────────────────────
+    @staticmethod
+    def _crear_usuario(datos, username, password):
+        from accounts.serializers import UsuarioCreateSerializer
+        ser = UsuarioCreateSerializer(data={
+            'nombres': datos['nombres'], 'apellidos': datos['apellidos'],
+            'telefono': datos.get('telefono', ''), 'rol': datos['rol'],
+            'username': username, 'password': password, 'password2': password,
+        })
+        ser.is_valid(raise_exception=True)
+        return ser.save()
+
     def create(self, validated_data):
-        nombres   = validated_data.pop('nombres', None)
-        apellidos = validated_data.pop('apellidos', None)
-        username  = validated_data.pop('username', None)
-        password  = validated_data.pop('password', None)
+        username = (validated_data.pop('username', '') or '').strip()
+        password = validated_data.pop('password', '')
         with transaction.atomic():
-            if validated_data.get('usuario') is None:
-                from accounts.serializers import UsuarioCreateSerializer
-                ser = UsuarioCreateSerializer(data={
-                    'nombres': nombres, 'apellidos': apellidos,
-                    'telefono': validated_data.get('telefono', ''),
-                    'rol': validated_data['rol'], 'username': username,
-                    'password': password, 'password2': password,
-                })
-                ser.is_valid(raise_exception=True)
-                validated_data['usuario'] = ser.save()
-            # Personal.save() alinea el rol del usuario con el de la ficha.
+            if username and validated_data.get('usuario') is None:
+                validated_data['usuario'] = self._crear_usuario(validated_data, username, password)
+            # Personal.save() alinea nombre y rol del usuario con los de la ficha.
             return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        nombres   = validated_data.pop('nombres', None)
-        apellidos = validated_data.pop('apellidos', None)
-        validated_data.pop('username', None)   # el acceso se gestiona en Usuarios
-        validated_data.pop('password', None)
+        username = (validated_data.pop('username', '') or '').strip()
+        password = validated_data.pop('password', '')
         with transaction.atomic():
-            instance = super().update(instance, validated_data)
-            u, campos = instance.usuario, []
-            if nombres is not None:
-                u.nombres = nombres; campos.append('nombres')
-            if apellidos is not None:
-                u.apellidos = apellidos; campos.append('apellidos')
-            if 'telefono' in validated_data:
-                u.telefono = validated_data['telefono']; campos.append('telefono')
-            if campos:
-                u.save(update_fields=campos)
-        return instance
+            if username and instance.usuario is None and validated_data.get('usuario') is None:
+                datos = {'nombres': validated_data.get('nombres', instance.nombres),
+                         'apellidos': validated_data.get('apellidos', instance.apellidos),
+                         'telefono': validated_data.get('telefono', instance.telefono),
+                         'rol': validated_data.get('rol', instance.rol)}
+                validated_data['usuario'] = self._crear_usuario(datos, username, password)
+            return super().update(instance, validated_data)
 
 
 class AsignacionPersonalSerializer(serializers.ModelSerializer):
-    personal_nombre = serializers.CharField(source='personal.usuario.nombre_completo', read_only=True)
+    personal_nombre = serializers.CharField(source='personal.nombre_completo', read_only=True)
     sucursal_nombre = serializers.CharField(source='sucursal.nombre', read_only=True)
     sala_nombre     = serializers.CharField(source='sala.nombre', read_only=True)
     turno_nombre    = serializers.CharField(source='turno.nombre', read_only=True)
@@ -130,7 +153,7 @@ class AsignacionPersonalSerializer(serializers.ModelSerializer):
 
 
 class AsistenciaPersonalSerializer(serializers.ModelSerializer):
-    personal_nombre = serializers.CharField(source='personal.usuario.nombre_completo', read_only=True)
+    personal_nombre = serializers.CharField(source='personal.nombre_completo', read_only=True)
     sucursal_nombre = serializers.CharField(source='sucursal.nombre', read_only=True)
     estado_display  = serializers.CharField(source='get_estado_display', read_only=True)
 

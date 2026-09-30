@@ -20,7 +20,7 @@ from .authentication import CentroMisaelAPIKeyAuthentication
 from accounts.permissions import filtrar_por_alcance, NoEsTutor, exigir_nino_en_alcance
 
 class DerivacionViewSet(viewsets.ModelViewSet):
-    queryset = Derivacion.objects.select_related("nino","solicitado_por__usuario").all()
+    queryset = Derivacion.objects.select_related("nino","solicitado_por").all()
     serializer_class   = DerivacionSerializer
     permission_classes = [IsAuthenticated]
     filter_backends    = [DjangoFilterBackend, filters.SearchFilter]

@@ -164,6 +164,17 @@ class EducadoraAsistenciaTests(BaseSalas):
         r = self.client.get('/api/asistencia/asistencia/planilla/')
         self.assertEqual([n['nino'] for n in r.data['ninos']], [self.nino_a.id])
 
+    def test_planilla_muestra_educadora_sin_usuario(self):
+        """Una ficha sin acceso al sistema igual aparece asignada a su sala."""
+        ficha = Personal.objects.create(nombres='Sin', apellidos='Login', ci='900',
+                                        rol='educadora', fecha_ingreso=date(2024, 1, 1))
+        AsignacionPersonal.objects.create(personal=ficha, sucursal=self.suc, sala=self.sala_a,
+                                          turno=self.turno_a, fecha_inicio=date(2024, 1, 1))
+        self.client.force_authenticate(self.recep)
+        r = self.client.get(f'/api/asistencia/asistencia/planilla/?sala={self.sala_a.id}')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('Sin Login', [e['nombre'] for e in r.data['educadoras']])
+
     def test_listado_solo_asistencia_de_su_sala(self):
         Asistencia.objects.create(inscripcion=self.insc_a, fecha=date.today(),
                                   estado=Asistencia.ESTADO_PRESENTE)

@@ -338,7 +338,7 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
 
         # ── Educadoras responsables ──
         asignaciones = AsignacionPersonal.objects.select_related(
-            'personal__usuario', 'sala', 'turno', 'sucursal'
+            'personal', 'sala', 'turno', 'sucursal'
         ).filter(
             activa=True, personal__activo=True, fecha_inicio__lte=fecha,
         ).filter(Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=fecha))
@@ -354,12 +354,12 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         if turno:
             asignaciones = asignaciones.filter(turno=turno)
         asignaciones = asignaciones.order_by(
-            'sala__nombre', 'turno__hora_inicio', '-es_titular', 'personal__usuario__apellidos'
+            'sala__nombre', 'turno__hora_inicio', '-es_titular', 'personal__apellidos'
         )
         educadoras = [{
             'id': a.id,
             'personal_id': a.personal_id,
-            'nombre': a.personal.usuario.nombre_completo,
+            'nombre': a.personal.nombre_completo,
             'rol': a.personal.get_rol_display(),
             'es_titular': a.es_titular,
             'foto': self._url_media(request, a.personal.foto),

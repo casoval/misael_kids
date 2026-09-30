@@ -22,7 +22,7 @@ class PersonalViewSet(viewsets.ModelViewSet):
 
 class AsignacionPersonalViewSet(viewsets.ModelViewSet):
     queryset = AsignacionPersonal.objects.select_related(
-        'personal__usuario', 'sucursal', 'sala', 'turno'
+        'personal', 'sucursal', 'sala', 'turno'
     ).all()
     serializer_class   = AsignacionPersonalSerializer
     permission_classes = [EsAdminODirectora]
@@ -32,7 +32,7 @@ class AsignacionPersonalViewSet(viewsets.ModelViewSet):
 
 class AsistenciaPersonalViewSet(viewsets.ModelViewSet):
     queryset = AsistenciaPersonal.objects.select_related(
-        'personal__usuario', 'sucursal'
+        'personal', 'sucursal'
     ).all()
     serializer_class   = AsistenciaPersonalSerializer
     permission_classes = [IsAuthenticated]
