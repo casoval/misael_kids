@@ -220,11 +220,11 @@ misael_kids/
 |---|---|
 | `admin` | Todo el sistema |
 | `directora` | Su sucursal completa + admin |
-| `educadora` | Su sala, agenda, asistencia, comunicación |
-| `ayudante` | Asistencia y agenda (lectura cobros) |
+| `educadora` | **Solo sus salas asignadas** (asignación vigente): ve y edita a sus niños, marca asistencia, agenda, salud, desarrollo y comunicación. No ve cobros ni inscripciones; no crea/borra niños ni cambia autorizados a retirar |
+| `ayudante` | Igual que educadora en alcance (solo sus salas), pero la ficha del niño es de solo lectura. Sin acceso a dinero |
 | `tutor` | Solo portal de padres — su hijo/a |
 | `profesional` | Planes de trabajo (Centro Misael) |
-| `administrativo` | Cobros, reportes |
+| `recepcionista` | Oficina, todas las salas: inscripciones, fichas de niños/tutores/autorizados/documentos, cobros y recibos, asistencia (entrada/salida), avisos y mensajes, reportes. Sin agenda pedagógica ni desarrollo. (Antes se llamaba `administrativo`; la migración convierte los usuarios existentes) |
 | `cocina` | Solo inventario/menús |
 
 ---

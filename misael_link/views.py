@@ -17,7 +17,7 @@ from .serializers import (
 )
 from .import centro_misael_client as cm
 from .authentication import CentroMisaelAPIKeyAuthentication
-from accounts.permissions import filtrar_por_tutor, NoEsTutor
+from accounts.permissions import filtrar_por_alcance, NoEsTutor, exigir_nino_en_alcance
 
 class DerivacionViewSet(viewsets.ModelViewSet):
     queryset = Derivacion.objects.select_related("nino","solicitado_por__usuario").all()
@@ -33,9 +33,10 @@ class DerivacionViewSet(viewsets.ModelViewSet):
         # filtro, CUALQUIER cuenta de tutor podía listar TODAS las
         # derivaciones de TODOS los niños, ni siquiera hacía falta
         # adivinar un ID — bastaba con llamar al endpoint sin filtros.
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'nino')
 
     def perform_create(self, serializer):
+        exigir_nino_en_alcance(self.request.user, serializer.validated_data['nino'])
         # `solicitado_por` es opcional: cualquier cuenta con permiso puede
         # crear una derivación, tenga o no una ficha de Personal asociada.
         # Cuando sí existe, la guardamos para trazabilidad (quién lo pidió);
@@ -506,4 +507,4 @@ class VinculoCentroMisaelViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_fields = ['nino']
 
     def get_queryset(self):
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'nino')

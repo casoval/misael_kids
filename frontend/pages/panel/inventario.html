@@ -354,8 +354,8 @@
 <script src="{% static 'js/api.js' %}"></script>
 <script src="{% static 'js/components.js' %}"></script>
 <script>
-initPanel('inventario', ['admin', 'directora', 'educadora', 'ayudante', 'administrativo']);
-Auth.requerirAuth(['admin','directora','administrativo','educadora']);
+initPanel('inventario', ['admin', 'directora', 'educadora', 'ayudante', 'recepcionista']);
+Auth.requerirAuth(['admin','directora','recepcionista','educadora']);
 
 const usr = Auth.getUsuario();
 document.getElementById('usr-avatar').textContent = UI.iniciales(`${usr.nombres} ${usr.apellidos}`);

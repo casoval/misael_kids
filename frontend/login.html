@@ -300,7 +300,7 @@
 
     <!-- Mensaje contextual -->
     <p id="msg-contexto" style="font-size:.82rem;color:var(--texto-suave);margin-bottom:1rem;font-weight:600;text-align:center;">
-      Acceso para directoras, educadoras y administrativos
+      Acceso para directoras, educadoras y recepcionistas
     </p>
 
     <!-- Error -->
@@ -372,7 +372,7 @@
       document.getElementById('tab-padre').classList.toggle('activo', modo === 'padre');
       document.getElementById('msg-contexto').textContent =
         modo === 'personal'
-          ? 'Acceso para directoras, educadoras y administrativos'
+          ? 'Acceso para directoras, educadoras y recepcionistas'
           : 'Acceso para padres y tutores del jardín';
       ocultarError();
     }
@@ -426,7 +426,7 @@
         Auth.guardar(data);
 
         const rol = data.usuario?.rol;
-        const esPersonal = ['admin','directora','educadora','ayudante','administrativo','cocina','profesional'].includes(rol);
+        const esPersonal = ['admin','directora','educadora','ayudante','recepcionista','cocina','profesional'].includes(rol);
         const esPadre    = rol === 'tutor';
 
         // Verificar que el modo seleccionado corresponde al rol real

@@ -13,14 +13,16 @@ from .serializers import (
     NinoSerializer, NinoResumenSerializer, TutorSerializer,
     NinoTutorSerializer, PersonaAutorizadaSerializer, DocumentoSerializer,
 )
-from accounts.permissions import filtrar_por_tutor
+from accounts.permissions import (
+    filtrar_por_alcance, PermisoFichaNino, PermisoDatosFamiliares, ROLES_DE_SALA,
+)
 
 
 class NinoViewSet(viewsets.ModelViewSet):
     queryset = Nino.objects.prefetch_related(
         'tutores__tutor', 'autorizados', 'documentos'
     ).all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [PermisoFichaNino]
     filter_backends    = [filters.SearchFilter, DjangoFilterBackend]
     search_fields      = ['nombres', 'apellidos']
     filterset_fields   = ['genero', 'tiene_plan_misael', 'activo']
@@ -31,12 +33,9 @@ class NinoViewSet(viewsets.ModelViewSet):
         return NinoSerializer
 
     def get_queryset(self):
-        qs      = super().get_queryset()
-        usuario = self.request.user
-        # Tutores solo ven a sus hijos
-        if usuario.rol == 'tutor':
-            qs = qs.filter(tutores__tutor__usuario=usuario)
-        return qs
+        # Tutor: solo sus hijos. Educadora/ayudante: solo los niños con
+        # inscripción activa en sus salas asignadas. Oficina: todos.
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, '')
 
     @action(detail=True, methods=['get'], url_path='autorizados-activos')
     def autorizados_activos(self, request, pk=None):
@@ -58,7 +57,7 @@ class NinoViewSet(viewsets.ModelViewSet):
 class TutorViewSet(viewsets.ModelViewSet):
     queryset           = Tutor.objects.select_related('usuario').prefetch_related('ninos__nino').all()
     serializer_class   = TutorSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [PermisoDatosFamiliares]
     filter_backends    = [filters.SearchFilter]
     search_fields      = ['nombres', 'apellidos', 'ci', 'email']
 
@@ -70,7 +69,8 @@ class TutorViewSet(viewsets.ModelViewSet):
         usuario = self.request.user
         if usuario.rol == 'tutor':
             return qs.filter(usuario=usuario)
-        return qs
+        # Educadora/ayudante: solo los tutores de los niños de sus salas.
+        return filtrar_por_alcance(qs, usuario, 'ninos__nino')
 
 
 class NinoTutorViewSet(viewsets.ModelViewSet):
@@ -82,7 +82,7 @@ class NinoTutorViewSet(viewsets.ModelViewSet):
     """
     queryset           = NinoTutor.objects.select_related('nino', 'tutor').all()
     serializer_class   = NinoTutorSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [PermisoDatosFamiliares]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ['nino', 'tutor']
 
@@ -91,26 +91,26 @@ class NinoTutorViewSet(viewsets.ModelViewSet):
         usuario = self.request.user
         if usuario.rol == 'tutor':
             return qs.filter(tutor__usuario=usuario)
-        return qs
+        return filtrar_por_alcance(qs, usuario, 'nino')
 
 
 class PersonaAutorizadaViewSet(viewsets.ModelViewSet):
     queryset           = PersonaAutorizada.objects.select_related('nino').all()
     serializer_class   = PersonaAutorizadaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [PermisoDatosFamiliares]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ['nino', 'activa']
 
     def get_queryset(self):
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'nino')
 
 
 class DocumentoViewSet(viewsets.ModelViewSet):
     queryset           = Documento.objects.select_related('nino').all()
     serializer_class   = DocumentoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [PermisoDatosFamiliares]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ['nino', 'tipo', 'verificado']
 
     def get_queryset(self):
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'nino')

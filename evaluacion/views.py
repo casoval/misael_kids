@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import HitoDesarrollo, EvaluacionNino
 from .serializers import HitoDesarrolloSerializer, EvaluacionNinoSerializer
-from accounts.permissions import filtrar_por_tutor
+from accounts.permissions import filtrar_por_alcance, exigir_nino_en_alcance
 
 class HitoDesarrolloViewSet(viewsets.ModelViewSet):
     queryset           = HitoDesarrollo.objects.filter(activo=True).order_by("edad_min_meses","area")
@@ -36,7 +36,11 @@ class EvaluacionNinoViewSet(viewsets.ModelViewSet):
         # no las de cualquier niño (antes bastaba con cambiar ?nino=<id>
         # en la URL para ver la evaluación de otro niño, incluida la
         # bandera de alerta de rezago).
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'nino')
+
+    def perform_create(self, serializer):
+        exigir_nino_en_alcance(self.request.user, serializer.validated_data['nino'])
+        serializer.save()
 
     @action(detail=False, methods=["get"], url_path="alertas-rezago")
     def alertas_rezago(self, request):

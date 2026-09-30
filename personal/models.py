@@ -14,14 +14,14 @@ class Personal(ModeloBase):
     ROL_EDUCADORA   = 'educadora'
     ROL_AYUDANTE    = 'ayudante'
     ROL_DIRECTORA   = 'directora'
-    ROL_ADMINISTRATIVO = 'administrativo'
+    ROL_RECEPCIONISTA = 'recepcionista'
     ROL_COCINA      = 'cocina'
 
     ROLES = [
         (ROL_EDUCADORA,      'Educadora'),
         (ROL_AYUDANTE,       'Ayudante'),
         (ROL_DIRECTORA,      'Directora'),
-        (ROL_ADMINISTRATIVO, 'Administrativo'),
+        (ROL_RECEPCIONISTA, 'Recepcionista'),
         (ROL_COCINA,         'Cocina'),
     ]
 

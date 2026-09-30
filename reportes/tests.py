@@ -47,7 +47,7 @@ class ReportesBase(APITestCase):
         def usuario(email, rol, **kw):
             return Usuario.objects.create_user(email=email, password='x12345678', nombres='U', apellidos=rol, rol=rol, **kw)
         self.admin = usuario('admin@x.test', Usuario.ROL_ADMIN, is_staff=True)
-        self.administrativo = usuario('adm2@x.test', Usuario.ROL_ADMINISTRATIVO)
+        self.recepcionista = usuario('adm2@x.test', Usuario.ROL_RECEPCIONISTA)
         self.educadora = usuario('edu@x.test', Usuario.ROL_EDUCADORA)
         self.usuario_tutor = Usuario.objects.create_user(username='mama', password='x12345678', nombres='K', apellidos='C', rol=Usuario.ROL_TUTOR)
 
@@ -96,8 +96,8 @@ class PermisosReportesTests(ReportesBase):
             self.assertEqual(self.client.get(URL_RESUMEN).status_code, 403, u.rol)
             self.assertEqual(self.client.get(URL_EXPORT + 'ninos/').status_code, 403, u.rol)
 
-    def test_administrativo_si_puede(self):
-        self.client.force_authenticate(self.administrativo)
+    def test_recepcionista_si_puede(self):
+        self.client.force_authenticate(self.recepcionista)
         self.assertEqual(self.client.get(URL_RESUMEN).status_code, 200)
 
     def test_parametros_invalidos_dan_400(self):

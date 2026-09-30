@@ -6,13 +6,13 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import SoloAdminDirectoraOAdministrativo
+from accounts.permissions import SoloAdminDirectoraORecepcionista
 from . import services
 
 
 class _ReporteBase(APIView):
-    """Solo admin, directora y administrativo (los mismos que ven Cobros/caja)."""
-    permission_classes = [SoloAdminDirectoraOAdministrativo]
+    """Solo admin, directora y recepcionista (los mismos que ven Cobros/caja)."""
+    permission_classes = [SoloAdminDirectoraORecepcionista]
 
     @staticmethod
     def parametros(request):

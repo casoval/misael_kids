@@ -200,7 +200,7 @@
 <script src="{% static 'js/api.js' %}"></script>
 <script src="{% static 'js/components.js' %}"></script>
 <script>
-initPanel('evaluacion');
+initPanel('evaluacion', ['admin', 'directora', 'educadora', 'ayudante', 'cocina']);
 const hoy = new Date().toISOString().split('T')[0];
 document.getElementById('eval-fecha').value = hoy;
 let editandoId = null;

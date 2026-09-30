@@ -461,7 +461,7 @@
 <script src="{% static 'js/api.js' %}"></script>
 <script src="{% static 'js/components.js' %}"></script>
 <script>
-initPanel('inscripciones');
+initPanel('inscripciones', ['admin', 'directora', 'recepcionista']);
 const hoy = new Date().toISOString().split('T')[0];
 document.getElementById('i-inicio').value = hoy;
 let editandoId = null;

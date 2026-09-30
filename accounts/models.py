@@ -38,7 +38,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     ROL_TUTOR         = 'tutor'          # Padre / madre / tutor del niño
     ROL_PROFESIONAL   = 'profesional'    # Del Centro Misael
     ROL_COCINA        = 'cocina'
-    ROL_ADMINISTRATIVO = 'administrativo'
+    ROL_RECEPCIONISTA = 'recepcionista'
 
     ROLES = [
         (ROL_ADMIN,          'Administrador'),
@@ -48,7 +48,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         (ROL_TUTOR,          'Tutor / Padre'),
         (ROL_PROFESIONAL,    'Profesional Misael'),
         (ROL_COCINA,         'Personal de cocina'),
-        (ROL_ADMINISTRATIVO, 'Administrativo'),
+        (ROL_RECEPCIONISTA, 'Recepcionista'),
     ]
 
     id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

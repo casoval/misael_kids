@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import IncidenteSalud
 from .serializers import IncidenteSaludSerializer
-from accounts.permissions import filtrar_por_tutor
+from accounts.permissions import filtrar_por_alcance, exigir_nino_en_alcance
 class IncidenteSaludViewSet(viewsets.ModelViewSet):
     queryset = IncidenteSalud.objects.select_related("nino","reportado_por__usuario","sucursal").all()
     serializer_class   = IncidenteSaludSerializer
@@ -17,4 +17,8 @@ class IncidenteSaludViewSet(viewsets.ModelViewSet):
         # Sin esto, cualquier tutor podía consultar el historial de
         # incidentes de salud (golpes, fiebre, alergias...) de CUALQUIER
         # niño, no solo del suyo, con solo cambiar ?nino=<id>.
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'nino')
+
+    def perform_create(self, serializer):
+        exigir_nino_en_alcance(self.request.user, serializer.validated_data['nino'])
+        serializer.save()

@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
-from accounts.permissions import EsAdminDirectoraOAdministrativo, filtrar_por_tutor
+from accounts.permissions import PermisoFinanzas, filtrar_por_alcance
 from .models import Inscripcion, Cobro, Pago, Devolucion
 from .serializers import (
     InscripcionSerializer, InscripcionResumenSerializer, CobroSerializer,
@@ -30,7 +30,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
     queryset = Inscripcion.objects.select_related(
         'nino', 'sucursal', 'sala', 'turno'
     ).prefetch_related('cobros').all()
-    permission_classes = [EsAdminDirectoraOAdministrativo]
+    permission_classes = [PermisoFinanzas]
     filter_backends    = [filters.SearchFilter, DjangoFilterBackend]
     search_fields      = ['nino__nombres', 'nino__apellidos']
 
@@ -39,7 +39,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         # acciones de detalle: cobros-pendientes, calendario-pagos,
         # registrar-pago...) tocar la inscripción de CUALQUIER niño con
         # solo cambiar el id en la URL — no solo la de su propio hijo.
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'nino')
     filterset_fields   = ['sucursal', 'sala', 'turno', 'modalidad_pago', 'tipo_ajuste', 'activa']
 
     def get_serializer_class(self):
@@ -234,7 +234,7 @@ class CobroViewSet(viewsets.ModelViewSet):
         'inscripcion__nino', 'inscripcion__sucursal', 'registrado_por'
     ).all()
     serializer_class   = CobroSerializer
-    permission_classes = [EsAdminDirectoraOAdministrativo]
+    permission_classes = [PermisoFinanzas]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields   = ['inscripcion', 'tipo', 'estado', 'metodo_pago',
                           'inscripcion__sucursal', 'inscripcion__sala']
@@ -246,13 +246,13 @@ class CobroViewSet(viewsets.ModelViewSet):
         # leer (y, vía registrar-pago/registrar-devolucion/cerrar-con-lo-
         # pagado si alguna vez se relaja el permiso de escritura) el cobro
         # de cualquier niño, no solo el suyo.
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'inscripcion__nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'inscripcion__nino')
 
     # ── Estadísticas y movimientos de caja ────────────────────────────────
     # Se calculan aquí (servidor) y no en el navegador: la paginación de DRF
     # ignora `page_size` (fija 25), así que sumar desde el front truncaba los
     # totales en cuanto había más de 25 cobros.
-    ROLES_CAJA = ('admin', 'directora', 'administrativo')
+    ROLES_CAJA = ('admin', 'directora', 'recepcionista')
 
     def _exigir_rol_caja(self, request):
         if request.user.rol not in self.ROLES_CAJA:

@@ -12,7 +12,10 @@ from .serializers import AsistenciaSerializer
 from inscripciones.models import Cobro, Inscripcion
 from personal.models import AsignacionPersonal
 from inscripciones.services import generar_ciclo_mensual
-from accounts.permissions import filtrar_por_tutor, NoEsTutor
+from accounts.permissions import (
+    filtrar_por_alcance, NoEsTutor, ROLES_DE_SALA, salas_asignadas,
+    exigir_nino_en_alcance,
+)
 
 
 class AsistenciaViewSet(viewsets.ModelViewSet):
@@ -38,7 +41,7 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Sin esto, un tutor podía consultar la asistencia diaria de
         # cualquier niño de cualquier sala, no solo la de su propio hijo.
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'inscripcion__nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'inscripcion__nino')
 
     # Texto que queda en `Cobro.observacion` cuando el sistema anula un cobro
     # diario por un cambio de asistencia. Sirve de marca: solo se reactiva un
@@ -140,6 +143,8 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         return 'anulado'
 
     def perform_create(self, serializer):
+        # Educadora/ayudante solo marcan asistencia en niños de SUS salas.
+        exigir_nino_en_alcance(self.request.user, serializer.validated_data['inscripcion'].nino_id)
         asistencia = serializer.save(registrado_por=self.request.user)
         self._generar_cobros_por_presencia(asistencia)
 
@@ -150,6 +155,8 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         Ausente no anulaba el cobro del día, y pasar de Ausente a Presente
         nunca lo generaba. Ahora el cobro sigue al cambio de estado.
         """
+        if 'inscripcion' in serializer.validated_data:
+            exigir_nino_en_alcance(self.request.user, serializer.validated_data['inscripcion'].nino_id)
         with transaction.atomic():
             anterior   = serializer.instance.estado
             asistencia = serializer.save()
@@ -335,6 +342,11 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         ).filter(
             activa=True, personal__activo=True, fecha_inicio__lte=fecha,
         ).filter(Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=fecha))
+        # Educadora/ayudante: la planilla solo muestra sus salas asignadas
+        # (aunque pidan otra sala por parámetro, no ven niños ajenos).
+        mis_salas = salas_asignadas(request.user) if request.user.rol in ROLES_DE_SALA else None
+        if mis_salas is not None:
+            asignaciones = asignaciones.filter(sala_id__in=mis_salas)
         if sucursal:
             asignaciones = asignaciones.filter(sucursal=sucursal)
         if sala:
@@ -361,6 +373,8 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         ).prefetch_related(
             'nino__tutores__tutor', 'nino__autorizados'
         ).filter(activa=True)
+        if mis_salas is not None:
+            inscripciones = inscripciones.filter(sala_id__in=mis_salas)
         if sucursal:
             inscripciones = inscripciones.filter(sucursal=sucursal)
         if sala:

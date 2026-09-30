@@ -360,7 +360,7 @@
 <script src="{% static 'js/components.js' %}"></script>
 <script>
 // ── Inicializar sidebar dinámico y verificar autenticación ──
-initPanel('dashboard', ['admin', 'directora', 'educadora', 'ayudante', 'administrativo', 'cocina', 'profesional']);
+initPanel('dashboard', ['admin', 'directora', 'educadora', 'ayudante', 'recepcionista', 'cocina', 'profesional']);
 const usr = Auth.getUsuario();
 
 // Saludo según hora
@@ -395,10 +395,14 @@ async function cargarDashboard() {
 // ── Estadísticas ──
 async function cargarStats() {
   try {
+    // Educadora/ayudante no ven dinero: sin cobros (el backend respondería 403)
+    // y se oculta la tarjeta.
+    const verCobros = ['admin', 'directora', 'recepcionista'].includes(Auth.getRol());
+    if (!verCobros) document.getElementById('stat-cobros').closest('.stat-card').style.display = 'none';
     const [ninos, asistHoy, cobros, stockAlertas] = await Promise.all([
       API.get('/ninos/ninos/?activo=true&limit=1'),
       API.get('/asistencia/asistencia/hoy/'),
-      API.get('/inscripciones/cobros/?estado=pendiente&limit=1'),
+      verCobros ? API.get('/inscripciones/cobros/?estado=pendiente&limit=1') : Promise.resolve({ count: null }),
       API.get('/inventario/items/alertas-stock/'),
     ]);
 
@@ -408,7 +412,7 @@ async function cargarStats() {
     document.getElementById('stat-ninos').textContent     = ninos.count ?? '—';
     document.getElementById('stat-presentes').textContent = presentes;
     document.getElementById('stat-ausentes').textContent  = ausentes;
-    document.getElementById('stat-cobros').textContent    = cobros.count ?? '—';
+    if (verCobros) document.getElementById('stat-cobros').textContent = cobros.count ?? '—';
     document.getElementById('stat-stock').textContent     = stockAlertas.length ?? 0;
 
     // Badge en sidebar

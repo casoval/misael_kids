@@ -152,23 +152,33 @@ function renderSidebar(paginaActiva) {
     return _pintarSidebar(itemsProfesional, paginaActiva, usr);
   }
 
-  const items = [
+  // Cada item indica qué roles lo ven (sin `roles` = todos los del panel).
+  // educadora/ayudante: solo trabajo de sala (nada de dinero ni inscripciones).
+  // recepcionista: oficina (fichas, inscripciones, cobros, asistencia, avisos);
+  // no ve la parte pedagógica (agenda, desarrollo) ni la gestión de personal.
+  const OFICINA = ['admin', 'directora', 'recepcionista'];
+  const SALA    = ['admin', 'directora', 'educadora', 'ayudante', 'cocina'];
+  const todos = [
     { seccion: 'Principal' },
     { href: '/panel/dashboard/',    icon: '🏠', label: 'Inicio' },
     { href: '/panel/asistencia/',   icon: '📋', label: 'Asistencia' },
-    { href: '/panel/agenda/',       icon: '📔', label: 'Agenda pedagógica' },
+    { href: '/panel/agenda/',       icon: '📔', label: 'Agenda pedagógica',  roles: SALA },
     { seccion: 'Gestión' },
     { href: '/panel/ninos/',        icon: '👶', label: 'Niños' },
-    { href: '/panel/inscripciones/',icon: '📝', label: 'Inscripciones' },
-    { href: '/panel/cobros/',       icon: '💰', label: 'Cobros' },
+    { href: '/panel/inscripciones/',icon: '📝', label: 'Inscripciones',      roles: OFICINA },
+    { href: '/panel/cobros/',       icon: '💰', label: 'Cobros',             roles: OFICINA },
     { seccion: 'Personal y Operación' },
-    { href: '/panel/personal/',     icon: '👩‍🏫', label: 'Educadoras' },
+    { href: '/panel/personal/',     icon: '👩‍🏫', label: 'Educadoras',         roles: ['admin', 'directora'] },
     { href: '/panel/salud/',        icon: '🏥', label: 'Salud' },
     { href: '/panel/comunicacion/', icon: '📨', label: 'Comunicación' },
     { href: '/panel/inventario/',   icon: '📦', label: 'Inventario' },
-    { href: '/panel/evaluacion/',   icon: '🌱', label: 'Desarrollo' },
+    { href: '/panel/evaluacion/',   icon: '🌱', label: 'Desarrollo',         roles: SALA },
     { href: '/panel/misael-link/',  icon: '🔗', label: 'Centro Misael' },
   ];
+  const visibles = todos.filter(i => i.seccion || !i.roles || i.roles.includes(usr.rol));
+  // Quita cabeceras de sección que quedaron sin ningún enlace debajo.
+  const items = visibles.filter((it, idx) =>
+    !it.seccion || (visibles[idx + 1] && !visibles[idx + 1].seccion));
 
   // Sección admin solo para admin/directora
   if (['admin', 'directora'].includes(usr.rol)) {
@@ -179,6 +189,11 @@ function renderSidebar(paginaActiva) {
       { href: '/panel/usuarios/',   icon: '🔐', label: 'Usuarios' },
       { href: '/panel/reportes/',   icon: '📊', label: 'Reportes' },
     );
+  }
+  // Recepcionista: Reportes (mismo acceso que Cobros/caja)
+  if (usr.rol === 'recepcionista') {
+    items.push({ seccion: 'Administración' },
+               { href: '/panel/reportes/', icon: '📊', label: 'Reportes' });
   }
   // Enlace al admin Django solo para superusuarios (rol admin)
   if (usr.rol === 'admin') {
@@ -351,7 +366,7 @@ const Sucursal = {
 };
 
 /* ── Inicializar página del panel ─────────────────────────── */
-function initPanel(paginaActiva, rolesPermitidos = ['admin','directora','educadora','ayudante','administrativo','cocina']) {
+function initPanel(paginaActiva, rolesPermitidos = ['admin','directora','educadora','ayudante','recepcionista','cocina']) {
   Auth.requerirAuth(rolesPermitidos);
   renderSidebar(paginaActiva);
   // Sucursal.init() se llama por separado en cada página que lo necesite

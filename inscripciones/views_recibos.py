@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
 
-from accounts.permissions import EsAdminDirectoraOAdministrativo
+from accounts.permissions import PermisoFinanzas
 from .models import Pago, Devolucion
 from .pdf_generator import generar_recibo_pdf, generar_devolucion_pdf
 
@@ -33,7 +33,7 @@ def _verificar_acceso_tutor(request, nino):
 
 class ReciboPagoView(APIView):
     """GET /api/inscripciones/recibos/pago/<uuid>/ — PDF del recibo de un Pago."""
-    permission_classes = [EsAdminDirectoraOAdministrativo]
+    permission_classes = [PermisoFinanzas]
 
     def get(self, request, pago_id):
         pago = get_object_or_404(
@@ -51,7 +51,7 @@ class ReciboPagoView(APIView):
 
 class ReciboDevolucionView(APIView):
     """GET /api/inscripciones/recibos/devolucion/<uuid>/ — PDF del recibo de una Devolucion."""
-    permission_classes = [EsAdminDirectoraOAdministrativo]
+    permission_classes = [PermisoFinanzas]
 
     def get(self, request, devolucion_id):
         devolucion = get_object_or_404(

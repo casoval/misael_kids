@@ -8,7 +8,10 @@ from inscripciones.models import Inscripcion
 from .models import PlanificacionGrupal, PlanIndividual, ObjetivoIndividual, RegistroObjetivo
 from .filters import PlanificacionFilter, PlanIndividualFilter
 from .serializers import PlanificacionGrupalSerializer, PlanIndividualSerializer, ObjetivoIndividualSerializer, RegistroObjetivoSerializer
-from accounts.permissions import filtrar_por_tutor, NoEsTutor
+from accounts.permissions import (
+    filtrar_por_alcance, NoEsTutor, ROLES_DE_SALA, salas_asignadas,
+    exigir_nino_en_alcance, exigir_sala_en_alcance,
+)
 
 
 def _personal_del_usuario(request):
@@ -48,9 +51,13 @@ class PlanificacionGrupalViewSet(viewsets.ModelViewSet):
             for sala_id, turno_id in pares:
                 filtro |= Q(sala_id=sala_id, turno_id=turno_id)
             qs = qs.filter(filtro, visible_padres=True)
+        elif usuario.rol in ROLES_DE_SALA:
+            # Educadora/ayudante: solo la planificación de sus salas.
+            qs = qs.filter(sala_id__in=salas_asignadas(usuario))
         return qs
 
     def perform_create(self, serializer):
+        exigir_sala_en_alcance(self.request.user, serializer.validated_data['sala'])
         serializer.save(educadora=_personal_del_usuario(self.request))
 
 class PlanIndividualViewSet(viewsets.ModelViewSet):
@@ -69,9 +76,10 @@ class PlanIndividualViewSet(viewsets.ModelViewSet):
     filterset_class    = PlanIndividualFilter
 
     def get_queryset(self):
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'nino')
 
     def perform_create(self, serializer):
+        exigir_nino_en_alcance(self.request.user, serializer.validated_data['nino'])
         serializer.save(creado_por=_personal_del_usuario(self.request))
 
 class ObjetivoIndividualViewSet(viewsets.ModelViewSet):
@@ -82,7 +90,11 @@ class ObjetivoIndividualViewSet(viewsets.ModelViewSet):
     filterset_fields   = ["plan","area","estado"]
 
     def get_queryset(self):
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'plan__nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'plan__nino')
+
+    def perform_create(self, serializer):
+        exigir_nino_en_alcance(self.request.user, serializer.validated_data['plan'].nino_id)
+        serializer.save()
 
 class RegistroObjetivoViewSet(viewsets.ModelViewSet):
     queryset           = RegistroObjetivo.objects.select_related("objetivo","educadora__usuario").all()
@@ -93,7 +105,7 @@ class RegistroObjetivoViewSet(viewsets.ModelViewSet):
     ordering           = ["-fecha"]
 
     def get_queryset(self):
-        return filtrar_por_tutor(super().get_queryset(), self.request.user, 'objetivo__plan__nino')
+        return filtrar_por_alcance(super().get_queryset(), self.request.user, 'objetivo__plan__nino')
 
     @staticmethod
     def _avanzar_objetivo(registro):
@@ -115,6 +127,7 @@ class RegistroObjetivoViewSet(viewsets.ModelViewSet):
             objetivo.save(update_fields=["estado"])
 
     def perform_create(self, serializer):
+        exigir_nino_en_alcance(self.request.user, serializer.validated_data['objetivo'].plan.nino_id)
         registro = serializer.save(educadora=_personal_del_usuario(self.request))
         self._avanzar_objetivo(registro)
 

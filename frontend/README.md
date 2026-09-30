@@ -94,7 +94,7 @@ Rol:      Administrador (acceso total al panel interno)
 3. Ingresa email y contraseña
 4. El sistema llama a `/api/auth/login/` y obtiene el JWT
 5. Según el rol del usuario, redirige automáticamente:
-   - `admin`, `directora`, `educadora`, `ayudante`, `administrativo`, `cocina` → `pages/panel/dashboard.html`
+   - `admin`, `directora`, `educadora`, `ayudante`, `recepcionista`, `cocina` → `pages/panel/dashboard.html`
    - `tutor` → `pages/portal/inicio.html`
 6. El token se guarda en `localStorage` (`mk_token`, `mk_refresh`, `mk_usuario`)
 7. Todas las requests llevan `Authorization: Bearer <token>`
