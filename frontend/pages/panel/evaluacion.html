@@ -43,7 +43,7 @@
     <header class="topbar">
       <h1 class="topbar-titulo">🌱 Evaluación del desarrollo</h1>
       <div class="topbar-acciones">
-        <button class="btn btn-primary" onclick="UI.abrirModal('modal-nueva-eval')">➕ Nueva evaluación</button>
+        <button class="btn btn-primary" id="btn-nueva-eval" onclick="abrirNuevaEval()">➕ Nueva evaluación</button>
         <button class="btn btn-outline" onclick="cambiarTab('hitos')">📚 Catálogo de hitos</button>
       </div>
     </header>
@@ -124,13 +124,21 @@
             </select>
           </div>
           <div class="form-grupo" style="margin:0;min-width:160px">
-            <label class="form-label">Edad mínima (meses)</label>
-            <input type="number" id="f-edad-hito" class="form-input" placeholder="Ej: 12" min="0" max="72">
+            <label class="form-label">Edad del niño/a (meses)</label>
+            <input type="number" id="f-edad-hito" class="form-input" placeholder="Ej: 14" min="0" max="72"
+              onkeydown="if(event.key==='Enter')cargarHitos()">
+          </div>
+          <div class="form-grupo" style="margin:0;flex:1;min-width:180px">
+            <label class="form-label">Buscar</label>
+            <input type="search" id="f-texto-hito" class="form-input" placeholder="Ej: camina, vocabulario..."
+              onkeydown="if(event.key==='Enter')cargarHitos()">
           </div>
           <div style="display:flex;align-items:flex-end;gap:6px">
             <button class="btn btn-primary" onclick="cargarHitos()">Filtrar</button>
+            <button class="btn btn-outline" onclick="limpiarFiltrosHitos()">Limpiar</button>
           </div>
         </div>
+        <div id="resumen-hitos" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:600;margin-bottom:var(--gap-sm)"></div>
         <div id="lista-hitos">
           <div class="loader"><div class="spinner"></div></div>
         </div>
@@ -165,12 +173,12 @@
       </div>
       <div class="form-grupo">
         <label class="form-label">Fecha de evaluación *</label>
-        <input type="date" id="eval-fecha" class="form-input">
+        <input type="date" id="eval-fecha" class="form-input" max="">
         <span class="form-error" data-error="eval-fecha"></span>
       </div>
       <div class="form-grupo">
         <label class="form-label">Estado *</label>
-        <select id="eval-estado" class="form-select">
+        <select id="eval-estado" class="form-select" onchange="sincronizarAlerta()">
           <option value="">Seleccionar...</option>
           <option value="logrado">✅ Logrado</option>
           <option value="en_proceso">⏳ En proceso</option>
@@ -188,11 +196,14 @@
           <input type="checkbox" id="eval-alerta" style="width:13px;height:13px">
           ⚠️ Marcar como alerta de rezago (recomienda derivación al Centro Misael)
         </label>
+        <p id="nota-alerta" style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:4px;display:none">
+          Un hito logrado no puede marcarse como rezago.
+        </p>
       </div>
     </div>
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-md)">
       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-nueva-eval')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarEvaluacion()">Guardar evaluación</button>
+      <button class="btn btn-primary" id="btn-guardar-eval" onclick="guardarEvaluacion()">Guardar evaluación</button>
     </div>
   </div>
 </div>
@@ -201,16 +212,35 @@
 <script src="{% static 'js/components.js' %}"></script>
 <script>
 initPanel('evaluacion', ['admin', 'directora', 'educadora', 'ayudante', 'cocina']);
-const hoy = new Date().toISOString().split('T')[0];
-document.getElementById('eval-fecha').value = hoy;
-let editandoId = null;
-let ninosData  = [];
-let hitosData  = [];
 
+// La cocina puede consultar el desarrollo pero no registrar evaluaciones (la API tampoco se lo permite).
+const PUEDE_EVALUAR = ['admin', 'directora', 'educadora', 'ayudante'].includes(Auth.getRol());
+// Fecha de hoy en hora LOCAL (toISOString() daría la fecha de mañana en Bolivia después de las 20:00).
+const hoy = UI.fechaHoyISO();
+document.getElementById('eval-fecha').value = hoy;
+document.getElementById('eval-fecha').max   = hoy;
+if (!PUEDE_EVALUAR) document.getElementById('btn-nueva-eval').style.display = 'none';
+
+let ninosData = [];
+let hitosData = [];
+
+const AREAS_ORDEN = ['motricidad_gruesa','motricidad_fina','lenguaje','social','cognitivo','autonomia'];
 const areaIcons = {
-  motricidad_fina:'✋',motricidad_gruesa:'🏃',lenguaje:'💬',
-  social:'👥',cognitivo:'🧠',autonomia:'⭐'
+  motricidad_fina:'✋', motricidad_gruesa:'🏃', lenguaje:'💬',
+  social:'👥', cognitivo:'🧠', autonomia:'⭐'
 };
+const areaNombres = {
+  motricidad_fina:'Motricidad fina', motricidad_gruesa:'Motricidad gruesa', lenguaje:'Lenguaje y comunicación',
+  social:'Desarrollo social', cognitivo:'Desarrollo cognitivo', autonomia:'Autonomía'
+};
+const ordenArea = a => { const i = AREAS_ORDEN.indexOf(a); return i < 0 ? 99 : i; };
+
+// Escapa texto que viene de la base de datos antes de ponerlo en innerHTML
+// (las observaciones las escribe cualquier educadora: no deben poder inyectar HTML).
+function esc(t) {
+  return String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+const chipEstado = e => e==='logrado' ? 'chip-verde' : e==='en_proceso' ? 'chip-amarillo' : 'chip-gris';
 
 async function inicializar() {
   await cargarSelectores();
@@ -228,7 +258,7 @@ async function cargarSelectores() {
     hitosData = hitos.results||hitos;
     [document.getElementById('f-nino-eval'), document.getElementById('eval-nino')].forEach(sel =>
       UI.llenarSelect(sel, ninosData, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)'));
-  } catch {}
+  } catch (err) { UI.toast('No se pudieron cargar los niños y hitos: '+err.message, 'error'); }
 }
 
 function cambiarTab(tab) {
@@ -240,6 +270,7 @@ function cambiarTab(tab) {
   if (tab==='hitos')   cargarHitos();
 }
 
+// ── Evaluaciones de un niño ─────────────────────────────────────────
 async function cargarEvalNino() {
   const ninoId = document.getElementById('f-nino-eval').value;
   const area   = document.getElementById('f-area-eval').value;
@@ -251,37 +282,51 @@ async function cargarEvalNino() {
   UI.mostrarLoader(cont,'Cargando evaluaciones...');
   try {
     const nino = ninosData.find(n=>n.id===ninoId);
-    let url = '/evaluacion/evaluaciones/?nino='+ninoId+'&page_size=500';
+    let url = '/evaluacion/evaluaciones/?nino='+ninoId+'&page_size=1000';
     if (area) url += '&hito__area='+area;
-    const data = await API.get(url);
-    const evals = data.results||data;
+    let urlEdad = '/evaluacion/hitos/por-edad/?meses='+(nino?.edad_en_meses ?? 0);
+    if (area) urlEdad += '&area='+area;
+    const [data, hitosEdad] = await Promise.all([API.get(url), API.get(urlEdad).catch(() => [])]);
+    const todas = data.results||data;
 
-    if (!evals.length) {
-      cont.innerHTML = '<div style="text-align:center;padding:var(--gap-xl);color:var(--texto-suave);font-weight:600"><div style="font-size:2.5rem;margin-bottom:8px">🌱</div><p>Sin evaluaciones registradas para este niño/a</p><button class="btn btn-primary mt-md" onclick="UI.abrirModal(\'modal-nueva-eval\')">➕ Agregar primera evaluación</button></div>';
-      return;
-    }
-
-    // Agrupar por área
-    const porArea = {};
-    evals.forEach(ev => {
-      const area = ev.hito_area;
-      if (!porArea[area]) porArea[area] = [];
-      porArea[area].push(ev);
+    // Un hito se puede evaluar varias veces (p. ej. cada mes). Se muestra la evaluación MÁS
+    // RECIENTE de cada hito; contar todas juntas falseaba los porcentajes.
+    todas.sort((a,b) => (b.fecha||'').localeCompare(a.fecha||'') || (b.created_at||'').localeCompare(a.created_at||''));
+    const ultimas = new Map();
+    todas.forEach(ev => {
+      if (!ultimas.has(ev.hito)) ultimas.set(ev.hito, { ev, total: 0 });
+      ultimas.get(ev.hito).total++;
     });
+    const evals = [...ultimas.values()];
 
-    // Calcular % logrado general
-    const logrados  = evals.filter(e=>e.estado==='logrado').length;
-    const pctGeneral = Math.round((logrados/evals.length)*100);
+    const pendientes = (hitosEdad||[]).filter(h => !ultimas.has(h.id));
+    const botonPrimera = PUEDE_EVALUAR
+      ? `<button class="btn btn-primary mt-md" onclick="abrirNuevaEval('${ninoId}')">➕ Agregar primera evaluación</button>` : '';
 
-    cont.innerHTML = `
+    let html = '';
+    if (!evals.length) {
+      html = `<div style="text-align:center;padding:var(--gap-xl);color:var(--texto-suave);font-weight:600">
+        <div style="font-size:2.5rem;margin-bottom:8px">🌱</div>
+        <p>Sin evaluaciones registradas para este niño/a</p>${botonPrimera}</div>`;
+    } else {
+      const logrados   = evals.filter(x=>x.ev.estado==='logrado').length;
+      const enProceso  = evals.filter(x=>x.ev.estado==='en_proceso').length;
+      const noLogrado  = evals.filter(x=>x.ev.estado==='no_logrado').length;
+      const alertas    = evals.filter(x=>x.ev.alerta_rezago).length;
+      const pctGeneral = Math.round((logrados/evals.length)*100);
+
+      const porArea = {};
+      evals.forEach(x => { (porArea[x.ev.hito_area_codigo] ||= []).push(x); });
+
+      html = `
       <div class="card mb-lg">
         <div style="display:flex;align-items:center;gap:var(--gap-md);margin-bottom:var(--gap-md)">
           <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--turquesa),var(--verde));
             display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:1.2rem">
-            ${UI.iniciales(nino?.nombre_completo||'')}
+            ${esc(UI.iniciales(nino?.nombre_completo||''))}
           </div>
           <div>
-            <div style="font-family:var(--font-display);font-size:var(--text-2xl)">${nino?.nombre_completo}</div>
+            <div style="font-family:var(--font-display);font-size:var(--text-2xl)">${esc(nino?.nombre_completo)}</div>
             <div style="font-size:var(--text-sm);color:var(--texto-suave)">${nino?.edad_en_meses} meses · ${evals.length} hitos evaluados</div>
           </div>
           <div style="margin-left:auto;text-align:right">
@@ -292,57 +337,80 @@ async function cargarEvalNino() {
         <div class="progreso-area"><div class="progreso-fill" style="width:${pctGeneral}%"></div></div>
         <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap">
           <span class="chip chip-verde">✅ ${logrados} Logrados</span>
-          <span class="chip chip-amarillo">⏳ ${evals.filter(e=>e.estado==='en_proceso').length} En proceso</span>
-          <span class="chip chip-gris">📌 ${evals.filter(e=>e.estado==='no_logrado').length} No logrado</span>
-          ${evals.filter(e=>e.alerta_rezago).length?'<span class="chip chip-coral">⚠️ '+evals.filter(e=>e.alerta_rezago).length+' Alertas</span>':''}
+          <span class="chip chip-amarillo">⏳ ${enProceso} En proceso</span>
+          <span class="chip chip-gris">📌 ${noLogrado} No logrado</span>
+          ${alertas ? '<span class="chip chip-coral">⚠️ '+alertas+' Alertas</span>' : ''}
         </div>
       </div>
 
-      ${Object.entries(porArea).map(([area, evs]) => {
-        const log = evs.filter(e=>e.estado==='logrado').length;
-        const pct = Math.round((log/evs.length)*100);
+      ${Object.keys(porArea).sort((a,b)=>ordenArea(a)-ordenArea(b)).map(codigo => {
+        const grupo = porArea[codigo];
+        const log = grupo.filter(x=>x.ev.estado==='logrado').length;
+        const pct = Math.round((log/grupo.length)*100);
         return `
-          <div class="area-header">${areaIcons[area]||'🌱'} ${evs[0]?.hito_area||area} <span style="font-size:var(--text-sm);color:var(--texto-suave);font-family:var(--font-body)">${log}/${evs.length} logrados</span></div>
+          <div class="area-header">${areaIcons[codigo]||'🌱'} ${esc(grupo[0].ev.hito_area)} <span style="font-size:var(--text-sm);color:var(--texto-suave);font-family:var(--font-body)">${log}/${grupo.length} logrados</span></div>
           <div class="progreso-area"><div class="progreso-fill" style="width:${pct}%"></div></div>
           <div class="eval-grid mb-lg">
-            ${evs.map(ev => `
+            ${grupo.map(({ev,total}) => `
               <div class="hito-card">
                 <div style="display:flex;align-items:flex-start;gap:var(--gap-sm);margin-bottom:6px">
-                  <div class="hito-estado-dot dot-${ev.estado}" style="margin-top:4px"></div>
+                  <div class="hito-estado-dot dot-${esc(ev.estado)}" style="margin-top:4px"></div>
                   <div style="flex:1">
-                    <div style="font-weight:700;font-size:var(--text-sm)">${ev.hito_nombre}</div>
-                    <div style="font-size:var(--text-xs);color:var(--texto-suave)">${UI.fecha(ev.fecha)}</div>
+                    <div style="font-weight:700;font-size:var(--text-sm)">${esc(ev.hito_nombre)}</div>
+                    <div style="font-size:var(--text-xs);color:var(--texto-suave)">${UI.fecha(ev.fecha)}${total>1?' · '+total+' evaluaciones':''}${ev.educadora_nombre?' · '+esc(ev.educadora_nombre):''}</div>
                   </div>
                   ${ev.alerta_rezago?'<span title="Alerta de rezago">⚠️</span>':''}
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-                  <span class="chip ${ev.estado==='logrado'?'chip-verde':ev.estado==='en_proceso'?'chip-amarillo':'chip-gris'}"
-                    style="font-size:.65rem">${ev.estado_display}</span>
-                  <button class="btn btn-outline btn-sm" style="font-size:.65rem;padding:2px 8px"
+                  <span class="chip ${chipEstado(ev.estado)}" style="font-size:.65rem">${esc(ev.estado_display)}</span>
+                  ${PUEDE_EVALUAR ? `
+                  <button class="btn btn-outline btn-sm" style="font-size:.65rem;padding:2px 8px" title="Editar"
                     onclick="editarEval('${ev.id}')">✏️</button>
-                  <button class="btn btn-sm" style="font-size:.65rem;padding:2px 8px;background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
-                    onclick="eliminarEval('${ev.id}')">🗑️</button>
+                  <button class="btn btn-sm" style="font-size:.65rem;padding:2px 8px;background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)" title="Eliminar"
+                    onclick="eliminarEval('${ev.id}')">🗑️</button>` : ''}
                 </div>
-                ${ev.observacion?'<p style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:4px;font-style:italic">'+ev.observacion+'</p>':''}
+                ${ev.observacion?'<p style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:4px;font-style:italic">'+esc(ev.observacion)+'</p>':''}
               </div>`).join('')}
           </div>`;
       }).join('')}
-      <div style="margin-top:var(--gap-md)">
-        <button class="btn btn-primary" onclick="abrirEvalParaNino('${ninoId}')">➕ Agregar evaluación</button>
+      ${PUEDE_EVALUAR ? `<div style="margin-top:var(--gap-md)">
+        <button class="btn btn-primary" onclick="abrirNuevaEval('${ninoId}')">➕ Agregar evaluación</button>
+      </div>` : ''}`;
+    }
+
+    // Hitos que corresponden a la edad del niño y todavía no se han evaluado.
+    if (pendientes.length) {
+      html += `
+      <div class="card mt-lg">
+        <div class="card-header">
+          <h3 class="card-titulo">🔎 Hitos de su edad sin evaluar</h3>
+          <span class="chip chip-turquesa">${pendientes.length}</span>
+        </div>
+        ${pendientes.map(h => `
+          <div style="display:flex;align-items:center;gap:var(--gap-sm);padding:.5rem 0;border-bottom:1px dashed var(--gris-100)">
+            <span>${areaIcons[h.area]||'🌱'}</span>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:var(--text-sm)">${esc(h.nombre)}</div>
+              <div style="font-size:var(--text-xs);color:var(--texto-suave)">${esc(h.area_display)} · ${h.edad_min_meses}–${h.edad_max_meses} meses${h.descripcion?' · '+esc(h.descripcion):''}</div>
+            </div>
+            ${PUEDE_EVALUAR ? `<button class="btn btn-outline btn-sm" onclick="abrirNuevaEval('${ninoId}','${h.id}')">Evaluar</button>` : ''}
+          </div>`).join('')}
       </div>`;
+    }
+    cont.innerHTML = html;
   } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
 }
 
+// ── Alertas de rezago ───────────────────────────────────────────────
 async function cargarAlertasRezago() {
   const cont = document.getElementById('lista-alertas-rezago');
   UI.mostrarLoader(cont,'Cargando alertas...');
   try {
-    const data = await API.get('/evaluacion/evaluaciones/alertas-rezago/?page_size=100');
+    const data = await API.get('/evaluacion/evaluaciones/alertas-rezago/');
     const lista = data.results||data;
     const badge = document.getElementById('badge-alertas');
     badge.textContent = lista.length; badge.style.display = lista.length?'':'none';
     if (!lista.length) { UI.vacio(cont,'¡Sin alertas de rezago!','✅'); return; }
-    // Agrupar por niño
     const porNino = {};
     lista.forEach(ev => {
       if (!porNino[ev.nino]) porNino[ev.nino] = { nombre:ev.nino_nombre, evals:[] };
@@ -352,7 +420,7 @@ async function cargarAlertasRezago() {
       <div class="card mb-md" style="border-color:var(--coral)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--gap-md)">
           <div>
-            <div style="font-weight:800;font-size:var(--text-lg)">${grupo.nombre}</div>
+            <div style="font-weight:800;font-size:var(--text-lg)">${esc(grupo.nombre)}</div>
             <div style="font-size:var(--text-sm);color:var(--coral-d);font-weight:700">
               ⚠️ ${grupo.evals.length} alerta(s) de rezago
             </div>
@@ -364,37 +432,48 @@ async function cargarAlertasRezago() {
             border-bottom:1px dashed var(--gris-100)">
             <span>⚠️</span>
             <div style="flex:1">
-              <div style="font-weight:700;font-size:var(--text-sm)">${ev.hito_nombre}</div>
-              <div style="font-size:var(--text-xs);color:var(--texto-suave)">${ev.hito_area} · ${UI.fecha(ev.fecha)}</div>
+              <div style="font-weight:700;font-size:var(--text-sm)">${esc(ev.hito_nombre)}</div>
+              <div style="font-size:var(--text-xs);color:var(--texto-suave)">${esc(ev.hito_area)} · ${UI.fecha(ev.fecha)}</div>
+              ${ev.observacion?'<div style="font-size:var(--text-xs);color:var(--texto-suave);font-style:italic">'+esc(ev.observacion)+'</div>':''}
             </div>
-            <span class="chip chip-coral" style="font-size:.65rem">${ev.estado_display}</span>
+            <span class="chip chip-coral" style="font-size:.65rem">${esc(ev.estado_display)}</span>
           </div>`).join('')}
       </div>`).join('');
   } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
 }
 
+// ── Catálogo de hitos ───────────────────────────────────────────────
+function limpiarFiltrosHitos() {
+  document.getElementById('f-area-hito').value  = '';
+  document.getElementById('f-edad-hito').value  = '';
+  document.getElementById('f-texto-hito').value = '';
+  cargarHitos();
+}
+
 async function cargarHitos() {
-  const cont  = document.getElementById('lista-hitos');
-  const area  = document.getElementById('f-area-hito').value;
-  const edad  = document.getElementById('f-edad-hito').value;
-  let url = '/evaluacion/hitos/?activo=true&page_size=200&ordering=edad_min_meses';
-  if (area) url += '&area='+area;
-  if (edad) url += '&edad_min_meses='+edad;
+  const cont   = document.getElementById('lista-hitos');
+  const area   = document.getElementById('f-area-hito').value;
+  const edad   = document.getElementById('f-edad-hito').value;
+  const texto  = document.getElementById('f-texto-hito').value.trim();
+  // page_size=1000: el catálogo completo supera los 200 hitos y se cortaría a la mitad.
+  let url = '/evaluacion/hitos/?activo=true&page_size=1000&ordering=edad_min_meses,nombre';
+  if (area)  url += '&area='+area;
+  if (edad !== '') url += '&edad='+encodeURIComponent(edad);   // hitos que corresponden a esa edad
+  if (texto) url += '&search='+encodeURIComponent(texto);
   UI.mostrarLoader(cont,'Cargando hitos...');
   try {
     const data  = await API.get(url);
     const lista = data.results||data;
+    document.getElementById('resumen-hitos').textContent = lista.length ? lista.length+' hitos'+(edad!==''?' para '+edad+' meses':'') : '';
     if (!lista.length) { UI.vacio(cont,'Sin hitos con esos filtros','📚'); return; }
-    // Agrupar por área
     const porArea = {};
-    lista.forEach(h => {
-      if (!porArea[h.area]) porArea[h.area] = [];
-      porArea[h.area].push(h);
-    });
-    cont.innerHTML = Object.entries(porArea).map(([area, hitos]) => `
+    lista.forEach(h => { (porArea[h.area] ||= []).push(h); });
+    cont.innerHTML = Object.keys(porArea).sort((a,b)=>ordenArea(a)-ordenArea(b)).map(area => {
+      const hitos = porArea[area];
+      return `
       <div class="card mb-md">
         <div class="card-header">
-          <h3 class="card-titulo">${areaIcons[area]||'🌱'} ${hitos[0]?.area_display||area}</h3>
+          <h3 class="card-titulo">${areaIcons[area]||'🌱'} ${esc(hitos[0]?.area_display||areaNombres[area]||area)}</h3>
           <span class="chip chip-turquesa">${hitos.length} hitos</span>
         </div>
         <div class="tabla-wrap">
@@ -403,102 +482,140 @@ async function cargarHitos() {
             <tbody>
               ${hitos.map(h => `
                 <tr>
-                  <td style="font-weight:700;font-size:var(--text-sm)">${h.nombre}</td>
+                  <td style="font-weight:700;font-size:var(--text-sm)">${esc(h.nombre)}</td>
                   <td><span class="chip chip-turquesa">${h.edad_min_meses}m</span></td>
                   <td><span class="chip chip-verde">${h.edad_max_meses}m</span></td>
-                  <td style="font-size:var(--text-sm);color:var(--texto-suave)">${h.descripcion||'—'}</td>
+                  <td style="font-size:var(--text-sm);color:var(--texto-suave)">${esc(h.descripcion)||'—'}</td>
                 </tr>`).join('')}
             </tbody>
           </table>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+}
+
+// ── Modal de evaluación ─────────────────────────────────────────────
+function limpiarErroresModal() {
+  document.querySelectorAll('#modal-nueva-eval .form-error').forEach(el=>el.textContent='');
+  document.querySelectorAll('#modal-nueva-eval .input-error').forEach(el=>el.classList.remove('input-error'));
+}
+
+// Si el hito ya está logrado no tiene sentido una alerta de rezago (el servidor también lo impide).
+function sincronizarAlerta() {
+  const logrado = document.getElementById('eval-estado').value === 'logrado';
+  const chk = document.getElementById('eval-alerta');
+  if (logrado) chk.checked = false;
+  chk.disabled = logrado;
+  document.getElementById('nota-alerta').style.display = logrado ? '' : 'none';
+}
+
+// Abre el formulario EN BLANCO. Antes el botón "Nueva evaluación" solo abría el modal:
+// si antes se había editado una evaluación, el id oculto seguía puesto y al guardar se
+// SOBRESCRIBÍA esa evaluación en vez de crear una nueva.
+async function abrirNuevaEval(ninoId, hitoId) {
+  ninoId = ninoId || document.getElementById('f-nino-eval').value || '';
+  limpiarErroresModal();
+  document.getElementById('titulo-modal-eval').textContent = 'Nueva evaluación';
+  document.getElementById('eval-id').value          = '';
+  document.getElementById('eval-nino').value        = ninoId;
+  document.getElementById('eval-fecha').value       = hoy;
+  document.getElementById('eval-estado').value      = '';
+  document.getElementById('eval-observacion').value = '';
+  document.getElementById('eval-alerta').checked    = false;
+  sincronizarAlerta();
+  await cargarHitosModal();
+  if (hitoId) document.getElementById('eval-hito').value = hitoId;
+  UI.abrirModal('modal-nueva-eval');
 }
 
 async function cargarHitosModal() {
   const ninoId = document.getElementById('eval-nino').value;
   const sel    = document.getElementById('eval-hito');
-  sel.innerHTML = '<option value="">Cargando hitos...</option>';
   if (!ninoId) { sel.innerHTML='<option value="">Primero selecciona niño</option>'; return; }
   const nino = ninosData.find(n=>n.id===ninoId);
-  const edad = nino?.edad_en_meses||0;
+  const edad = nino?.edad_en_meses ?? 0;
   try {
-    const data = await API.get('/evaluacion/hitos/?activo=true&page_size=200');
-    const hitos = (data.results||data);
-    sel.innerHTML = '<option value="">Seleccionar hito...</option>';
-    hitos.forEach(h => {
-      const opt = document.createElement('option');
-      opt.value = h.id;
-      opt.textContent = h.nombre + ' ('+h.edad_min_meses+'–'+h.edad_max_meses+'m) — '+h.area_display;
-      if (edad >= h.edad_min_meses && edad <= h.edad_max_meses) {
-        opt.style.fontWeight = '700';
-        opt.textContent = '★ ' + opt.textContent;
-      }
-      sel.appendChild(opt);
-    });
-  } catch {}
-}
-
-function abrirEvalParaNino(ninoId) {
-  document.getElementById('eval-nino').value = ninoId;
-  cargarHitosModal();
-  document.getElementById('eval-id').value = '';
-  document.getElementById('eval-fecha').value = hoy;
-  document.getElementById('eval-estado').value = '';
-  document.getElementById('eval-observacion').value = '';
-  document.getElementById('eval-alerta').checked = false;
-  document.querySelectorAll('#modal-nueva-eval .form-error').forEach(el=>el.textContent='');
-  UI.abrirModal('modal-nueva-eval');
+    if (!hitosData.length) {
+      const data = await API.get('/evaluacion/hitos/?activo=true&page_size=1000');
+      hitosData = data.results||data;
+    }
+    const para = h => edad >= h.edad_min_meses && edad <= h.edad_max_meses;
+    const etiqueta = h => h.nombre+' ('+h.edad_min_meses+'–'+h.edad_max_meses+'m) — '+h.area_display;
+    const porEdad = (a,b) => ordenArea(a.area)-ordenArea(b.area) || a.edad_min_meses-b.edad_min_meses;
+    const relevantes = hitosData.filter(para).sort(porEdad);
+    const otros      = hitosData.filter(h=>!para(h)).sort((a,b)=>a.edad_min_meses-b.edad_min_meses || ordenArea(a.area)-ordenArea(b.area));
+    const opciones = (lista) => lista.map(h => `<option value="${h.id}">${esc(etiqueta(h))}</option>`).join('');
+    sel.innerHTML = '<option value="">Seleccionar hito...</option>'
+      + (relevantes.length ? `<optgroup label="★ Para su edad (${edad} meses)">${opciones(relevantes)}</optgroup>` : '')
+      + (otros.length      ? `<optgroup label="Otras edades">${opciones(otros)}</optgroup>` : '');
+  } catch (err) { sel.innerHTML='<option value="">No se pudieron cargar los hitos</option>'; UI.toast('Error: '+err.message,'error'); }
 }
 
 async function editarEval(id) {
-  editandoId = id;
-  document.getElementById('titulo-modal-eval').textContent = 'Editar evaluación';
   try {
     const ev = await API.get('/evaluacion/evaluaciones/'+id+'/');
-    document.getElementById('eval-id').value          = id;
-    document.getElementById('eval-nino').value        = ev.nino;
+    limpiarErroresModal();
+    document.getElementById('titulo-modal-eval').textContent = 'Editar evaluación';
+    document.getElementById('eval-id').value   = id;
+    document.getElementById('eval-nino').value = ev.nino;
     await cargarHitosModal();
-    document.getElementById('eval-hito').value        = ev.hito;
+    const selHito = document.getElementById('eval-hito');
+    if (![...selHito.options].some(o => o.value === ev.hito)) {     // hito desactivado: se conserva la opción
+      const o = document.createElement('option'); o.value = ev.hito; o.textContent = ev.hito_nombre+' (desactivado)';
+      selHito.appendChild(o);
+    }
+    selHito.value = ev.hito;
     document.getElementById('eval-fecha').value       = ev.fecha;
     document.getElementById('eval-estado').value      = ev.estado;
     document.getElementById('eval-observacion').value = ev.observacion||'';
     document.getElementById('eval-alerta').checked    = ev.alerta_rezago;
+    sincronizarAlerta();
     UI.abrirModal('modal-nueva-eval');
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
 }
 
 async function guardarEvaluacion() {
+  const val = id => document.getElementById(id).value;
   const errores = Validar.formulario({
-    'eval-nino':   [()=>Validar.requerido(document.getElementById('eval-nino').value,'Niño/a')],
-    'eval-hito':   [()=>Validar.requerido(document.getElementById('eval-hito').value,'Hito')],
-    'eval-fecha':  [()=>Validar.fecha(document.getElementById('eval-fecha').value,'Fecha')],
-    'eval-estado': [()=>Validar.requerido(document.getElementById('eval-estado').value,'Estado')],
+    'eval-nino':   [()=>Validar.requerido(val('eval-nino'),'Niño/a')],
+    'eval-hito':   [()=>Validar.requerido(val('eval-hito'),'Hito')],
+    'eval-fecha':  [()=>Validar.fecha(val('eval-fecha'),'Fecha'),
+                    ()=>val('eval-fecha') > hoy ? 'La fecha no puede ser futura' : null],
+    'eval-estado': [()=>Validar.requerido(val('eval-estado'),'Estado')],
   });
   if (!Validar.mostrarErrores(errores,'#modal-nueva-eval ')) return;
-  const id = document.getElementById('eval-id').value;
+  const id = val('eval-id');
+  // `educadora` NO se envía: el servidor la asigna según quién inició sesión.
   const datos = {
-    nino:          document.getElementById('eval-nino').value,
-    hito:          document.getElementById('eval-hito').value,
-    fecha:         document.getElementById('eval-fecha').value,
-    estado:        document.getElementById('eval-estado').value,
-    observacion:   document.getElementById('eval-observacion').value,
-    alerta_rezago: document.getElementById('eval-alerta').checked,
-    educadora:     null,
+    nino:          val('eval-nino'),
+    hito:          val('eval-hito'),
+    fecha:         val('eval-fecha'),
+    estado:        val('eval-estado'),
+    observacion:   val('eval-observacion').trim(),
+    alerta_rezago: document.getElementById('eval-alerta').checked && val('eval-estado') !== 'logrado',
   };
+  const btn = document.getElementById('btn-guardar-eval');
+  btn.disabled = true;                                   // evita el doble clic (duplicado → error)
   try {
     if (id) await API.patch('/evaluacion/evaluaciones/'+id+'/',datos);
     else    await API.post('/evaluacion/evaluaciones/',datos);
     UI.toast('Evaluación guardada correctamente','exito');
     UI.cerrarModal('modal-nueva-eval');
-    const ninoId = document.getElementById('f-nino-eval').value;
-    if (ninoId) cargarEvalNino();
+    // Mostrar al niño recién evaluado para que se vea el resultado.
+    document.getElementById('f-nino-eval').value = datos.nino;
+    cambiarTab('evaluaciones');
+    cargarEvalNino();
     cargarAlertasRezago();
-  } catch (err) { UI.toast('Error: '+err.message,'error'); }
+  } catch (err) {
+    const dup = /unique|único|conjunto/i.test(err.message);
+    UI.toast(dup ? 'Ya existe una evaluación de este hito para ese niño/a en esa fecha. Edítala o elige otra fecha.'
+                 : 'Error: '+err.message, 'error', 6000);
+  } finally { btn.disabled = false; }
 }
 
 async function eliminarEval(id) {
-  if (!confirm('Eliminar esta evaluación?')) return;
+  if (!confirm('¿Eliminar esta evaluación?')) return;
   try {
     await API.delete('/evaluacion/evaluaciones/'+id+'/');
     UI.toast('Evaluación eliminada','exito');

@@ -14,7 +14,7 @@ App Django integrada (backend + frontend) para la gestión integral del jardín 
 | 97 endpoints API REST | ✅ Completo |
 | Autenticación JWT | ✅ Configurado |
 | Base de datos PostgreSQL migrada | ✅ En producción local |
-| Datos iniciales cargados | ✅ 1 sucursal, 3 salas, 6 turnos, 32 hitos |
+| Datos iniciales cargados | ✅ 1 sucursal, 3 salas, 6 turnos, 243 hitos (catálogo completo 0-72 meses, en 6 áreas) |
 | **Frontend integrado (Opción A)** | ✅ Completo — 17 páginas HTML |
 | **Sidebar dinámico** (components.js) | ✅ Todas las páginas |
 | **CRUD completo con validaciones** | ✅ Todas las páginas |
@@ -48,7 +48,7 @@ python manage.py migrate
 
 # 7. Cargar datos iniciales
 python manage.py loaddata core/fixtures/datos_iniciales.json
-python manage.py loaddata evaluacion/fixtures/hitos_desarrollo.json
+python manage.py cargar_hitos      # opcional: `migrate` ya carga el catálogo; repone los que falten (--actualizar restablece textos y edades)
 
 # 8. Crear superusuario
 python manage.py createsuperuser

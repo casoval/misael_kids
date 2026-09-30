@@ -1,34 +1,3404 @@
 [
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000001", "fields": {"nombre": "Sostiene la cabeza brevemente", "area": "motricidad_gruesa", "edad_min_meses": 0, "edad_max_meses": 3, "descripcion": "En posición boca abajo levanta la cabeza", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000002", "fields": {"nombre": "Sonrisa social", "area": "social", "edad_min_meses": 1, "edad_max_meses": 3, "descripcion": "Sonríe en respuesta a estímulos de personas", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000003", "fields": {"nombre": "Vocaliza sonidos simples", "area": "lenguaje", "edad_min_meses": 1, "edad_max_meses": 4, "descripcion": "Emite sonidos vocálicos y gorjeos", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000004", "fields": {"nombre": "Sigue objetos con la vista", "area": "cognitivo", "edad_min_meses": 1, "edad_max_meses": 4, "descripcion": "Rastrea visualmente un objeto en movimiento", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000005", "fields": {"nombre": "Se sienta con apoyo", "area": "motricidad_gruesa", "edad_min_meses": 4, "edad_max_meses": 6, "descripcion": "Mantiene posición sentado con apoyo", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000006", "fields": {"nombre": "Agarra objetos con la mano", "area": "motricidad_fina", "edad_min_meses": 4, "edad_max_meses": 6, "descripcion": "Toma objetos con toda la mano (agarre palmar)", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000007", "fields": {"nombre": "Reconoce rostro de cuidadores", "area": "social", "edad_min_meses": 4, "edad_max_meses": 7, "descripcion": "Reacciona diferente ante personas conocidas y desconocidas", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000008", "fields": {"nombre": "Balbuceo (ma-ma, ba-ba)", "area": "lenguaje", "edad_min_meses": 6, "edad_max_meses": 9, "descripcion": "Repite sílabas dobles", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000009", "fields": {"nombre": "Se sienta solo sin apoyo", "area": "motricidad_gruesa", "edad_min_meses": 6, "edad_max_meses": 9, "descripcion": "Mantiene posición sentado de forma independiente", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000010", "fields": {"nombre": "Pinza fina (índice-pulgar)", "area": "motricidad_fina", "edad_min_meses": 8, "edad_max_meses": 12, "descripcion": "Toma objetos pequeños usando índice y pulgar", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000011", "fields": {"nombre": "Se pone de pie con apoyo", "area": "motricidad_gruesa", "edad_min_meses": 8, "edad_max_meses": 12, "descripcion": "Se incorpora sujetándose a un mueble o persona", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000012", "fields": {"nombre": "Primera palabra con significado", "area": "lenguaje", "edad_min_meses": 10, "edad_max_meses": 14, "descripcion": "Usa una palabra con intención comunicativa (mamá, agua, no)", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000013", "fields": {"nombre": "Camina solo", "area": "motricidad_gruesa", "edad_min_meses": 11, "edad_max_meses": 15, "descripcion": "Da pasos sin apoyo de forma estable", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000014", "fields": {"nombre": "Señala con el dedo índice", "area": "cognitivo", "edad_min_meses": 12, "edad_max_meses": 16, "descripcion": "Señala objetos o personas para llamar la atención", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000015", "fields": {"nombre": "Garabatea con lápiz o crayón", "area": "motricidad_fina", "edad_min_meses": 12, "edad_max_meses": 18, "descripcion": "Realiza trazos espontáneos sobre papel", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000016", "fields": {"nombre": "Vocabulario de 10-20 palabras", "area": "lenguaje", "edad_min_meses": 18, "edad_max_meses": 24, "descripcion": "Usa al menos 10 palabras distintas de forma espontánea", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000017", "fields": {"nombre": "Sube y baja escaleras con apoyo", "area": "motricidad_gruesa", "edad_min_meses": 18, "edad_max_meses": 24, "descripcion": "Alterna pies con apoyo de barandilla o mano", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000018", "fields": {"nombre": "Juego paralelo con otros niños", "area": "social", "edad_min_meses": 18, "edad_max_meses": 30, "descripcion": "Juega cerca de otros niños aunque no interactúe directamente", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000019", "fields": {"nombre": "Frases de 2 palabras", "area": "lenguaje", "edad_min_meses": 20, "edad_max_meses": 27, "descripcion": "Combina dos palabras (más agua, mamá ven)", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000020", "fields": {"nombre": "Control de esfínteres diurno", "area": "autonomia", "edad_min_meses": 24, "edad_max_meses": 36, "descripcion": "Avisa cuando necesita ir al baño durante el día", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000021", "fields": {"nombre": "Juego simbólico (hace como si)", "area": "cognitivo", "edad_min_meses": 24, "edad_max_meses": 36, "descripcion": "Imita situaciones de la vida cotidiana en el juego", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000022", "fields": {"nombre": "Frases de 3 o más palabras", "area": "lenguaje", "edad_min_meses": 27, "edad_max_meses": 36, "descripcion": "Construye oraciones simples completas", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000023", "fields": {"nombre": "Corre y salta en dos pies", "area": "motricidad_gruesa", "edad_min_meses": 24, "edad_max_meses": 36, "descripcion": "Corre con control y salta con ambos pies", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000024", "fields": {"nombre": "Dibuja líneas y círculos", "area": "motricidad_fina", "edad_min_meses": 24, "edad_max_meses": 36, "descripcion": "Reproduce trazos verticales, horizontales y circulares", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000025", "fields": {"nombre": "Se viste y desviste con ayuda", "area": "autonomia", "edad_min_meses": 30, "edad_max_meses": 42, "descripcion": "Colabora activamente al vestirse", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000026", "fields": {"nombre": "Juego cooperativo con pares", "area": "social", "edad_min_meses": 36, "edad_max_meses": 48, "descripcion": "Participa en juegos con reglas simples con otros niños", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000027", "fields": {"nombre": "Narra una historia simple", "area": "lenguaje", "edad_min_meses": 36, "edad_max_meses": 48, "descripcion": "Cuenta lo que hizo con inicio y final reconocibles", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000028", "fields": {"nombre": "Salta en un pie", "area": "motricidad_gruesa", "edad_min_meses": 42, "edad_max_meses": 54, "descripcion": "Mantiene el equilibrio saltando en un solo pie", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000029", "fields": {"nombre": "Dibuja figura humana básica", "area": "motricidad_fina", "edad_min_meses": 42, "edad_max_meses": 54, "descripcion": "Dibuja persona con cabeza, cuerpo y extremidades", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000030", "fields": {"nombre": "Reconoce letras de su nombre", "area": "cognitivo", "edad_min_meses": 48, "edad_max_meses": 60, "descripcion": "Identifica al menos algunas letras de su nombre escrito", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000031", "fields": {"nombre": "Se ata los zapatos", "area": "autonomia", "edad_min_meses": 54, "edad_max_meses": 72, "descripcion": "Realiza el nudo de los cordones de manera independiente", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}},
-  {"model": "evaluacion.hitodesarrollo", "pk": "a1000001-0000-0000-0000-000000000032", "fields": {"nombre": "Escribe su nombre", "area": "motricidad_fina", "edad_min_meses": 54, "edad_max_meses": 72, "descripcion": "Escribe su nombre completo de forma legible", "activo": true, "created_at": "2025-01-01T00:00:00Z", "updated_at": "2025-01-01T00:00:00Z"}}
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "10919d1d-73c3-5429-8018-47b7e922ee2c",
+  "fields": {
+   "nombre": "Levanta la cabeza boca abajo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 0,
+   "edad_max_meses": 2,
+   "descripcion": "Acostado boca abajo levanta la cabeza unos segundos y la gira hacia un lado.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "41eeac9d-b08e-5acc-908b-b69282c175ad",
+  "fields": {
+   "nombre": "Mueve brazos y piernas con energía",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 0,
+   "edad_max_meses": 3,
+   "descripcion": "Patalea y agita brazos y piernas de forma alternada cuando está despierto y contento.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000001",
+  "fields": {
+   "nombre": "Sostiene la cabeza brevemente",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 0,
+   "edad_max_meses": 3,
+   "descripcion": "En posición boca abajo levanta la cabeza",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "2c980924-f0ae-5553-95fc-eb70c6eb7cdd",
+  "fields": {
+   "nombre": "Abre y cierra las manos",
+   "area": "motricidad_fina",
+   "edad_min_meses": 0,
+   "edad_max_meses": 3,
+   "descripcion": "Pasa de puños cerrados a manos abiertas y reacciona al contacto con un objeto en la palma.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c3642e8f-d67d-598d-abea-0f77d0097919",
+  "fields": {
+   "nombre": "Llora de forma distinta según lo que necesita",
+   "area": "lenguaje",
+   "edad_min_meses": 0,
+   "edad_max_meses": 3,
+   "descripcion": "Diferencia su llanto de hambre, sueño o incomodidad para comunicarse.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e3e55ef9-1942-5aa9-aac1-bce9aba985f2",
+  "fields": {
+   "nombre": "Se sobresalta o se calma con los sonidos",
+   "area": "lenguaje",
+   "edad_min_meses": 0,
+   "edad_max_meses": 3,
+   "descripcion": "Reacciona con un gesto o movimiento ante ruidos fuertes y se tranquiliza con la voz conocida.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c4263a8b-f672-596f-b2d1-b6837d90e703",
+  "fields": {
+   "nombre": "Mira el rostro y sostiene el contacto visual",
+   "area": "social",
+   "edad_min_meses": 0,
+   "edad_max_meses": 4,
+   "descripcion": "Fija la mirada en quien le habla y la sostiene varios segundos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "48df61be-4a0e-576d-8f8b-a5f2c41d14db",
+  "fields": {
+   "nombre": "Se calma al ser alzado o arrullado",
+   "area": "social",
+   "edad_min_meses": 0,
+   "edad_max_meses": 3,
+   "descripcion": "Se tranquiliza con el contacto, la voz y el balanceo del cuidador.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "b185c26f-3326-5357-8dd0-2b833905ad10",
+  "fields": {
+   "nombre": "Reconoce la voz y el olor de sus cuidadores",
+   "area": "cognitivo",
+   "edad_min_meses": 0,
+   "edad_max_meses": 3,
+   "descripcion": "Se calma o reacciona diferente ante las personas de su entorno.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "54f17f4a-ca8d-565d-85ac-1e2c0dd22e45",
+  "fields": {
+   "nombre": "Coordina la succión y la respiración al alimentarse",
+   "area": "autonomia",
+   "edad_min_meses": 0,
+   "edad_max_meses": 3,
+   "descripcion": "Se alimenta con ritmo coordinado de succión, deglución y respiración.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "6fa825fb-3e55-51c7-8b26-2ff002e58708",
+  "fields": {
+   "nombre": "Lleva las manos a la boca",
+   "area": "motricidad_fina",
+   "edad_min_meses": 1,
+   "edad_max_meses": 4,
+   "descripcion": "Se chupa los puños o dedos y junta las manos en la línea media.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000003",
+  "fields": {
+   "nombre": "Vocaliza sonidos simples",
+   "area": "lenguaje",
+   "edad_min_meses": 1,
+   "edad_max_meses": 4,
+   "descripcion": "Emite sonidos vocálicos y gorjeos",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000002",
+  "fields": {
+   "nombre": "Sonrisa social",
+   "area": "social",
+   "edad_min_meses": 1,
+   "edad_max_meses": 3,
+   "descripcion": "Sonríe en respuesta a estímulos de personas",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000004",
+  "fields": {
+   "nombre": "Sigue objetos con la vista",
+   "area": "cognitivo",
+   "edad_min_meses": 1,
+   "edad_max_meses": 4,
+   "descripcion": "Rastrea visualmente un objeto en movimiento",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "63fa9785-89ab-57fd-82c6-ba4b295bf9bd",
+  "fields": {
+   "nombre": "Mantiene la cabeza firme al sentarlo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 2,
+   "edad_max_meses": 4,
+   "descripcion": "Cuando se le sostiene sentado, la cabeza permanece erguida sin caerse hacia adelante.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "4cc3aec2-fcea-576d-8702-6a87675d82af",
+  "fields": {
+   "nombre": "Se apoya en los antebrazos boca abajo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 2,
+   "edad_max_meses": 5,
+   "descripcion": "Levanta el pecho y la cabeza apoyándose en los antebrazos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "d3acfde6-5712-564c-9e7b-034bf37d8676",
+  "fields": {
+   "nombre": "Sostiene un sonajero puesto en su mano",
+   "area": "motricidad_fina",
+   "edad_min_meses": 2,
+   "edad_max_meses": 5,
+   "descripcion": "Mantiene el objeto unos segundos y lo agita de forma casual.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e29f3bea-221d-5fe7-a0ad-8187ab3abeba",
+  "fields": {
+   "nombre": "Gira la cabeza hacia la voz",
+   "area": "lenguaje",
+   "edad_min_meses": 2,
+   "edad_max_meses": 5,
+   "descripcion": "Busca con la mirada a la persona que le habla o hacia el sonido.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "943ca62c-9259-52f0-9551-321dc0f9add7",
+  "fields": {
+   "nombre": "Descubre y mira sus manos",
+   "area": "cognitivo",
+   "edad_min_meses": 2,
+   "edad_max_meses": 5,
+   "descripcion": "Observa sus manos, las junta y juega con ellas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "448ca407-622e-589b-8173-8c5b851755c2",
+  "fields": {
+   "nombre": "Establece ritmos de sueño y vigilia",
+   "area": "autonomia",
+   "edad_min_meses": 2,
+   "edad_max_meses": 6,
+   "descripcion": "Sus horarios de sueño y comidas empiezan a ser más predecibles.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "d96e5fb0-6a08-5832-a712-875a5ba5f49f",
+  "fields": {
+   "nombre": "Empuja con las piernas al apoyar los pies",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 3,
+   "edad_max_meses": 6,
+   "descripcion": "Al sostenerlo de pie sobre una superficie firme, empuja con las piernas y soporta parte de su peso.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7e927ea4-5080-5b67-b33a-37c93c902b6a",
+  "fields": {
+   "nombre": "Rueda de boca abajo a boca arriba",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 3,
+   "edad_max_meses": 6,
+   "descripcion": "Gira el cuerpo completo para pasar de boca abajo a boca arriba por sí solo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c8249e24-5034-5025-892a-16ceaa42616d",
+  "fields": {
+   "nombre": "Alcanza y agarra un juguete con las dos manos",
+   "area": "motricidad_fina",
+   "edad_min_meses": 3,
+   "edad_max_meses": 6,
+   "descripcion": "Extiende los brazos hacia un objeto cercano y logra tomarlo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "2757972d-5359-5681-b867-c5f3859836ce",
+  "fields": {
+   "nombre": "Ríe a carcajadas",
+   "area": "lenguaje",
+   "edad_min_meses": 3,
+   "edad_max_meses": 6,
+   "descripcion": "Responde con risas sonoras a juegos, cosquillas o gestos divertidos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "1e3345f4-8bcc-5fb3-9dff-4c245a3c3eb4",
+  "fields": {
+   "nombre": "Disfruta jugar con personas",
+   "area": "social",
+   "edad_min_meses": 3,
+   "edad_max_meses": 6,
+   "descripcion": "Sonríe, ríe y busca la interacción con el adulto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e83f5592-be98-5c9c-b43c-6b4af51dd52c",
+  "fields": {
+   "nombre": "Alcanza lo que ve con curiosidad",
+   "area": "cognitivo",
+   "edad_min_meses": 3,
+   "edad_max_meses": 6,
+   "descripcion": "Explora con la vista y trata de tomar objetos llamativos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "910b7714-e1e5-5924-a622-4a779f8f50f5",
+  "fields": {
+   "nombre": "Rueda de boca arriba a boca abajo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 4,
+   "edad_max_meses": 7,
+   "descripcion": "Se da vuelta hasta quedar boca abajo, a veces para alcanzar un juguete.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000005",
+  "fields": {
+   "nombre": "Se sienta con apoyo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 4,
+   "edad_max_meses": 6,
+   "descripcion": "Mantiene posición sentado con apoyo",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000006",
+  "fields": {
+   "nombre": "Agarra objetos con la mano",
+   "area": "motricidad_fina",
+   "edad_min_meses": 4,
+   "edad_max_meses": 6,
+   "descripcion": "Toma objetos con toda la mano (agarre palmar)",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "68a7e075-b4b6-5750-a375-2726149a36f7",
+  "fields": {
+   "nombre": "Responde con sonidos cuando se le habla",
+   "area": "lenguaje",
+   "edad_min_meses": 4,
+   "edad_max_meses": 7,
+   "descripcion": "Hace pausas y emite vocalizaciones como si conversara por turnos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "0467c4ed-c5d3-53f5-a6f9-5b240fc49a15",
+  "fields": {
+   "nombre": "Expresa alegría, enojo y sorpresa",
+   "area": "social",
+   "edad_min_meses": 4,
+   "edad_max_meses": 8,
+   "descripcion": "Muestra con la cara y el cuerpo distintas emociones.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000007",
+  "fields": {
+   "nombre": "Reconoce rostro de cuidadores",
+   "area": "social",
+   "edad_min_meses": 4,
+   "edad_max_meses": 7,
+   "descripcion": "Reacciona diferente ante personas conocidas y desconocidas",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "2110290c-303a-5b1d-a28b-8e4bcb0c5878",
+  "fields": {
+   "nombre": "Busca con la mirada un objeto que cae",
+   "area": "cognitivo",
+   "edad_min_meses": 4,
+   "edad_max_meses": 8,
+   "descripcion": "Sigue con los ojos un juguete que se le cae o desaparece.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "eddd9c7e-51fe-5c39-a489-48194e8817a9",
+  "fields": {
+   "nombre": "Anticipa la cuchara",
+   "area": "autonomia",
+   "edad_min_meses": 4,
+   "edad_max_meses": 8,
+   "descripcion": "Abre la boca al ver acercarse la cuchara y muestra interés por la comida.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f560c71e-3559-52ef-a5bf-e8f5ca8f1962",
+  "fields": {
+   "nombre": "Se apoya en las manos con brazos estirados",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 5,
+   "edad_max_meses": 8,
+   "descripcion": "Boca abajo, levanta el tronco apoyándose en las palmas con los codos extendidos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "30adaeb7-8474-5908-a41c-7c07ccbff23d",
+  "fields": {
+   "nombre": "Pasa un objeto de una mano a otra",
+   "area": "motricidad_fina",
+   "edad_min_meses": 5,
+   "edad_max_meses": 8,
+   "descripcion": "Transfiere voluntariamente un juguete entre sus manos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a9c48c5c-23e1-5c26-bd4b-6884930b8950",
+  "fields": {
+   "nombre": "Responde a su nombre",
+   "area": "lenguaje",
+   "edad_min_meses": 5,
+   "edad_max_meses": 9,
+   "descripcion": "Se gira o mira cuando lo llaman por su nombre.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "48f4c33c-9729-59c2-97ca-9d5d70b90223",
+  "fields": {
+   "nombre": "Se mantiene en posición de gateo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 6,
+   "edad_max_meses": 10,
+   "descripcion": "Se sostiene sobre manos y rodillas y se balancea hacia adelante y atrás.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000009",
+  "fields": {
+   "nombre": "Se sienta solo sin apoyo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 6,
+   "edad_max_meses": 9,
+   "descripcion": "Mantiene posición sentado de forma independiente",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "0ae1515a-81f3-553d-8177-f19ddc70fa69",
+  "fields": {
+   "nombre": "Golpea objetos contra la superficie",
+   "area": "motricidad_fina",
+   "edad_min_meses": 6,
+   "edad_max_meses": 9,
+   "descripcion": "Sacude, golpea y tira objetos para explorar el sonido y el movimiento.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000008",
+  "fields": {
+   "nombre": "Balbuceo (ma-ma, ba-ba)",
+   "area": "lenguaje",
+   "edad_min_meses": 6,
+   "edad_max_meses": 9,
+   "descripcion": "Repite sílabas dobles",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f6870b95-be6d-5c07-adad-5e1b52855908",
+  "fields": {
+   "nombre": "Varía el tono y el volumen al balbucear",
+   "area": "lenguaje",
+   "edad_min_meses": 6,
+   "edad_max_meses": 10,
+   "descripcion": "Combina sílabas con entonación parecida a frases o preguntas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "0a416d3e-8b05-5220-bf43-b8719d927130",
+  "fields": {
+   "nombre": "Distingue a conocidos de extraños",
+   "area": "social",
+   "edad_min_meses": 6,
+   "edad_max_meses": 10,
+   "descripcion": "Muestra cautela, llanto o extrañeza ante personas desconocidas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "83a65d22-860d-5710-9dc2-546802e249be",
+  "fields": {
+   "nombre": "Juega a esconderse y aparecer",
+   "area": "social",
+   "edad_min_meses": 6,
+   "edad_max_meses": 10,
+   "descripcion": "Disfruta el cucú-tras y espera la reaparición del rostro.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "463eff02-463e-5d0e-a8c6-716492e5119e",
+  "fields": {
+   "nombre": "Busca un objeto parcialmente escondido",
+   "area": "cognitivo",
+   "edad_min_meses": 6,
+   "edad_max_meses": 9,
+   "descripcion": "Encuentra un juguete cubierto solo en parte con una tela.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "b6aa92e0-b29f-5d3e-acd7-3e1fc58d3def",
+  "fields": {
+   "nombre": "Pasa la atención de un objeto a otro",
+   "area": "cognitivo",
+   "edad_min_meses": 6,
+   "edad_max_meses": 10,
+   "descripcion": "Explora varios juguetes alternando entre ellos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e8ae228c-7ecb-5bf4-9812-47dd892d3fe5",
+  "fields": {
+   "nombre": "Acepta alimentos semisólidos con cuchara",
+   "area": "autonomia",
+   "edad_min_meses": 6,
+   "edad_max_meses": 9,
+   "descripcion": "Come papillas y purés con ayuda del adulto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "68503a79-960c-57b6-9068-6ad64f398c6e",
+  "fields": {
+   "nombre": "Se sostiene el biberón o el vaso con ayuda",
+   "area": "autonomia",
+   "edad_min_meses": 6,
+   "edad_max_meses": 12,
+   "descripcion": "Toma el biberón con las dos manos y lo dirige a la boca.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "156da202-5d0e-5686-9c16-ca7a84030d75",
+  "fields": {
+   "nombre": "Pasa de acostado a sentado por sí solo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 7,
+   "edad_max_meses": 11,
+   "descripcion": "Se incorpora desde el piso hasta quedar sentado sin ayuda del adulto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "08a7be4f-bc80-5133-8a48-bb6cabd0fdbf",
+  "fields": {
+   "nombre": "Se arrastra o gatea para desplazarse",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 7,
+   "edad_max_meses": 11,
+   "descripcion": "Se desplaza por el piso (arrastre, gateo o deslizamiento sentado) para alcanzar lo que quiere.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c2a31b5c-e51f-56f2-8fb9-ae88e502c730",
+  "fields": {
+   "nombre": "Agarra con el método de rastrillo",
+   "area": "motricidad_fina",
+   "edad_min_meses": 7,
+   "edad_max_meses": 10,
+   "descripcion": "Usa los dedos como un rastrillo para atrapar objetos pequeños contra la palma.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000011",
+  "fields": {
+   "nombre": "Se pone de pie con apoyo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 8,
+   "edad_max_meses": 12,
+   "descripcion": "Se incorpora sujetándose a un mueble o persona",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "6e1eb928-4f9b-5208-883c-d76ce3045a97",
+  "fields": {
+   "nombre": "Aplaude y golpea dos objetos entre sí",
+   "area": "motricidad_fina",
+   "edad_min_meses": 8,
+   "edad_max_meses": 12,
+   "descripcion": "Junta las manos o choca dos juguetes de forma intencional.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000010",
+  "fields": {
+   "nombre": "Pinza fina (índice-pulgar)",
+   "area": "motricidad_fina",
+   "edad_min_meses": 8,
+   "edad_max_meses": 12,
+   "descripcion": "Toma objetos pequeños usando índice y pulgar",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "9f3eb183-0a41-54eb-bcc5-d50f8f719438",
+  "fields": {
+   "nombre": "Entiende la palabra no",
+   "area": "lenguaje",
+   "edad_min_meses": 8,
+   "edad_max_meses": 12,
+   "descripcion": "Detiene brevemente lo que hace cuando el adulto dice no con tono firme.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "d3e2fa45-1982-58bb-95ec-740da21be4d6",
+  "fields": {
+   "nombre": "Reacciona cuando el cuidador se aleja",
+   "area": "social",
+   "edad_min_meses": 8,
+   "edad_max_meses": 14,
+   "descripcion": "Protesta o busca a la persona de apego en las separaciones.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "d5257155-dcb9-537b-9045-6512eb13e19a",
+  "fields": {
+   "nombre": "Busca un juguete escondido por completo",
+   "area": "cognitivo",
+   "edad_min_meses": 8,
+   "edad_max_meses": 12,
+   "descripcion": "Comprende que los objetos siguen existiendo aunque no los vea.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "eda8631b-e916-53a4-809c-41bbe7e783c6",
+  "fields": {
+   "nombre": "Descubre que sus acciones producen efectos",
+   "area": "cognitivo",
+   "edad_min_meses": 8,
+   "edad_max_meses": 12,
+   "descripcion": "Golpea, sacude o aprieta para producir sonidos o movimientos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "04ebe87c-5b37-54d8-b69f-6f3ec3797ff8",
+  "fields": {
+   "nombre": "Come alimentos blandos con los dedos",
+   "area": "autonomia",
+   "edad_min_meses": 8,
+   "edad_max_meses": 12,
+   "descripcion": "Toma trozos blandos con los dedos y los lleva a la boca.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "770dc81f-4e86-5a1b-88e0-9ef64a6a8e50",
+  "fields": {
+   "nombre": "Se desplaza de lado agarrado de los muebles",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 9,
+   "edad_max_meses": 13,
+   "descripcion": "Camina lateralmente sujetándose de sillones, mesas o de la cuna.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "83f523ae-4a1c-5f53-8928-1ccf4984ce88",
+  "fields": {
+   "nombre": "Se mantiene de pie con apoyo mínimo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 9,
+   "edad_max_meses": 13,
+   "descripcion": "Permanece parado unos segundos apoyando solo una mano sobre un mueble.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a67a8661-ea71-59fd-ba3c-17c2f8b09963",
+  "fields": {
+   "nombre": "Suelta objetos voluntariamente",
+   "area": "motricidad_fina",
+   "edad_min_meses": 9,
+   "edad_max_meses": 13,
+   "descripcion": "Deja caer o entrega un objeto al adulto cuando se lo piden.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "2ce242fa-65fe-55d2-8bf2-3448012343dc",
+  "fields": {
+   "nombre": "Comprende órdenes simples con gestos",
+   "area": "lenguaje",
+   "edad_min_meses": 9,
+   "edad_max_meses": 14,
+   "descripcion": "Reacciona a indicaciones como dame o ven acompañadas de un gesto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "41b35411-40d0-51ab-b1a1-ae194f41cc38",
+  "fields": {
+   "nombre": "Imita sonidos y gestos",
+   "area": "lenguaje",
+   "edad_min_meses": 9,
+   "edad_max_meses": 13,
+   "descripcion": "Dice adiós con la mano, repite sonidos y copia gestos simples.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "18f0110e-ddbd-58d3-94a2-e94edd8464be",
+  "fields": {
+   "nombre": "Extiende los brazos para que lo carguen",
+   "area": "social",
+   "edad_min_meses": 9,
+   "edad_max_meses": 13,
+   "descripcion": "Pide ser alzado y muestra objetos al adulto para compartir interés.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "6b5d5498-4d13-5c03-a2bd-274fb893dc44",
+  "fields": {
+   "nombre": "Imita acciones y gestos nuevos",
+   "area": "cognitivo",
+   "edad_min_meses": 9,
+   "edad_max_meses": 15,
+   "descripcion": "Copia movimientos y usos de objetos que ve hacer a otros.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e8c126c2-b604-51fb-b19a-ca6c4586a8fa",
+  "fields": {
+   "nombre": "Colabora al vestirse",
+   "area": "autonomia",
+   "edad_min_meses": 9,
+   "edad_max_meses": 15,
+   "descripcion": "Extiende el brazo o la pierna cuando lo visten.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "3fe5155c-7293-53c2-bcbd-ba0fdc328756",
+  "fields": {
+   "nombre": "Explora agujeros con el dedo índice",
+   "area": "motricidad_fina",
+   "edad_min_meses": 10,
+   "edad_max_meses": 14,
+   "descripcion": "Mete el dedo en agujeros, botones y detalles de los juguetes.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000012",
+  "fields": {
+   "nombre": "Primera palabra con significado",
+   "area": "lenguaje",
+   "edad_min_meses": 10,
+   "edad_max_meses": 14,
+   "descripcion": "Usa una palabra con intención comunicativa (mamá, agua, no)",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000013",
+  "fields": {
+   "nombre": "Camina solo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 11,
+   "edad_max_meses": 15,
+   "descripcion": "Da pasos sin apoyo de forma estable",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "780b5a2d-f26f-5cb4-a21c-e673b41b42de",
+  "fields": {
+   "nombre": "Se agacha y se levanta para recoger juguetes",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 12,
+   "edad_max_meses": 16,
+   "descripcion": "Se pone en cuclillas para tomar un objeto del piso y vuelve a pararse sin caerse.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000015",
+  "fields": {
+   "nombre": "Garabatea con lápiz o crayón",
+   "area": "motricidad_fina",
+   "edad_min_meses": 12,
+   "edad_max_meses": 18,
+   "descripcion": "Realiza trazos espontáneos sobre papel",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "d7261828-3e6c-5f90-9a75-cc4290c9bad1",
+  "fields": {
+   "nombre": "Mete y saca objetos de un recipiente",
+   "area": "motricidad_fina",
+   "edad_min_meses": 12,
+   "edad_max_meses": 16,
+   "descripcion": "Llena y vacía cajas o baldes con juguetes pequeños.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "03f0abb8-c1ac-5af2-ad2f-13d79501c782",
+  "fields": {
+   "nombre": "Dice 2 a 3 palabras además de mamá y papá",
+   "area": "lenguaje",
+   "edad_min_meses": 12,
+   "edad_max_meses": 18,
+   "descripcion": "Usa palabras sueltas reconocibles para pedir u objetos familiares.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7c3e962f-76f5-5c7e-929e-f76b344710b3",
+  "fields": {
+   "nombre": "Sigue órdenes simples sin gestos",
+   "area": "lenguaje",
+   "edad_min_meses": 12,
+   "edad_max_meses": 18,
+   "descripcion": "Entiende indicaciones como trae la pelota sin necesidad de señales.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "b9326e93-3768-5be6-97f4-9bda39ff305a",
+  "fields": {
+   "nombre": "Busca al adulto con la mirada ante lo nuevo",
+   "area": "social",
+   "edad_min_meses": 12,
+   "edad_max_meses": 18,
+   "descripcion": "Consulta con la mirada el rostro del adulto para saber si algo es seguro.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "ad61198a-3384-5495-851c-f1493a6c9cdb",
+  "fields": {
+   "nombre": "Juega a dar y recibir",
+   "area": "social",
+   "edad_min_meses": 12,
+   "edad_max_meses": 18,
+   "descripcion": "Entrega y recibe objetos o rueda una pelota con otra persona.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "10982299-f398-5089-a565-95e81c5cfc1e",
+  "fields": {
+   "nombre": "Muestra afecto con abrazos y besos",
+   "area": "social",
+   "edad_min_meses": 12,
+   "edad_max_meses": 18,
+   "descripcion": "Expresa cariño de forma espontánea a personas conocidas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "896ae608-6439-532c-9c35-867f6ec3ed85",
+  "fields": {
+   "nombre": "Busca objetos tras varios desplazamientos",
+   "area": "cognitivo",
+   "edad_min_meses": 12,
+   "edad_max_meses": 18,
+   "descripcion": "Encuentra un juguete aunque lo hayan cambiado de lugar delante de él.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000014",
+  "fields": {
+   "nombre": "Señala con el dedo índice",
+   "area": "cognitivo",
+   "edad_min_meses": 12,
+   "edad_max_meses": 16,
+   "descripcion": "Señala objetos o personas para llamar la atención",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "53f4dcef-5acb-5cd4-8e6d-2331f2c0dd74",
+  "fields": {
+   "nombre": "Usa los objetos para lo que sirven",
+   "area": "cognitivo",
+   "edad_min_meses": 12,
+   "edad_max_meses": 18,
+   "descripcion": "Bebe de la taza, se peina, habla por teléfono de juguete.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a73900c0-3b63-52f7-927a-67ffdb65afbc",
+  "fields": {
+   "nombre": "Bebe de un vaso con ayuda",
+   "area": "autonomia",
+   "edad_min_meses": 12,
+   "edad_max_meses": 18,
+   "descripcion": "Toma de un vaso sostenido por el adulto o con asas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "147f78cb-5acf-5960-acc9-ad9d10a78a41",
+  "fields": {
+   "nombre": "Camina hacia atrás o jala un juguete",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 13,
+   "edad_max_meses": 18,
+   "descripcion": "Da algunos pasos hacia atrás o camina arrastrando un juguete con cuerda.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "39412fb9-19ca-53bb-aa38-658b253d508b",
+  "fields": {
+   "nombre": "Apila 2 a 3 bloques",
+   "area": "motricidad_fina",
+   "edad_min_meses": 13,
+   "edad_max_meses": 20,
+   "descripcion": "Coloca bloques uno sobre otro formando una torre baja.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7b56804a-6d9b-5ee4-962d-cf58659cfe43",
+  "fields": {
+   "nombre": "Sube escaleras gateando o con ayuda",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 14,
+   "edad_max_meses": 20,
+   "descripcion": "Sube los escalones gateando o tomado de la mano del adulto o de la baranda.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "851c36d4-46db-5dd6-82d8-b4bd4f49db19",
+  "fields": {
+   "nombre": "Pasa las páginas de un libro de cartón",
+   "area": "motricidad_fina",
+   "edad_min_meses": 14,
+   "edad_max_meses": 20,
+   "descripcion": "Voltea varias páginas a la vez de un libro resistente.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "2b373a16-5df1-59e1-bc6b-19d7560f75d1",
+  "fields": {
+   "nombre": "Corre con pasos rígidos",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 15,
+   "edad_max_meses": 22,
+   "descripcion": "Acelera el paso y corre aunque se detenga con dificultad o se caiga con facilidad.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "64d35ab0-2417-5620-a041-0700a6e1c97e",
+  "fields": {
+   "nombre": "Come con cuchara derramando un poco",
+   "area": "motricidad_fina",
+   "edad_min_meses": 15,
+   "edad_max_meses": 24,
+   "descripcion": "Lleva la cuchara a la boca con parte de la comida; mejora con la práctica.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a34f5eb7-49ae-50d5-9ca6-7c13b4ffc607",
+  "fields": {
+   "nombre": "Señala partes del cuerpo cuando se las nombran",
+   "area": "lenguaje",
+   "edad_min_meses": 15,
+   "edad_max_meses": 24,
+   "descripcion": "Identifica nariz, ojos, boca, manos y pies en sí mismo o en una muñeca.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f633a0e8-274e-5971-afcd-c113c5cf7452",
+  "fields": {
+   "nombre": "Usa 5 a 10 palabras con sentido",
+   "area": "lenguaje",
+   "edad_min_meses": 15,
+   "edad_max_meses": 20,
+   "descripcion": "Amplía su vocabulario con nombres de personas, objetos y acciones.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "10181bc8-3266-5d51-8b05-e63becfdda75",
+  "fields": {
+   "nombre": "Imita acciones de los adultos",
+   "area": "social",
+   "edad_min_meses": 15,
+   "edad_max_meses": 24,
+   "descripcion": "Copia tareas cotidianas como barrer, hablar por teléfono o cuidar a una muñeca.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "24478422-cc7a-51fd-a3a9-35167efa9498",
+  "fields": {
+   "nombre": "Identifica partes del cuerpo y objetos en láminas",
+   "area": "cognitivo",
+   "edad_min_meses": 15,
+   "edad_max_meses": 24,
+   "descripcion": "Señala dibujos o fotografías de objetos y animales conocidos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "d8395095-6336-58eb-8dcf-3d4595a84a22",
+  "fields": {
+   "nombre": "Se quita prendas simples",
+   "area": "autonomia",
+   "edad_min_meses": 15,
+   "edad_max_meses": 24,
+   "descripcion": "Se saca las medias, los zapatos o el gorro por su cuenta.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c4d65836-4bba-5da1-aaa8-b21418043ea8",
+  "fields": {
+   "nombre": "Patea una pelota sin caerse",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 16,
+   "edad_max_meses": 24,
+   "descripcion": "Balancea el cuerpo y golpea la pelota con el pie manteniendo el equilibrio.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "35c439a3-d009-56ce-af1a-9d419632a60c",
+  "fields": {
+   "nombre": "Lanza una pelota con ambas manos",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 18,
+   "edad_max_meses": 26,
+   "descripcion": "Arroja una pelota hacia adelante con las dos manos, aunque sin dirección precisa.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000017",
+  "fields": {
+   "nombre": "Sube y baja escaleras con apoyo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 18,
+   "edad_max_meses": 24,
+   "descripcion": "Alterna pies con apoyo de barandilla o mano",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "af7d66a9-85b5-5623-8119-ab31670a1ced",
+  "fields": {
+   "nombre": "Apila 4 a 6 bloques",
+   "area": "motricidad_fina",
+   "edad_min_meses": 18,
+   "edad_max_meses": 26,
+   "descripcion": "Construye torres más altas controlando la liberación de cada bloque.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f02685be-fee2-5d86-b124-6ffa0e44fc2a",
+  "fields": {
+   "nombre": "Imita un trazo vertical",
+   "area": "motricidad_fina",
+   "edad_min_meses": 18,
+   "edad_max_meses": 30,
+   "descripcion": "Copia una línea vertical que le muestra el adulto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "b4b9d534-11ea-54d4-a3e3-04f3081b16b6",
+  "fields": {
+   "nombre": "Nombra objetos y personas familiares",
+   "area": "lenguaje",
+   "edad_min_meses": 18,
+   "edad_max_meses": 26,
+   "descripcion": "Dice el nombre de juguetes, alimentos y miembros de la familia.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000016",
+  "fields": {
+   "nombre": "Vocabulario de 10-20 palabras",
+   "area": "lenguaje",
+   "edad_min_meses": 18,
+   "edad_max_meses": 24,
+   "descripcion": "Usa al menos 10 palabras distintas de forma espontánea",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e3375829-bb48-5db3-9de4-d550b9a1aaf5",
+  "fields": {
+   "nombre": "Expresa enojo o frustración y se calma con ayuda",
+   "area": "social",
+   "edad_min_meses": 18,
+   "edad_max_meses": 30,
+   "descripcion": "Pueden aparecer rabietas; se tranquiliza con la contención del adulto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000018",
+  "fields": {
+   "nombre": "Juego paralelo con otros niños",
+   "area": "social",
+   "edad_min_meses": 18,
+   "edad_max_meses": 30,
+   "descripcion": "Juega cerca de otros niños aunque no interactúe directamente",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "6fc339cb-53e8-52f5-93f8-acf639a012cb",
+  "fields": {
+   "nombre": "Se reconoce en el espejo",
+   "area": "social",
+   "edad_min_meses": 18,
+   "edad_max_meses": 26,
+   "descripcion": "Identifica su propia imagen y se señala en fotos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "83f09c5f-11a5-52a5-8fe6-fc0003c98f2e",
+  "fields": {
+   "nombre": "Encaja formas simples",
+   "area": "cognitivo",
+   "edad_min_meses": 18,
+   "edad_max_meses": 30,
+   "descripcion": "Completa encajes o rompecabezas de 2 a 3 piezas grandes.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "6cbaae2f-180c-5a71-8d86-c765910dad54",
+  "fields": {
+   "nombre": "Ayuda a guardar los juguetes",
+   "area": "autonomia",
+   "edad_min_meses": 18,
+   "edad_max_meses": 30,
+   "descripcion": "Acomoda sus cosas en su lugar con la guía del adulto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "00083998-c25f-5bb4-b353-7bfdbcaf232e",
+  "fields": {
+   "nombre": "Indica que el pañal está sucio",
+   "area": "autonomia",
+   "edad_min_meses": 18,
+   "edad_max_meses": 30,
+   "descripcion": "Avisa con palabras o gestos cuando necesita cambio.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f30c2cf7-48ae-5100-8de5-e6e6bc393fb8",
+  "fields": {
+   "nombre": "Se lava las manos con ayuda",
+   "area": "autonomia",
+   "edad_min_meses": 18,
+   "edad_max_meses": 30,
+   "descripcion": "Participa en el lavado y secado de manos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c173fe02-d935-57c0-94c2-338f826e34f4",
+  "fields": {
+   "nombre": "Ensarta cuentas grandes",
+   "area": "motricidad_fina",
+   "edad_min_meses": 20,
+   "edad_max_meses": 30,
+   "descripcion": "Introduce cuentas de agujero grande en un cordón grueso.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000019",
+  "fields": {
+   "nombre": "Frases de 2 palabras",
+   "area": "lenguaje",
+   "edad_min_meses": 20,
+   "edad_max_meses": 27,
+   "descripcion": "Combina dos palabras (más agua, mamá ven)",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "1c33f7c6-0d14-5413-8a05-c9e70a2e026f",
+  "fields": {
+   "nombre": "Sigue instrucciones de dos pasos",
+   "area": "lenguaje",
+   "edad_min_meses": 20,
+   "edad_max_meses": 30,
+   "descripcion": "Cumple una orden con dos acciones, por ejemplo toma el vaso y ponlo en la mesa.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "aedcde5a-955a-513c-a3b6-dcc8b3a624f0",
+  "fields": {
+   "nombre": "Corre con coordinación y cambia de dirección",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 24,
+   "edad_max_meses": 30,
+   "descripcion": "Corre esquivando obstáculos y se detiene sin perder el equilibrio.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000023",
+  "fields": {
+   "nombre": "Corre y salta en dos pies",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Corre con control y salta con ambos pies",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "fe6785e9-d201-5623-a08f-d8073dd2505b",
+  "fields": {
+   "nombre": "Salta en el lugar con ambos pies",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 24,
+   "edad_max_meses": 32,
+   "descripcion": "Despega los dos pies del piso a la vez, en su sitio o desde un escalón bajo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "2e0c3693-bb4a-5076-9e85-01c423f4381b",
+  "fields": {
+   "nombre": "Se para en puntillas",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Se eleva sobre la punta de los pies para alcanzar algo o por juego.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000024",
+  "fields": {
+   "nombre": "Dibuja líneas y círculos",
+   "area": "motricidad_fina",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Reproduce trazos verticales, horizontales y circulares",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "59147337-4ae7-5bf4-91e0-e61a5bd5f7de",
+  "fields": {
+   "nombre": "Gira perillas y abre tapas",
+   "area": "motricidad_fina",
+   "edad_min_meses": 24,
+   "edad_max_meses": 30,
+   "descripcion": "Abre puertas con perilla y desenrosca tapas sencillas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "4fa0f246-bead-5b10-9cf5-f6b3b0874849",
+  "fields": {
+   "nombre": "Imita trazos horizontales y verticales",
+   "area": "motricidad_fina",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Copia líneas horizontal y vertical después de verlas dibujar.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "b92e58ad-efc3-560c-9fc2-243d1ca92fae",
+  "fields": {
+   "nombre": "Pasa las páginas de una en una",
+   "area": "motricidad_fina",
+   "edad_min_meses": 24,
+   "edad_max_meses": 30,
+   "descripcion": "Separa y voltea cada hoja de un cuento de forma individual.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "3127b2b2-865c-5385-a36e-90d63e3d9c2b",
+  "fields": {
+   "nombre": "Responde preguntas simples",
+   "area": "lenguaje",
+   "edad_min_meses": 24,
+   "edad_max_meses": 30,
+   "descripcion": "Contesta preguntas como ¿qué es esto? o ¿dónde está?.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "76ceebcf-fa76-53a5-bc32-6d9625704be8",
+  "fields": {
+   "nombre": "Se le entiende la mitad de lo que dice",
+   "area": "lenguaje",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Las personas fuera de la familia comprenden alrededor de la mitad de su habla.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7d7c775d-6bfa-5317-9f53-3ca70ce7e5a2",
+  "fields": {
+   "nombre": "Su vocabulario supera las 50 palabras",
+   "area": "lenguaje",
+   "edad_min_meses": 24,
+   "edad_max_meses": 30,
+   "descripcion": "Suma palabras nuevas de forma constante y empieza a combinarlas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c0f507d5-1e5c-5580-ad9a-4b970d896d8c",
+  "fields": {
+   "nombre": "Usa pronombres (yo, mío, tú)",
+   "area": "lenguaje",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Se refiere a sí mismo con pronombres y marca lo que le pertenece.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "47e5cadd-88b1-5b51-800e-c4e4edf772a5",
+  "fields": {
+   "nombre": "Consuela o ayuda a otro niño",
+   "area": "social",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Muestra empatía al ver a un compañero triste o lastimado.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "6ca9e2b4-82df-5f55-bcec-915bd833e911",
+  "fields": {
+   "nombre": "Expresa emociones con palabras o gestos",
+   "area": "social",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Dice estoy contento o tengo miedo, o lo muestra con claridad.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "5662bb3d-d3ef-572c-b64d-1a82057aee06",
+  "fields": {
+   "nombre": "Muestra interés por otros niños",
+   "area": "social",
+   "edad_min_meses": 24,
+   "edad_max_meses": 30,
+   "descripcion": "Observa, se acerca e intenta imitar a sus compañeros.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c97fb0d5-ccec-5e3c-9e12-8696199c7b69",
+  "fields": {
+   "nombre": "Clasifica por color o forma",
+   "area": "cognitivo",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Agrupa objetos según una característica sencilla.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "5493884e-e576-5a6f-9c14-f3d2c9527c8a",
+  "fields": {
+   "nombre": "Comprende uno y muchos",
+   "area": "cognitivo",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Diferencia un objeto de varios y cuenta hasta 2 o 3.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "472cb5af-837a-557c-bd51-fd5c40e829d4",
+  "fields": {
+   "nombre": "Empareja objetos iguales",
+   "area": "cognitivo",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Une objetos o imágenes idénticos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000021",
+  "fields": {
+   "nombre": "Juego simbólico (hace como si)",
+   "area": "cognitivo",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Imita situaciones de la vida cotidiana en el juego",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c92819d6-a6f0-573c-8b5b-306569ce398c",
+  "fields": {
+   "nombre": "Bebe de un vaso sin derramar",
+   "area": "autonomia",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Sostiene el vaso con una mano y toma sin ayuda.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000020",
+  "fields": {
+   "nombre": "Control de esfínteres diurno",
+   "area": "autonomia",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Avisa cuando necesita ir al baño durante el día",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f54e55e3-5a98-5e27-bbe6-7ca38431a2b7",
+  "fields": {
+   "nombre": "Se quita prendas sencillas solo",
+   "area": "autonomia",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Baja pantalones y se quita poleras abiertas por su cuenta.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "9f0242ff-d29a-585e-a205-35721651572c",
+  "fields": {
+   "nombre": "Usa cuchara y tenedor sin ayuda",
+   "area": "autonomia",
+   "edad_min_meses": 24,
+   "edad_max_meses": 36,
+   "descripcion": "Come solo con cubiertos derramando poco.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000022",
+  "fields": {
+   "nombre": "Frases de 3 o más palabras",
+   "area": "lenguaje",
+   "edad_min_meses": 27,
+   "edad_max_meses": 36,
+   "descripcion": "Construye oraciones simples completas",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "8edf0194-0c97-56cd-a218-a7d8d6bebf09",
+  "fields": {
+   "nombre": "Patea una pelota con dirección",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Patea hacia una meta o hacia otra persona con intención.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "411547c2-19b4-538c-81a4-3527b7a62a53",
+  "fields": {
+   "nombre": "Sube escaleras alternando los pies con apoyo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 30,
+   "edad_max_meses": 40,
+   "descripcion": "Sube un pie por escalón tomado de la baranda; al bajar aún puede juntar los pies.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "8b7e250d-42cc-5323-bed7-bfca13718009",
+  "fields": {
+   "nombre": "Amasa y moldea plastilina",
+   "area": "motricidad_fina",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Hace bolitas, rollitos y tortitas con plastilina o masa.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "61267f75-229d-5a09-991a-0fedaef0256a",
+  "fields": {
+   "nombre": "Ensarta cuentas pequeñas",
+   "area": "motricidad_fina",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Usa un cordón fino para armar un collar con cuentas de tamaño mediano.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "078b8f97-4fff-5a06-90bc-2b7bdc4c381e",
+  "fields": {
+   "nombre": "Dice su nombre y su edad",
+   "area": "lenguaje",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Responde cuando le preguntan cómo se llama y cuántos años tiene.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "0f6a2902-8d06-5cf0-aba7-817e81242fe2",
+  "fields": {
+   "nombre": "Hace preguntas con qué y dónde",
+   "area": "lenguaje",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Pregunta para obtener información del entorno.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c63ca599-8064-5632-9b25-7ddd7db9d4b3",
+  "fields": {
+   "nombre": "Usa plurales y verbos en pasado",
+   "area": "lenguaje",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Dice juguetes, perros, comió, se cayó con mayor corrección.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "aad00e31-ee5a-59ba-ab66-5b6595b0916e",
+  "fields": {
+   "nombre": "Comparte con ayuda del adulto",
+   "area": "social",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Presta un juguete cuando se lo sugieren, aunque aún con dificultad.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f2628f08-6d4d-520a-aaea-d5a5529f4735",
+  "fields": {
+   "nombre": "Espera su turno con ayuda del adulto",
+   "area": "social",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Acepta esperar brevemente en juegos o actividades.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "8903f677-6c41-5ccc-9549-98c14df71387",
+  "fields": {
+   "nombre": "Participa en las rutinas del grupo",
+   "area": "social",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Se une a la ronda, al canto o a la hora de la merienda con sus compañeros.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "6181ee4f-0898-541c-aa68-b7b8ed29ec59",
+  "fields": {
+   "nombre": "Completa rompecabezas de 4 a 6 piezas",
+   "area": "cognitivo",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Resuelve encajes por ensayo y error o por observación.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "62657e76-f576-538d-94e5-af3c2cf445a3",
+  "fields": {
+   "nombre": "Comprende grande y pequeño",
+   "area": "cognitivo",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Identifica y compara tamaños y entiende conceptos de cantidad como más.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7840f4da-d7e2-5534-aa68-dd3e805a9c3f",
+  "fields": {
+   "nombre": "Reconoce los colores básicos",
+   "area": "cognitivo",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Nombra o señala correctamente al menos 3 colores.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "8413789f-acaa-580c-8f55-5a017bed523a",
+  "fields": {
+   "nombre": "Se lava y seca las manos solo",
+   "area": "autonomia",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Abre el grifo, usa jabón, enjuaga y se seca con poca ayuda.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000025",
+  "fields": {
+   "nombre": "Se viste y desviste con ayuda",
+   "area": "autonomia",
+   "edad_min_meses": 30,
+   "edad_max_meses": 42,
+   "descripcion": "Colabora activamente al vestirse",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "b4038d04-7667-507b-a191-73c0bc4b3f87",
+  "fields": {
+   "nombre": "Pedalea un triciclo",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Sube al triciclo, pedalea y gira el manubrio para cambiar de dirección.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e987456b-168e-5c1d-8413-eaa584af14f3",
+  "fields": {
+   "nombre": "Se sostiene en un pie varios segundos",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Mantiene el equilibrio sobre un solo pie al menos 2 a 3 segundos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "d4162c1f-7b30-5633-90e7-993341af8381",
+  "fields": {
+   "nombre": "Sube y baja escaleras alternando los pies",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Sube y baja un tramo de escaleras colocando un pie por escalón, con mínimo apoyo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e6f2c701-7a91-5266-b49b-9286134f3fe3",
+  "fields": {
+   "nombre": "Construye una torre de 8 a 10 bloques",
+   "area": "motricidad_fina",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Apila bloques con precisión sin que la torre se caiga.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a3a597c0-3374-5eb7-ae3e-b57395e20f8c",
+  "fields": {
+   "nombre": "Copia un círculo",
+   "area": "motricidad_fina",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Reproduce un círculo cerrado a partir de un modelo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "92e51d88-7b31-5bdb-938e-8706bb211978",
+  "fields": {
+   "nombre": "Corta papel con tijeras",
+   "area": "motricidad_fina",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Abre y cierra tijeras para cortar una tira de papel en línea recta.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "567769ce-1edf-527c-b9c1-3112410ac480",
+  "fields": {
+   "nombre": "Sostiene el lápiz con agarre trípode",
+   "area": "motricidad_fina",
+   "edad_min_meses": 36,
+   "edad_max_meses": 54,
+   "descripcion": "Toma el lápiz con el pulgar, el índice y el dedo medio para dibujar.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "2cb4a20a-356b-5beb-8b35-2e6d28c20f78",
+  "fields": {
+   "nombre": "Comprende preposiciones",
+   "area": "lenguaje",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Entiende y usa dentro, fuera, encima, debajo, al lado y detrás.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "49bcd72e-e16c-56fa-892e-aade5dfc5549",
+  "fields": {
+   "nombre": "Mantiene una conversación de 2 a 3 intercambios",
+   "area": "lenguaje",
+   "edad_min_meses": 36,
+   "edad_max_meses": 42,
+   "descripcion": "Responde y agrega información en una charla corta.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000027",
+  "fields": {
+   "nombre": "Narra una historia simple",
+   "area": "lenguaje",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Cuenta lo que hizo con inicio y final reconocibles",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "b2a83d15-84fb-56d6-9667-8f3a6994018c",
+  "fields": {
+   "nombre": "Sigue instrucciones de tres pasos",
+   "area": "lenguaje",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Cumple órdenes con tres acciones seguidas sin repetirlas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "851504fd-8238-5891-b1c7-34336fd08d2f",
+  "fields": {
+   "nombre": "Su habla se entiende casi por completo",
+   "area": "lenguaje",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Personas ajenas a la familia entienden aproximadamente las tres cuartas partes.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000026",
+  "fields": {
+   "nombre": "Juego cooperativo con pares",
+   "area": "social",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Participa en juegos con reglas simples con otros niños",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "5a485ff9-83c9-5db1-a6a5-a16765e3e50e",
+  "fields": {
+   "nombre": "Se separa del cuidador sin angustia",
+   "area": "social",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Se despide y se integra a la actividad del grupo con confianza.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "93879595-9cea-5142-b964-991a9e3d5929",
+  "fields": {
+   "nombre": "Sigue reglas simples del grupo",
+   "area": "social",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Respeta normas del aula como guardar los juguetes o pedir la palabra.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "5a1aeeed-cfe7-5688-98bf-90bd6af99b9c",
+  "fields": {
+   "nombre": "Cuenta hasta 5 con correspondencia",
+   "area": "cognitivo",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Asocia cada número con un objeto al contar.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "87a45c72-14cb-5df0-8b30-41b76cb66c25",
+  "fields": {
+   "nombre": "Distingue igual de diferente",
+   "area": "cognitivo",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Explica qué objetos son iguales y cuáles son distintos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "33fc3c63-d08f-5020-af20-482dbe693fdd",
+  "fields": {
+   "nombre": "Nombra cuatro colores",
+   "area": "cognitivo",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Dice el nombre de al menos 4 colores cuando se le pregunta.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "0fd1ce5e-0797-53f0-b1b5-f4e4018de853",
+  "fields": {
+   "nombre": "Controla los esfínteres de noche",
+   "area": "autonomia",
+   "edad_min_meses": 36,
+   "edad_max_meses": 60,
+   "descripcion": "Permanece seco durante la noche; puede haber accidentes ocasionales hasta los 5 años.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f816f75f-61bd-5abe-aee8-d96f1b21bb16",
+  "fields": {
+   "nombre": "Guarda sus pertenencias cuando se le pide",
+   "area": "autonomia",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Coloca su mochila, abrigo y materiales en su lugar.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a5d3c0c1-090f-5261-b40e-c2704c997773",
+  "fields": {
+   "nombre": "Se pone prendas simples",
+   "area": "autonomia",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Se coloca polera, pantalón y zapatos sin cordones con poca ayuda.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "b15902d1-d027-55c7-bbab-455a765a7394",
+  "fields": {
+   "nombre": "Va al baño solo con poca ayuda",
+   "area": "autonomia",
+   "edad_min_meses": 36,
+   "edad_max_meses": 48,
+   "descripcion": "Usa el inodoro con ayuda mínima para higiene y vestimenta.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c4f4a978-8bf4-583b-a12f-ab101fb3c32f",
+  "fields": {
+   "nombre": "Atrapa una pelota con ambas manos",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Recibe una pelota lanzada suavemente desde corta distancia atrapándola con brazos y manos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000028",
+  "fields": {
+   "nombre": "Salta en un pie",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Mantiene el equilibrio saltando en un solo pie",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f533a650-d24f-58c1-9433-202e2eae6b70",
+  "fields": {
+   "nombre": "Salta hacia adelante con ambos pies",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Realiza saltos largos con los dos pies juntos y cae sin perder el equilibrio.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a00476cc-cba9-50e8-816a-ce553e57ce90",
+  "fields": {
+   "nombre": "Copia una cruz",
+   "area": "motricidad_fina",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Dibuja una cruz (+) a partir de un modelo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000029",
+  "fields": {
+   "nombre": "Dibuja figura humana básica",
+   "area": "motricidad_fina",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Dibuja persona con cabeza, cuerpo y extremidades",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7443798c-25e6-5703-aae8-5391e200af1e",
+  "fields": {
+   "nombre": "Canta o recita canciones y rimas cortas",
+   "area": "lenguaje",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Repite de memoria estrofas sencillas y poemas breves.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "3a559ac1-0c94-5058-92c8-ecddcc59cebf",
+  "fields": {
+   "nombre": "Pregunta por qué y cómo",
+   "area": "lenguaje",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Muestra curiosidad y busca explicaciones con preguntas frecuentes.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "c7494334-a9ab-5719-b2bb-6891de36dc60",
+  "fields": {
+   "nombre": "Elige amigos preferidos",
+   "area": "social",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Busca a ciertos compañeros para jugar y expresa que son sus amigos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "9bd76290-6f2b-5195-b96e-e851192e872e",
+  "fields": {
+   "nombre": "Juega a roles con otros niños",
+   "area": "social",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Asigna y asume papeles (mamá, doctor) en juegos imaginarios compartidos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "0f08aa47-f6eb-58fe-a09d-bcecae81304a",
+  "fields": {
+   "nombre": "Nombra sus emociones y las de otros",
+   "area": "social",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Identifica y dice que está contento, triste, enojado o asustado.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "3035a26c-0f95-5e37-9635-0244b2123077",
+  "fields": {
+   "nombre": "Resuelve conflictos con palabras y ayuda",
+   "area": "social",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Pide ayuda o dialoga en vez de pegar o quitar el juguete.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a79cd225-3575-57ce-922f-1561325bb648",
+  "fields": {
+   "nombre": "Completa rompecabezas de 10 piezas o más",
+   "area": "cognitivo",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Arma rompecabezas observando la imagen modelo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "3c672476-e33b-5212-9c76-93e36b79ad94",
+  "fields": {
+   "nombre": "Entiende ayer, hoy y mañana",
+   "area": "cognitivo",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Ubica hechos en el tiempo con ayuda de rutinas y calendarios.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "0d6b8272-1368-5b2c-bbfc-3a018052442b",
+  "fields": {
+   "nombre": "Ordena objetos por tamaño",
+   "area": "cognitivo",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Coloca 3 o más elementos de menor a mayor.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "ab81f16d-eac2-5749-9983-96ff509a8610",
+  "fields": {
+   "nombre": "Maneja cierres y broches grandes",
+   "area": "autonomia",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Sube y baja cierres y cierra broches grandes.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "0bb2d7b6-01f1-5be4-9e30-b6a6f6a7ac53",
+  "fields": {
+   "nombre": "Se cepilla los dientes con supervisión",
+   "area": "autonomia",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Realiza el cepillado con la guía de un adulto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "8e01c670-ede3-5983-a273-7c08837659fc",
+  "fields": {
+   "nombre": "Se sirve agua o comida con poca ayuda",
+   "area": "autonomia",
+   "edad_min_meses": 42,
+   "edad_max_meses": 54,
+   "descripcion": "Usa jarras pequeñas y se sirve con cuidado.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "85a64850-de1f-5e1a-8f83-043214e86336",
+  "fields": {
+   "nombre": "Camina sobre una línea recta",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Avanza sobre una línea dibujada en el piso o sobre un borde bajo manteniendo el equilibrio.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7eca2cf2-8216-5234-9b04-d3e53e09b8b1",
+  "fields": {
+   "nombre": "Salta obstáculos bajos",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 48,
+   "edad_max_meses": 62,
+   "descripcion": "Salta por encima de una cuerda o un obstáculo pequeño con los dos pies.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a835e304-4801-5364-aaee-6678969fd0e3",
+  "fields": {
+   "nombre": "Se balancea en un pie 5 a 10 segundos",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Se mantiene en un pie con los brazos libres sin apoyarse.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "0574fd4b-0f9b-5faf-b739-9937877e0a82",
+  "fields": {
+   "nombre": "Copia un cuadrado",
+   "area": "motricidad_fina",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Reproduce un cuadrado con ángulos reconocibles.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "fce803c3-cd91-5a4a-846d-c37fa1ceeba8",
+  "fields": {
+   "nombre": "Recorta siguiendo una línea curva",
+   "area": "motricidad_fina",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Corta figuras sencillas respetando aproximadamente el contorno.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "d93bac4e-cc09-5432-8418-9bcb766817e9",
+  "fields": {
+   "nombre": "Cuenta un suceso con secuencia",
+   "area": "lenguaje",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Relata lo que pasó primero, después y al final.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "378dda10-ca0a-5835-8571-e809b9e192b1",
+  "fields": {
+   "nombre": "Pronuncia casi todos los sonidos",
+   "area": "lenguaje",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Articula claramente la mayoría de los fonemas; pueden quedar algunas dificultades leves.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "141189a0-dbcb-5068-bb6c-5d5a984153a5",
+  "fields": {
+   "nombre": "Usa oraciones de 5 a 6 palabras",
+   "area": "lenguaje",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Construye frases completas con sujeto, verbo y complemento.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "697e5e32-9745-5ee3-ac7e-82559086ef55",
+  "fields": {
+   "nombre": "Espera su turno y comparte sin que se lo pidan",
+   "area": "social",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Cede el turno y ofrece materiales por iniciativa propia.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "b8d89626-a268-549c-bc28-513b795e820e",
+  "fields": {
+   "nombre": "Respeta normas y entiende las consecuencias",
+   "area": "social",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Comprende que sus acciones tienen consecuencias y las acepta.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e278065b-a006-5d3a-92cb-fb17a5e3fc2d",
+  "fields": {
+   "nombre": "Clasifica por categorías",
+   "area": "cognitivo",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Agrupa animales, frutas, transportes y otras categorías.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "11ba3885-c047-54a1-863e-1eb4c5374f3b",
+  "fields": {
+   "nombre": "Cuenta hasta 10",
+   "area": "cognitivo",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Recita la serie numérica y cuenta objetos hasta diez.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7709182b-4e4f-56e0-be4a-0a5fc5222008",
+  "fields": {
+   "nombre": "Reconoce algunos números escritos",
+   "area": "cognitivo",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Identifica números del 1 al 5 o más.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e6901542-451e-5414-b393-9444fcde98a3",
+  "fields": {
+   "nombre": "Reconoce figuras geométricas básicas",
+   "area": "cognitivo",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Identifica círculo, cuadrado y triángulo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000030",
+  "fields": {
+   "nombre": "Reconoce letras de su nombre",
+   "area": "cognitivo",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Identifica al menos algunas letras de su nombre escrito",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "5675d0a5-2324-5efa-81ae-4bef7703c432",
+  "fields": {
+   "nombre": "Se abotona la ropa",
+   "area": "autonomia",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Introduce el botón en el ojal y lo cierra.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f20b735b-b508-543c-8acd-8f35cc2665c2",
+  "fields": {
+   "nombre": "Se cepilla los dientes solo",
+   "area": "autonomia",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Se higieniza la boca con autonomía y acepta la revisión del adulto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "16b4a11c-629f-52f5-b86c-eb41507edab6",
+  "fields": {
+   "nombre": "Se viste completamente solo",
+   "area": "autonomia",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Se viste y se desviste sin ayuda, salvo botones pequeños o cordones.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7ab2da43-a7e5-5423-b11c-b182c0b7c456",
+  "fields": {
+   "nombre": "Unta con cuchillo sin filo",
+   "area": "autonomia",
+   "edad_min_meses": 48,
+   "edad_max_meses": 60,
+   "descripcion": "Unta alimentos blandos usando un cuchillo de mesa.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f245abe3-9be7-5bad-b5b5-2a52eb94c123",
+  "fields": {
+   "nombre": "Rebota y atrapa una pelota",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 54,
+   "edad_max_meses": 66,
+   "descripcion": "Hace botar una pelota en el piso y la atrapa varias veces seguidas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "df177b03-b293-5c02-bb4c-f39236a3a22c",
+  "fields": {
+   "nombre": "Salta a la cuerda o al elástico",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 54,
+   "edad_max_meses": 72,
+   "descripcion": "Coordina el salto con el movimiento de la cuerda o el ritmo del juego.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "59fc746a-e048-58a5-8966-df5383aa68ba",
+  "fields": {
+   "nombre": "Colorea dentro de los bordes",
+   "area": "motricidad_fina",
+   "edad_min_meses": 54,
+   "edad_max_meses": 66,
+   "descripcion": "Rellena dibujos grandes sin salirse demasiado del contorno.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000032",
+  "fields": {
+   "nombre": "Escribe su nombre",
+   "area": "motricidad_fina",
+   "edad_min_meses": 54,
+   "edad_max_meses": 72,
+   "descripcion": "Escribe su nombre completo de forma legible",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "53c9ed8a-02e2-5c99-8155-08ed061a97d0",
+  "fields": {
+   "nombre": "Dice nombre completo, edad y dirección o teléfono",
+   "area": "lenguaje",
+   "edad_min_meses": 54,
+   "edad_max_meses": 66,
+   "descripcion": "Brinda datos personales básicos cuando se le pregunta.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e403ca1f-dd8e-5fae-8e97-839ad9cbe089",
+  "fields": {
+   "nombre": "Reconoce y produce rimas",
+   "area": "lenguaje",
+   "edad_min_meses": 54,
+   "edad_max_meses": 66,
+   "descripcion": "Identifica palabras que riman y completa rimas sencillas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "5231807d-264b-5783-9e26-e1f40f1f3654",
+  "fields": {
+   "nombre": "Mantiene amistades estables",
+   "area": "social",
+   "edad_min_meses": 54,
+   "edad_max_meses": 66,
+   "descripcion": "Juega con frecuencia con los mismos amigos y los extraña cuando faltan.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "48d9a1ae-f562-5715-ab73-7e4fdae4a999",
+  "fields": {
+   "nombre": "Tolera la frustración y acepta perder",
+   "area": "social",
+   "edad_min_meses": 54,
+   "edad_max_meses": 66,
+   "descripcion": "Maneja la derrota en juegos con poca ayuda del adulto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "36bc9849-8b89-53f6-a84c-09a0f631412f",
+  "fields": {
+   "nombre": "Comprende la secuencia de eventos",
+   "area": "cognitivo",
+   "edad_min_meses": 54,
+   "edad_max_meses": 66,
+   "descripcion": "Ordena tarjetas de una historia o de una rutina en su orden.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "90c44172-bdce-5461-aef6-a4b643d5fb32",
+  "fields": {
+   "nombre": "Suma y resta con objetos hasta 5",
+   "area": "cognitivo",
+   "edad_min_meses": 54,
+   "edad_max_meses": 72,
+   "descripcion": "Resuelve problemas sencillos manipulando material concreto.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "5d94038d-0825-563a-b06e-c0cf1f124d54",
+  "fields": {
+   "nombre": "Cuida sus pertenencias y las de los demás",
+   "area": "autonomia",
+   "edad_min_meses": 54,
+   "edad_max_meses": 66,
+   "descripcion": "Identifica sus cosas, las cuida y las devuelve a su lugar.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "59a86d29-32e4-558d-8408-80ca88362cca",
+  "fields": {
+   "nombre": "Participa en las tareas del aula",
+   "area": "autonomia",
+   "edad_min_meses": 54,
+   "edad_max_meses": 66,
+   "descripcion": "Ayuda a ordenar, repartir materiales o poner la mesa.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "a1000001-0000-0000-0000-000000000031",
+  "fields": {
+   "nombre": "Se ata los zapatos",
+   "area": "autonomia",
+   "edad_min_meses": 54,
+   "edad_max_meses": 72,
+   "descripcion": "Realiza el nudo de los cordones de manera independiente",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "36fc9bce-c720-5302-a25e-61fc6821dd75",
+  "fields": {
+   "nombre": "Anda en bicicleta con ruedas auxiliares",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Pedalea, frena y dirige la bicicleta en un espacio seguro.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e60a40e0-a7a3-535c-a53b-45e2cca3b974",
+  "fields": {
+   "nombre": "Salta alternando los pies (galope, saltito)",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Se desplaza saltando con un pie y luego con el otro, coordinando brazos y piernas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "8d5fda26-708b-53e9-99c4-172bb29f65cc",
+  "fields": {
+   "nombre": "Trepa estructuras de juego con seguridad",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Sube y baja por redes, escaleras o juegos de patio con buen control corporal.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "3fca9d59-82b6-5b51-a4fd-a870f7180142",
+  "fields": {
+   "nombre": "Copia letras y números",
+   "area": "motricidad_fina",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Reproduce letras mayúsculas y números con tamaño y trazo legibles.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "fbef526b-db17-559b-9aaf-4d9359e5619d",
+  "fields": {
+   "nombre": "Copia un triángulo",
+   "area": "motricidad_fina",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Reproduce un triángulo con tres lados y vértices definidos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "237f51ab-10fb-5c20-83de-9d2ba3ed6028",
+  "fields": {
+   "nombre": "Dibuja una persona con 6 o más partes",
+   "area": "motricidad_fina",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Incluye cabeza, cuerpo, brazos, piernas, ojos, boca y otros detalles.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "3768a802-1b10-5dba-a317-85856022e55c",
+  "fields": {
+   "nombre": "Identifica el sonido inicial de las palabras",
+   "area": "lenguaje",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Reconoce con qué sonido comienza una palabra y juega con las sílabas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "4c0b692c-1b7b-5005-ab97-f15396a16c4b",
+  "fields": {
+   "nombre": "Mantiene una conversación por turnos",
+   "area": "lenguaje",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Escucha, espera su turno y responde ajustándose al tema.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "415b6c3b-080e-55d7-b6b5-2fb5b18651f1",
+  "fields": {
+   "nombre": "Usa oraciones complejas y distintos tiempos verbales",
+   "area": "lenguaje",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Combina ideas con porque, cuando y si, y habla del pasado y del futuro.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "247ae404-fd9c-5f8e-90a3-313475c01d7d",
+  "fields": {
+   "nombre": "Expresa opiniones y escucha las de los demás",
+   "area": "social",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Da su punto de vista y respeta el turno y las ideas de sus compañeros.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "3eb0a45c-f54e-5caa-8e9c-0dc394efe2fb",
+  "fields": {
+   "nombre": "Negocia y llega a acuerdos",
+   "area": "social",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Propone soluciones y cede para resolver un desacuerdo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "dd477205-a07d-50a0-85e6-e59369664781",
+  "fields": {
+   "nombre": "Trabaja en equipo",
+   "area": "social",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Colabora con otros para lograr un objetivo común en una actividad.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "5cc8170c-4082-5912-a23f-ba1bc1c7fdf2",
+  "fields": {
+   "nombre": "Conoce los días de la semana y las estaciones",
+   "area": "cognitivo",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Nombra los días y reconoce algunas estaciones o momentos del año.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "9cfc9847-d7db-5084-9aa7-dcc97f16f9e0",
+  "fields": {
+   "nombre": "Cuenta hasta 20",
+   "area": "cognitivo",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Cuenta con precisión objetos y recita la serie hasta veinte.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "96f66f43-8d77-5ae1-a49e-faae5938f0c6",
+  "fields": {
+   "nombre": "Distingue su derecha de su izquierda",
+   "area": "cognitivo",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Usa correctamente derecha e izquierda referidas a su cuerpo.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "bda5705c-b9fe-555c-9f38-c3e891c63e9a",
+  "fields": {
+   "nombre": "Reconoce la mayoría de las letras",
+   "area": "cognitivo",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Identifica letras mayúsculas y minúsculas y sus sonidos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "219db60c-f95f-55b3-867d-161d488204df",
+  "fields": {
+   "nombre": "Reconoce y escribe números hasta 10",
+   "area": "cognitivo",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Lee y reproduce números con orden y sentido.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "f4f53097-a15e-5334-80ab-f6c7aa6ce291",
+  "fields": {
+   "nombre": "Resuelve problemas sencillos",
+   "area": "cognitivo",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Busca una solución cuando algo no funciona y prueba alternativas.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "7437b877-91a7-500c-af85-2746083b009a",
+  "fields": {
+   "nombre": "Organiza su mochila y materiales",
+   "area": "autonomia",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Prepara lo que necesita para la jornada siguiendo una rutina.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "2c8ff121-5425-5941-bec0-bc2433b2e7be",
+  "fields": {
+   "nombre": "Realiza su higiene con mínima supervisión",
+   "area": "autonomia",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Se baña, se peina y usa el baño con muy poca ayuda.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "ce6e09ad-013c-5906-a637-f98db1c8faa9",
+  "fields": {
+   "nombre": "Reconoce peligros y normas de seguridad",
+   "area": "autonomia",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Respeta reglas de seguridad en la calle, el patio y el aula.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "13e05c2a-7c28-5f47-831f-bd219c6a26bb",
+  "fields": {
+   "nombre": "Toma decisiones sencillas",
+   "area": "autonomia",
+   "edad_min_meses": 60,
+   "edad_max_meses": 72,
+   "descripcion": "Elige entre opciones y asume las consecuencias de su elección.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ },
+ {
+  "model": "evaluacion.hitodesarrollo",
+  "pk": "e94d1ba3-4120-5b40-b573-e3e4d18db8bb",
+  "fields": {
+   "nombre": "Camina talón-punta en línea recta",
+   "area": "motricidad_gruesa",
+   "edad_min_meses": 66,
+   "edad_max_meses": 72,
+   "descripcion": "Coloca un pie delante del otro tocando talón con punta durante varios pasos.",
+   "activo": true,
+   "created_at": "2025-01-01T00:00:00Z",
+   "updated_at": "2025-01-01T00:00:00Z"
+  }
+ }
 ]

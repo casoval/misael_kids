@@ -40,7 +40,8 @@ python manage.py migrate
 # 6. Datos iniciales
 echo "📥 Cargando datos iniciales..."
 python manage.py loaddata core/fixtures/datos_iniciales.json
-python manage.py loaddata evaluacion/fixtures/hitos_desarrollo.json
+# (el catálogo de hitos ya se carga solo con `migrate`; este comando es idempotente y repone los que falten)
+python manage.py cargar_hitos
 
 # 7. Superusuario
 echo ""

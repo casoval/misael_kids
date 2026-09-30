@@ -9,7 +9,8 @@ from core.models import ModeloBase
 class HitoDesarrollo(ModeloBase):
     """
     Catálogo de hitos esperados por rango de edad.
-    Se pre-carga con datos estándar del desarrollo infantil 0-72 meses.
+    Se pre-carga con `migrate` (ver catalogo_hitos.py) con los hitos estándar
+    del desarrollo infantil 0-72 meses; la directora puede agregar/editar más.
     """
     AREA_MOTRICIDAD_FINA   = 'motricidad_fina'
     AREA_MOTRICIDAD_GRUESA = 'motricidad_gruesa'
@@ -53,7 +54,10 @@ class EvaluacionNino(ModeloBase):
     ]
 
     nino          = models.ForeignKey('ninos.Nino', on_delete=models.CASCADE, related_name='evaluaciones')
-    educadora     = models.ForeignKey('personal.Personal', on_delete=models.CASCADE)
+    # Quién registró la evaluación. Nulo si la hizo admin/directora sin ficha de
+    # personal; SET_NULL para no perder el historial del niño si se borra la ficha.
+    educadora     = models.ForeignKey('personal.Personal', on_delete=models.SET_NULL,
+                                      null=True, blank=True, related_name='evaluaciones_realizadas')
     hito          = models.ForeignKey(HitoDesarrollo, on_delete=models.CASCADE)
     fecha         = models.DateField()
     estado        = models.CharField(max_length=15, choices=ESTADOS)

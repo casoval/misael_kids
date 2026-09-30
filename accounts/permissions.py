@@ -226,6 +226,43 @@ class PermisoFinanzas(BasePermission):
         return u.rol in ROLES_OFICINA
 
 
+class PermisoDesarrollo(BasePermission):
+    """
+    Evaluación del desarrollo (evaluaciones de hitos por niño).
+    Lectura: admin, directora, educadora, ayudante, cocina (tal como muestra el
+    menú) y tutor (su hijo, por `filtrar_por_alcance`). NO la recepcionista ni
+    el profesional: el README indica que no ven la parte de desarrollo.
+    Escritura: solo quien evalúa — admin, directora, educadora y ayudante (estas
+    dos, dentro de sus salas, lo controla `exigir_nino_en_alcance`). Antes
+    cualquier usuario autenticado, incluido un tutor, podía crear, editar o
+    borrar evaluaciones de cualquier niño.
+    """
+    ROLES_LECTURA   = ('admin', 'directora', 'educadora', 'ayudante', 'cocina', 'tutor')
+    ROLES_ESCRITURA = ('admin', 'directora', 'educadora', 'ayudante')
+
+    def has_permission(self, request, view):
+        u = request.user
+        if not (u and u.is_authenticated):
+            return False
+        if request.method in SAFE_METHODS:
+            return u.rol in self.ROLES_LECTURA
+        return u.rol in self.ROLES_ESCRITURA
+
+
+class PermisoCatalogoHitos(BasePermission):
+    """
+    Catálogo de hitos. Lectura: los mismos roles que ven el desarrollo.
+    Escritura (agregar, editar, desactivar hitos): solo admin y directora.
+    """
+    def has_permission(self, request, view):
+        u = request.user
+        if not (u and u.is_authenticated):
+            return False
+        if request.method in SAFE_METHODS:
+            return u.rol in PermisoDesarrollo.ROLES_LECTURA
+        return u.rol in ('admin', 'directora')
+
+
 def exigir_nino_en_alcance(usuario, nino):
     """
     Para escrituras (POST/PUT/PATCH): educadora/ayudante solo pueden registrar

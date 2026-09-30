@@ -877,11 +877,16 @@ async function cargarDesarrollo() {
 
   try {
     const [evaluaciones, planes] = await Promise.all([
-      API.get(`/evaluacion/evaluaciones/?nino=${ninoActivo.id}`),
+      API.get(`/evaluacion/evaluaciones/?nino=${ninoActivo.id}&page_size=1000`),
       API.get(`/agenda/planes-individuales/?nino=${ninoActivo.id}&activo=true`),
     ]);
 
-    const listaEval  = evaluaciones.results || evaluaciones;
+    // Un hito puede evaluarse varias veces; a los padres se les muestra solo la
+    // evaluación más reciente de cada uno (y con ?page_size: sin él llegaban solo 25).
+    const todasEval  = (evaluaciones.results || evaluaciones).slice()
+      .sort((x, y) => (y.fecha || '').localeCompare(x.fecha || '') || (y.created_at || '').localeCompare(x.created_at || ''));
+    const hitosVistos = new Set();
+    const listaEval  = todasEval.filter(ev => !hitosVistos.has(ev.hito) && hitosVistos.add(ev.hito));
     const listaPlanes = planes.results || planes;
 
     // Mostrar plan individual si existe

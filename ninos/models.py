@@ -48,7 +48,12 @@ class Nino(ModeloBase):
     def edad_en_meses(self):
         from datetime import date
         hoy = date.today()
-        return (hoy.year - self.fecha_nacimiento.year) * 12 + (hoy.month - self.fecha_nacimiento.month)
+        nac = self.fecha_nacimiento
+        meses = (hoy.year - nac.year) * 12 + (hoy.month - nac.month)
+        # Hasta que no llega el día del mes en que nació, aún no cumplió ese mes.
+        if hoy.day < nac.day:
+            meses -= 1
+        return max(meses, 0)
 
 
 class Tutor(ModeloBase):
