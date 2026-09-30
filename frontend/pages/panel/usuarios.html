@@ -247,7 +247,12 @@ async function cargar() {
             ?'<span class="id-tipo id-email">EMAIL</span> '+u.email
             :'<span class="id-tipo id-username">USUARIO</span> '+(u.username||'—')}
         </td>
-        <td><span class="rol-badge rol-${u.rol}">${u.rol_display}</span></td>
+        <td><span class="rol-badge rol-${u.rol}">${u.rol_display}</span>
+          ${u.requiere_ficha
+            ? `<div style="margin-top:4px"><a class="chip chip-amarillo" style="text-decoration:none"
+                 href="/panel/personal/?usuario=${u.id}" title="Sin ficha no se puede asignar a una sala">
+                 ⚠️ Sin ficha de personal · Crear</a></div>`
+            : ''}</td>
         <td>${u.telefono||'—'}</td>
         <td>${u.activo
           ?'<span class="chip chip-verde">✅ Activo</span>'

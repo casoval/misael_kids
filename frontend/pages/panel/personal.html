@@ -111,6 +111,17 @@
       </div>
     </div>
 
+    <div id="bloque-usuario-existente" class="form-grupo" style="background:var(--gris-50);
+      border-radius:var(--radio-lg);padding:var(--gap-md);margin-bottom:var(--gap-md)">
+      <label class="form-label">¿Ya tiene usuario en el sistema?</label>
+      <select id="p-usuario-existente" class="form-select" onchange="elegirUsuarioExistente()">
+        <option value="">No, crear su acceso ahora</option>
+      </select>
+      <span style="font-size:var(--text-xs);color:var(--texto-suave)">
+        Aquí aparecen los usuarios de personal que aún no tienen ficha. Al elegir uno,
+        se vincula en lugar de crear otro.</span>
+    </div>
+
     <p style="font-weight:700;font-size:var(--text-xs);color:var(--gris-500);
       text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--gap-sm)">Datos del personal</p>
     <div class="grid-2">
@@ -257,6 +268,8 @@ let editandoId = null, editandoAsigId = null;
 
 async function inicializar() {
   await Promise.all([cargar(), cargarAsignaciones(), cargarSelectores()]);
+  const preUsuario = new URLSearchParams(location.search).get('usuario');
+  if (preUsuario) abrirNuevo(preUsuario);
 }
 async function cargarSelectores() {
   try {
@@ -341,8 +354,42 @@ function previsualizarFotoPersonal(input) {
   lector.readAsDataURL(archivo);
 }
 
-function abrirNuevo() {
+let usuariosSinFicha = [];
+async function cargarUsuariosSinFicha(preseleccion) {
+  const sel = document.getElementById('p-usuario-existente');
+  sel.innerHTML = '<option value="">No, crear su acceso ahora</option>';
+  try {
+    const r = await API.get('/auth/usuarios/?sin_ficha=true&limit=200');
+    usuariosSinFicha = r.results || r;
+  } catch (e) { usuariosSinFicha = []; }
+  usuariosSinFicha.forEach(u => {
+    const o = document.createElement('option');
+    o.value = u.id;
+    o.textContent = `${u.nombre_completo} (${u.identificador || u.username || u.email}) · ${u.rol_display}`;
+    sel.appendChild(o);
+  });
+  if (preseleccion && usuariosSinFicha.some(u => u.id === preseleccion)) {
+    sel.value = preseleccion; elegirUsuarioExistente();
+  }
+}
+function elegirUsuarioExistente() {
+  const id = document.getElementById('p-usuario-existente').value;
+  const u  = usuariosSinFicha.find(x => x.id === id);
+  // Con usuario existente no se pide acceso nuevo; los datos se toman de él.
+  document.getElementById('bloque-acceso').style.display = u ? 'none' : '';
+  if (u) {
+    document.getElementById('p-nombres').value   = u.nombres || '';
+    document.getElementById('p-apellidos').value = u.apellidos || '';
+    document.getElementById('p-telefono').value  = u.telefono || '';
+    if (['educadora','ayudante','directora','recepcionista','cocina'].includes(u.rol))
+      document.getElementById('p-rol').value = u.rol;
+  }
+}
+
+function abrirNuevo(usuarioPreseleccionado) {
   editandoId=null;
+  document.getElementById('bloque-usuario-existente').style.display='';
+  cargarUsuariosSinFicha(typeof usuarioPreseleccionado === 'string' ? usuarioPreseleccionado : null);
   document.getElementById('titulo-modal-personal').textContent='Nuevo personal';
   document.getElementById('bloque-acceso').style.display='';
   document.getElementById('nota-acceso-editar').style.display='none';
@@ -359,6 +406,7 @@ function abrirNuevo() {
 }
 async function editar(id) {
   editandoId=id;
+  document.getElementById('bloque-usuario-existente').style.display='none';
   document.getElementById('titulo-modal-personal').textContent='Editar personal';
   document.getElementById('bloque-acceso').style.display='none';
   document.getElementById('nota-acceso-editar').style.display='';
@@ -390,7 +438,8 @@ async function guardarPersonal() {
     'p-rol':          [()=>Validar.requerido(document.getElementById('p-rol').value,'Rol')],
     'p-fecha-ingreso':[()=>Validar.fecha(document.getElementById('p-fecha-ingreso').value,'Fecha de ingreso')],
   };
-  if (!editandoId) {
+  const usuarioExistente = document.getElementById('p-usuario-existente').value;
+  if (!editandoId && !usuarioExistente) {
     reglas['p-username'] = [()=>Validar.requerido(document.getElementById('p-username').value,'Nombre de usuario')];
     reglas['p-password'] = [()=>Validar.minLength(document.getElementById('p-password').value,8,'La contraseña')];
   }
@@ -405,26 +454,29 @@ async function guardarPersonal() {
   try {
     let personalId = editandoId;
     if (!editandoId) {
-      const usuario = await API.post('/auth/usuarios/', {
-        nombres, apellidos, telefono, rol,
-        username: document.getElementById('p-username').value.trim(),
-        password: document.getElementById('p-password').value,
-        password2: document.getElementById('p-password').value,
-      });
-      const nuevo = await API.post('/personal/personal/', {
-        usuario:usuario.id, ci:document.getElementById('p-ci').value,
+      // UNA sola operación: el servidor crea el usuario y la ficha juntos (o
+      // vincula el usuario elegido). Si algo falla no queda nada a medias.
+      const datos = {
+        ci:document.getElementById('p-ci').value,
         telefono, rol,
         fecha_ingreso:document.getElementById('p-fecha-ingreso').value,
         especialidad:document.getElementById('p-especialidad').value,
-      });
+      };
+      if (usuarioExistente) {
+        datos.usuario = usuarioExistente;
+      } else {
+        Object.assign(datos, {
+          nombres, apellidos,
+          username: document.getElementById('p-username').value.trim(),
+          password: document.getElementById('p-password').value,
+        });
+      }
+      const nuevo = await API.post('/personal/personal/', datos);
       personalId = nuevo.id;
       UI.toast('Personal creado correctamente','exito');
     } else {
-      const usuarioId = document.getElementById('p-usuario-id').value;
-      await API.patch('/auth/usuarios/'+usuarioId+'/', {
-        nombres, apellidos, telefono,
-      });
       await API.patch('/personal/personal/'+editandoId+'/', {
+        nombres, apellidos,
         ci:document.getElementById('p-ci').value,
         telefono, rol,
         fecha_ingreso:document.getElementById('p-fecha-ingreso').value,

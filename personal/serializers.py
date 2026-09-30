@@ -1,6 +1,7 @@
 """
 personal/serializers.py
 """
+from django.db import transaction
 from rest_framework import serializers
 from .models import Personal, AsignacionPersonal, AsistenciaPersonal
 
@@ -13,16 +14,84 @@ class PersonalSerializer(serializers.ModelSerializer):
     usuario_username = serializers.CharField(source='usuario.username', read_only=True)
     rol_display      = serializers.CharField(source='get_rol_display', read_only=True)
 
+    # Solo de escritura: permiten crear el usuario junto con la ficha, en UNA
+    # sola operación (si algo falla no queda un usuario huérfano), o editar
+    # los datos personales que viven en el usuario.
+    nombres   = serializers.CharField(write_only=True, required=False, max_length=100)
+    apellidos = serializers.CharField(write_only=True, required=False, max_length=100)
+    username  = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=50)
+    password  = serializers.CharField(write_only=True, required=False, min_length=8)
+
     class Meta:
         model  = Personal
         fields = [
             'id', 'usuario', 'nombre_completo', 'email',
             'usuario_nombres', 'usuario_apellidos', 'usuario_username',
+            'nombres', 'apellidos', 'username', 'password',
             'ci', 'telefono', 'rol', 'rol_display', 'foto',
             'especialidad', 'fecha_ingreso', 'activo',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+        # `usuario` es opcional al crear: si no viene, se crea uno nuevo con
+        # username/password; si viene, se VINCULA ese usuario existente.
+        extra_kwargs = {'usuario': {'required': False}}
+
+    def validate(self, data):
+        if self.instance is not None:
+            if 'usuario' in data and data['usuario'] != self.instance.usuario:
+                raise serializers.ValidationError(
+                    {'usuario': 'No se puede cambiar el usuario de una ficha existente.'})
+            return data
+
+        usuario = data.get('usuario')
+        if usuario is not None:
+            if usuario.rol in ('tutor', 'profesional'):
+                raise serializers.ValidationError(
+                    {'usuario': 'Ese usuario es un tutor/profesional, no personal del centro.'})
+        else:
+            faltan = [c for c in ('nombres', 'apellidos', 'username', 'password') if not data.get(c)]
+            if faltan:
+                raise serializers.ValidationError(
+                    {c: 'Obligatorio para crear el acceso al sistema.' for c in faltan})
+        return data
+
+    def create(self, validated_data):
+        nombres   = validated_data.pop('nombres', None)
+        apellidos = validated_data.pop('apellidos', None)
+        username  = validated_data.pop('username', None)
+        password  = validated_data.pop('password', None)
+        with transaction.atomic():
+            if validated_data.get('usuario') is None:
+                from accounts.serializers import UsuarioCreateSerializer
+                ser = UsuarioCreateSerializer(data={
+                    'nombres': nombres, 'apellidos': apellidos,
+                    'telefono': validated_data.get('telefono', ''),
+                    'rol': validated_data['rol'], 'username': username,
+                    'password': password, 'password2': password,
+                })
+                ser.is_valid(raise_exception=True)
+                validated_data['usuario'] = ser.save()
+            # Personal.save() alinea el rol del usuario con el de la ficha.
+            return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        nombres   = validated_data.pop('nombres', None)
+        apellidos = validated_data.pop('apellidos', None)
+        validated_data.pop('username', None)   # el acceso se gestiona en Usuarios
+        validated_data.pop('password', None)
+        with transaction.atomic():
+            instance = super().update(instance, validated_data)
+            u, campos = instance.usuario, []
+            if nombres is not None:
+                u.nombres = nombres; campos.append('nombres')
+            if apellidos is not None:
+                u.apellidos = apellidos; campos.append('apellidos')
+            if 'telefono' in validated_data:
+                u.telefono = validated_data['telefono']; campos.append('telefono')
+            if campos:
+                u.save(update_fields=campos)
+        return instance
 
 
 class AsignacionPersonalSerializer(serializers.ModelSerializer):

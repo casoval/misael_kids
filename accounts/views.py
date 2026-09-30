@@ -70,11 +70,16 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
     def get_queryset(self):
-        qs      = super().get_queryset()
+        qs      = super().get_queryset().select_related('perfil_personal')
         usuario = self.request.user
         rol     = self.request.query_params.get('rol')
         if rol:
             qs = qs.filter(rol=rol)
+        # ?sin_ficha=true -> usuarios de rol personal que aún no tienen ficha
+        # de Personal (para vincularlos desde la pantalla de Personal).
+        if self.request.query_params.get('sin_ficha') == 'true':
+            qs = qs.filter(perfil_personal__isnull=True,
+                           rol__in=UsuarioSerializer.ROLES_PERSONAL)
         # Solo admin ve todos; el resto solo se ve a sí mismo
         if usuario.rol not in ['admin', 'directora']:
             qs = qs.filter(id=usuario.id)

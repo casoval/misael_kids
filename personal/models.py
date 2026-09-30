@@ -41,6 +41,16 @@ class Personal(ModeloBase):
         verbose_name_plural = 'Personal'
         ordering            = ['usuario__apellidos']
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Los permisos se deciden con el rol del USUARIO; si la ficha cambia de
+        # rol (educadora -> ayudante, etc.) el usuario lo sigue. Un admin nunca
+        # se degrada por tener ficha de personal.
+        u = self.usuario
+        if u.rol != self.rol and u.rol != 'admin':
+            u.rol = self.rol
+            u.save(update_fields=['rol'])
+
     def __str__(self):
         return f'{self.usuario.nombre_completo} — {self.get_rol_display()}'
 

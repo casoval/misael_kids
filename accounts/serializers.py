@@ -12,12 +12,26 @@ class UsuarioSerializer(serializers.ModelSerializer):
     rol_display = serializers.CharField(source='get_rol_display', read_only=True)
     nombre_completo = serializers.CharField(read_only=True)
     identificador = serializers.CharField(read_only=True)
+    # Enlace con la ficha de Personal (como Tutor.usuario, pero hacia el otro lado).
+    ficha_personal = serializers.SerializerMethodField()
+    requiere_ficha = serializers.SerializerMethodField()
+
+    ROLES_PERSONAL = ('educadora', 'ayudante', 'directora', 'recepcionista', 'cocina')
+
+    def get_ficha_personal(self, obj):
+        ficha = getattr(obj, 'perfil_personal', None)
+        return str(ficha.id) if ficha else None
+
+    def get_requiere_ficha(self, obj):
+        # Rol de personal pero sin ficha: no se le puede asignar a una sala.
+        return obj.rol in self.ROLES_PERSONAL and getattr(obj, 'perfil_personal', None) is None
 
     class Meta:
         model  = Usuario
         fields = [
             'id', 'email', 'username', 'identificador', 'nombres', 'apellidos', 'nombre_completo',
             'telefono', 'rol', 'rol_display', 'foto', 'activo',
+            'ficha_personal', 'requiere_ficha',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -30,6 +44,17 @@ class UsuarioSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'email': 'Ese email ya está registrado por otro usuario.'})
         if username and Usuario.objects.filter(username__iexact=username).exclude(pk=instance.pk).exists():
             raise serializers.ValidationError({'username': 'Ese nombre de usuario ya está en uso.'})
+
+        # Si ya tiene ficha de personal, su rol debe seguir siendo de personal
+        # y la ficha se alinea (evita usuario 'educadora' con ficha 'ayudante').
+        nuevo_rol = validated_data.get('rol')
+        ficha = getattr(instance, 'perfil_personal', None)
+        if nuevo_rol and ficha and nuevo_rol != instance.rol:
+            if nuevo_rol not in self.ROLES_PERSONAL:
+                raise serializers.ValidationError({'rol': 'Este usuario tiene ficha de personal; '
+                    'elimina la ficha antes de cambiarlo a un rol que no es de personal.'})
+            ficha.rol = nuevo_rol
+            ficha.save()
 
         instance = super().update(instance, validated_data)
         if 'activo' in validated_data:
