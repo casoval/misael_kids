@@ -744,7 +744,7 @@ async function guardarDetalleTutor() {
     };
     if (darAcceso && darAcceso.checked) {
       const usuario = await API.post('/auth/usuarios/', {
-        nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor',
+        nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor', telefono: datos.telefono,
         username: document.getElementById('dt-username').value.trim(),
         password: document.getElementById('dt-password').value,
         password2: document.getElementById('dt-password').value,
@@ -936,7 +936,7 @@ async function crearYVincularTutorNuevo() {
       const datos = {...datosTutor};
       if (accesoPortal) {
         const usuario = await API.post('/auth/usuarios/', {
-          nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor',
+          nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor', telefono: datos.telefono,
           username: accesoPortal.username, password: accesoPortal.password, password2: accesoPortal.password,
         });
         datos.usuario = usuario.id;
@@ -1125,7 +1125,7 @@ async function guardarNino() {
         const datos = {...t.tutor_nuevo};
         if (t.acceso_portal) {
           const usuario = await API.post('/auth/usuarios/', {
-            nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor',
+            nombres: datos.nombres, apellidos: datos.apellidos, rol: 'tutor', telefono: datos.telefono,
             username: t.acceso_portal.username, password: t.acceso_portal.password,
             password2: t.acceso_portal.password,
           });

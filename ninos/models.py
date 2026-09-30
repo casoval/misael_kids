@@ -88,6 +88,24 @@ class Tutor(ModeloBase):
         verbose_name_plural = 'Tutores'
         ordering            = ['apellidos', 'nombres']
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # La tarjeta del niño muestra Tutor.telefono, pero la cuenta del portal
+        # (Usuario) tiene su propio campo. Se mantienen iguales para que el
+        # teléfono cargado en la ficha también aparezca en el usuario.
+        u = self.usuario
+        if not u:
+            return
+        campos = []
+        if u.nombres != self.nombres:
+            u.nombres = self.nombres; campos.append('nombres')
+        if u.apellidos != self.apellidos:
+            u.apellidos = self.apellidos; campos.append('apellidos')
+        if self.telefono and u.telefono != self.telefono:
+            u.telefono = self.telefono; campos.append('telefono')
+        if campos:
+            u.save(update_fields=campos)
+
     def __str__(self):
         return f'{self.nombres} {self.apellidos} ({self.get_parentesco_display()})'
 

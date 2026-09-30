@@ -63,6 +63,13 @@ class UsuarioSerializer(serializers.ModelSerializer):
             if instance.telefono:
                 ficha.telefono = instance.telefono
             ficha.save()
+        # Igual para tutores: el teléfono editado aquí llega a la tarjeta del niño.
+        tutor = getattr(instance, 'perfil_tutor', None)
+        if tutor and any(k in validated_data for k in ('nombres', 'apellidos', 'telefono')):
+            tutor.nombres, tutor.apellidos = instance.nombres, instance.apellidos
+            if instance.telefono:
+                tutor.telefono = instance.telefono
+            tutor.save()
         if 'activo' in validated_data:
             instance.is_active = validated_data['activo']
             instance.save(update_fields=['is_active'])
