@@ -21,6 +21,7 @@ from .serializers import (
 from .services import (
     generar_ciclo_mensual, calendario_pagos_mensual, calendario_pagos_diario,
     cobro_anterior_pendiente, etiqueta_periodo, asignar_numero_recibo,
+    resumen_financiero,
     ESTADOS_ABIERTOS,
 )
 
@@ -277,51 +278,7 @@ class CobroViewSet(viewsets.ModelViewSet):
             date(anio, mes, 1)
         except (ValueError, TypeError):
             return Response({'error': 'El mes debe tener formato YYYY-MM.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        cobros = Cobro.objects.all()
-        pagos  = Pago.objects.filter(fecha_pago__year=anio, fecha_pago__month=mes)
-        devs   = Devolucion.objects.filter(fecha__year=anio, fecha__month=mes)
-        if sucursal:
-            cobros = cobros.filter(inscripcion__sucursal=sucursal)
-            pagos  = pagos.filter(cobro__inscripcion__sucursal=sucursal)
-            devs   = devs.filter(cobro__inscripcion__sucursal=sucursal)
-
-        cero = Decimal('0')
-        pend_monto = venc_monto = cero
-        pend_n = venc_n = 0
-        abiertos = cobros.filter(estado__in=ESTADOS_ABIERTOS).prefetch_related('pagos', 'devoluciones')
-        for c in abiertos:
-            pagado = sum((p.monto for p in c.pagos.all()), cero) - sum((d.monto for d in c.devoluciones.all()), cero)
-            saldo = c.monto_final - pagado - c.monto_condonado
-            if saldo <= 0:
-                continue
-            pend_monto += saldo
-            pend_n += 1
-            if c.fecha_vencimiento < hoy:
-                venc_monto += saldo
-                venc_n += 1
-
-        p = pagos.aggregate(total=Sum('monto'), n=Count('id'))
-        d = devs.aggregate(total=Sum('monto'), n=Count('id'))
-        total_pagos = p['total'] or cero
-        total_devs  = d['total'] or cero
-        condonado = cobros.filter(
-            monto_condonado__gt=0, fecha_pago__year=anio, fecha_pago__month=mes,
-        ).aggregate(t=Sum('monto_condonado'))['t'] or cero
-
-        return Response({
-            'mes': f'{anio:04d}-{mes:02d}',
-            'pendiente': {'monto': pend_monto, 'cantidad': pend_n},
-            'vencido':   {'monto': venc_monto, 'cantidad': venc_n},
-            'caja_mes': {
-                'ingresos':            total_pagos,
-                'cantidad_pagos':      p['n'],
-                'devoluciones':        total_devs,
-                'cantidad_devoluciones': d['n'],
-                'neto':                total_pagos - total_devs,
-                'condonado':           condonado,
-            },
-        })
+        return Response(resumen_financiero(anio, mes, sucursal))
 
     @action(detail=False, methods=['get'], url_path='movimientos')
     def movimientos(self, request):

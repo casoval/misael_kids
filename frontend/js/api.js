@@ -130,7 +130,33 @@ const API = {
   // el header multipart con el boundary correcto solo si lo dejamos vacío.
   postForm:  (url, formData) => apiFetchForm(url, formData, 'POST'),
   patchForm: (url, formData) => apiFetchForm(url, formData, 'PATCH'),
+  // Descarga un archivo (CSV, etc.) de un endpoint que exige login. Un <a href> normal
+  // no envía el token, por eso se pide con fetch y se entrega como Blob.
+  // Devuelve { nombre, filas } (filas = cabecera X-Filas, si el servidor la manda).
+  // Con { omitirSiVacio: true } no descarga nada si el servidor informa 0 filas.
+  descargar: (endpoint, opciones) => apiDescargar(endpoint, opciones),
 };
+
+async function apiDescargar(endpoint, { nombre = 'descarga', omitirSiVacio = false } = {}) {
+  const pedir = () => fetch(`${API_BASE}${endpoint}`, { headers: { Authorization: `Bearer ${Auth.getToken()}` } });
+  let res = await pedir();
+  if (res.status === 401 && await Auth.refrescarToken()) res = await pedir();
+  if (!res.ok) {
+    let msg = `Error ${res.status}`;
+    try { const e = await res.json(); msg = Object.values(e).flat().join(' ') || msg; } catch {}
+    throw new Error(msg);
+  }
+  const cd    = res.headers.get('Content-Disposition') || '';
+  const dado  = /filename="?([^";]+)"?/.exec(cd);
+  const filas = res.headers.has('X-Filas') ? parseInt(res.headers.get('X-Filas'), 10) : null;
+  const archivo = dado ? dado[1] : nombre;
+  if (omitirSiVacio && filas === 0) return { nombre: archivo, filas, descargado: false };
+  const url = URL.createObjectURL(await res.blob());
+  const a = Object.assign(document.createElement('a'), { href: url, download: archivo });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);   // revocarla al instante puede cancelar la descarga en algunos navegadores
+  return { nombre: archivo, filas, descargado: true };
+}
 
 async function apiFetchForm(endpoint, formData, method) {
   const token = Auth.getToken();

@@ -31,6 +31,20 @@ class EsAdminDirectoraOAdministrativo(BasePermission):
         return request.user.rol in ('admin', 'directora', 'administrativo')
 
 
+class SoloAdminDirectoraOAdministrativo(BasePermission):
+    """
+    Lectura Y escritura solo para admin/directora/administrativo.
+    A diferencia de EsAdminDirectoraOAdministrativo (que deja LEER a cualquier
+    autenticado, porque el tutor ve lo suyo), esta sirve para datos que no
+    pueden verlos ni tutores ni educadoras, como los reportes: incluyen el
+    listado de todos los niños con alergias y teléfonos de tutores, y las
+    finanzas del centro.
+    """
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated
+                    and request.user.rol in ('admin', 'directora', 'administrativo'))
+
+
 class SoloAdmin(BasePermission):
     """Solo el rol admin puede usar la vista (lectura y escritura)."""
     def has_permission(self, request, view):

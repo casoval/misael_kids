@@ -8,9 +8,11 @@ inscripción nueva, una transferencia, o la generación manual/masiva.
 import calendar
 from datetime import date
 from dateutil.relativedelta import relativedelta
+from decimal import Decimal
 from django.db import IntegrityError, transaction, models
+from django.db.models import Count, Sum
 
-from .models import Cobro
+from .models import Cobro, Pago, Devolucion
 
 MESES_ES = [
     '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -295,3 +297,60 @@ def calendario_pagos_diario(inscripcion, anio, mes):
             'bloqueado_por': bloqueado_por,
         })
     return {'anio': anio, 'mes': mes, 'etiqueta': f'{MESES_ES[mes]} {anio}', 'dias': dias}
+
+
+def resumen_financiero(anio, mes, sucursal=None):
+    """
+    Caja y cartera de un mes (la misma contabilidad que muestran las tarjetas
+    de Cobros y que usan los Reportes, para que nunca den números distintos).
+    - pendiente: saldo por cobrar de todos los cobros abiertos (pendiente,
+      parcial o vencido), NO anulados, ya descontando pagos, devoluciones y
+      condonado. Incluye a los vencidos.
+    - vencido: la parte de lo pendiente cuyo vencimiento ya pasó.
+    - caja_mes: pagos con fecha del mes - devoluciones con fecha del mes.
+    """
+    hoy = date.today()
+    cobros = Cobro.objects.all()
+    pagos  = Pago.objects.filter(fecha_pago__year=anio, fecha_pago__month=mes)
+    devs   = Devolucion.objects.filter(fecha__year=anio, fecha__month=mes)
+    if sucursal:
+        cobros = cobros.filter(inscripcion__sucursal=sucursal)
+        pagos  = pagos.filter(cobro__inscripcion__sucursal=sucursal)
+        devs   = devs.filter(cobro__inscripcion__sucursal=sucursal)
+
+    cero = Decimal('0')
+    pend_monto = venc_monto = cero
+    pend_n = venc_n = 0
+    abiertos = cobros.filter(estado__in=ESTADOS_ABIERTOS).prefetch_related('pagos', 'devoluciones')
+    for c in abiertos:
+        pagado = sum((p.monto for p in c.pagos.all()), cero) - sum((d.monto for d in c.devoluciones.all()), cero)
+        saldo = c.monto_final - pagado - c.monto_condonado
+        if saldo <= 0:
+            continue
+        pend_monto += saldo
+        pend_n += 1
+        if c.fecha_vencimiento < hoy:
+            venc_monto += saldo
+            venc_n += 1
+
+    p = pagos.aggregate(total=Sum('monto'), n=Count('id'))
+    d = devs.aggregate(total=Sum('monto'), n=Count('id'))
+    total_pagos = p['total'] or cero
+    total_devs  = d['total'] or cero
+    condonado = cobros.filter(
+        monto_condonado__gt=0, fecha_pago__year=anio, fecha_pago__month=mes,
+    ).aggregate(t=Sum('monto_condonado'))['t'] or cero
+
+    return {
+        'mes': f'{anio:04d}-{mes:02d}',
+        'pendiente': {'monto': pend_monto, 'cantidad': pend_n},
+        'vencido':   {'monto': venc_monto, 'cantidad': venc_n},
+        'caja_mes': {
+            'ingresos':            total_pagos,
+            'cantidad_pagos':      p['n'],
+            'devoluciones':        total_devs,
+            'cantidad_devoluciones': d['n'],
+            'neto':                total_pagos - total_devs,
+            'condonado':           condonado,
+        },
+    }

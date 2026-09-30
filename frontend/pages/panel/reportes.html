@@ -7,28 +7,63 @@
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <style>
-    .reporte-card {
-      background: var(--blanco); border: 2px solid var(--gris-100);
-      border-radius: var(--radio-xl); padding: var(--gap-xl);
-      box-shadow: var(--sombra-md); transition: all var(--trans-fast);
-      cursor: pointer; text-align: center;
-    }
-    .reporte-card:hover { transform: translateY(-4px); box-shadow: var(--sombra-xl); border-color: var(--turquesa); }
-    .reporte-icono {
-      width: 72px; height: 72px; border-radius: var(--radio-xl);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 2.2rem; margin: 0 auto var(--gap-md);
-    }
-    .reporte-titulo { font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--gap-sm); }
-    .reporte-desc { font-size: var(--text-sm); color: var(--texto-suave); line-height: 1.6; }
+    .contexto { font-size:var(--text-sm);font-weight:700;color:var(--texto-suave);margin-bottom:var(--gap-md); }
+    .seccion-titulo { font-family:var(--font-display);font-size:var(--text-lg);margin:var(--gap-lg) 0 var(--gap-sm); }
+    .seccion-nota { font-size:var(--text-xs);color:var(--texto-suave);font-weight:600;margin:-4px 0 var(--gap-md); }
 
-    /* Mini charts con CSS */
-    .mini-bar-chart { display: flex; flex-direction: column; gap: 8px; }
-    .bar-row { display: flex; align-items: center; gap: var(--gap-sm); }
-    .bar-label { font-size: var(--text-xs); font-weight: 700; color: var(--texto-suave); width: 80px; text-align: right; flex-shrink: 0; }
-    .bar-track { flex: 1; height: 22px; background: var(--gris-100); border-radius: var(--radio-full); overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: var(--radio-full); display: flex; align-items: center; padding-left: 8px; font-size: var(--text-xs); font-weight: 700; color: white; transition: width .8s ease; }
-    .bar-val { font-size: var(--text-xs); font-weight: 700; color: var(--texto); min-width: 40px; }
+    /* ── Indicadores ── */
+    .kpi { background:var(--blanco);border:2px solid var(--gris-100);border-radius:var(--radio-xl);
+      padding:var(--gap-md) var(--gap-lg);box-shadow:var(--sombra-sm);display:flex;flex-direction:column;gap:2px; }
+    .kpi-etq { font-size:var(--text-xs);font-weight:800;color:var(--gris-600); }
+    .kpi-valor { font-family:var(--font-display);font-size:var(--text-2xl);line-height:1.15; }
+    .kpi-sub { font-size:var(--text-xs);font-weight:700;color:var(--texto-suave); }
+
+    /* ── Descargas ── */
+    .reporte-card {
+      background:var(--blanco);border:2px solid var(--gris-100);border-radius:var(--radio-xl);
+      padding:var(--gap-lg);box-shadow:var(--sombra-md);transition:all var(--trans-fast);
+      cursor:pointer;text-align:center;font-family:inherit;color:inherit;width:100%;
+    }
+    .reporte-card:hover:not(:disabled) { transform:translateY(-4px);box-shadow:var(--sombra-xl);border-color:var(--turquesa); }
+    .reporte-card:focus-visible { outline:3px solid var(--violeta);outline-offset:2px; }
+    .reporte-card:disabled { opacity:.6;cursor:progress; }
+    .reporte-icono { width:64px;height:64px;border-radius:var(--radio-xl);display:flex;align-items:center;
+      justify-content:center;font-size:2rem;margin:0 auto var(--gap-sm); }
+    .reporte-titulo { font-family:var(--font-display);font-size:var(--text-lg);margin-bottom:4px; }
+    .reporte-desc { font-size:var(--text-xs);color:var(--texto-suave);line-height:1.5;font-weight:600; }
+
+    /* ── Gráficos con CSS ── */
+    .mini-bar-chart { display:flex;flex-direction:column;gap:10px; }
+    .bar-row { display:flex;align-items:center;gap:var(--gap-sm); }
+    .bar-label { font-size:var(--text-xs);font-weight:700;color:var(--texto-suave);width:96px;text-align:right;
+      flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .bar-track { flex:1;height:22px;background:var(--gris-100);border-radius:var(--radio-full);overflow:hidden;display:flex; }
+    .bar-fill { height:100%;transition:width .6s ease; }
+    .bar-val { font-size:var(--text-xs);font-weight:800;color:var(--texto);min-width:88px;text-align:right; }
+    .leyenda { display:flex;flex-wrap:wrap;gap:var(--gap-md);font-size:var(--text-xs);font-weight:700;color:var(--texto-suave);margin-top:var(--gap-sm); }
+    .leyenda i { display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px; }
+
+    /* ── Resumen financiero ── */
+    .fin-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap-sm); }
+    .fin-caja { border-radius:var(--radio-lg);padding:var(--gap-sm) var(--gap-md);border:1.5px solid; }
+    .fin-caja .e { font-size:var(--text-xs);font-weight:800;text-transform:none; }
+    .fin-caja .v { font-family:var(--font-display);font-size:var(--text-xl);line-height:1.2; }
+    .fin-sub { font-size:var(--text-xs);font-weight:800;color:var(--gris-600);margin:var(--gap-md) 0 var(--gap-xs); }
+    .fin-fila { display:flex;justify-content:space-between;padding:.35rem 0;font-size:var(--text-sm);
+      border-bottom:1px dashed var(--gris-100); }
+    .fin-fila:last-child { border-bottom:none; }
+    .fin-fila b { font-weight:800; }
+    .progreso { height:10px;border-radius:var(--radio-full);background:var(--gris-100);overflow:hidden;margin:6px 0; }
+    .progreso > span { display:block;height:100%;background:linear-gradient(90deg,var(--turquesa),var(--verde)); }
+
+    .estado-error { text-align:center;padding:var(--gap-xl);color:var(--coral-d);font-weight:700; }
+
+    @media (max-width:640px) { .fin-grid { grid-template-columns:1fr; } .bar-label { width:70px; } .bar-val { min-width:70px; } }
+    @media print {
+      .sidebar, .topbar-acciones, #selector-sucursal, #zona-descargas, .btn { display:none !important; }
+      .main-content { margin:0 !important; }
+      .card, .kpi { box-shadow:none !important;break-inside:avoid; }
+    }
   </style>
 </head>
 <body>
@@ -39,88 +74,68 @@
     <header class="topbar">
       <h1 class="topbar-titulo">📊 Reportes</h1>
       <div class="topbar-acciones">
-        <select class="form-select" id="filtro-mes-reporte" style="max-width:200px">
-        </select>
-        <select class="form-select" id="filtro-suc-reporte" style="max-width:180px">
-          <option value="">Todas las sucursales</option>
-        </select>
-        <button class="btn btn-primary" onclick="generarTodos()">🔄 Actualizar</button>
+        <select class="form-select" id="filtro-mes-reporte" style="max-width:200px" aria-label="Mes del reporte"></select>
+        <button class="btn btn-outline" onclick="window.print()" title="Imprimir o guardar como PDF">🖨️ Imprimir</button>
+        <button class="btn btn-primary" onclick="cargar()">🔄 Actualizar</button>
       </div>
     </header>
 
     <div class="pagina">
+      <div class="contexto" id="contexto"></div>
 
-      <!-- Tarjetas de reportes disponibles -->
-      <div class="grid-4 mb-lg">
-        <div class="reporte-card" onclick="exportarAsistenciaCSV()">
-          <div class="reporte-icono" style="background:var(--turquesa-l)">📋</div>
-          <div class="reporte-titulo">Asistencia</div>
-          <div class="reporte-desc">Registro mensual de asistencia por sala</div>
-          <div class="mt-md"><span class="chip chip-turquesa">📥 CSV</span></div>
+      <!-- Indicadores -->
+      <div class="grid-4 mb-lg" id="kpis"></div>
+
+      <!-- Gráficos -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><h3 class="card-titulo">📋 Asistencia por sala</h3></div>
+          <div id="chart-asistencia" class="mini-bar-chart"><div class="loader"><div class="spinner"></div></div></div>
         </div>
-        <div class="reporte-card" onclick="exportarCobrosCSV()">
-          <div class="reporte-icono" style="background:var(--verde-l)">💰</div>
-          <div class="reporte-titulo">Cobros</div>
-          <div class="reporte-desc">Estado de pagos y deudas del mes</div>
-          <div class="mt-md"><span class="chip chip-verde">📥 CSV</span></div>
+        <div class="card">
+          <div class="card-header"><h3 class="card-titulo">👶 Ocupación por sala</h3></div>
+          <div id="chart-ocupacion" class="mini-bar-chart"><div class="loader"><div class="spinner"></div></div></div>
         </div>
-        <div class="reporte-card" onclick="exportarNinosCSV()">
-          <div class="reporte-icono" style="background:var(--coral-l)">👶</div>
-          <div class="reporte-titulo">Niños inscritos</div>
-          <div class="reporte-desc">Listado completo con salas y tutores</div>
-          <div class="mt-md"><span class="chip chip-coral">📥 CSV</span></div>
+        <div class="card">
+          <div class="card-header"><h3 class="card-titulo">🧾 Cobros emitidos en el mes</h3></div>
+          <div id="chart-cobros" class="mini-bar-chart"><div class="loader"><div class="spinner"></div></div></div>
         </div>
-        <div class="reporte-card" onclick="exportarStockCSV()">
-          <div class="reporte-icono" style="background:var(--amarillo-l)">📦</div>
-          <div class="reporte-titulo">Inventario</div>
-          <div class="reporte-desc">Stock actual de todos los ítems</div>
-          <div class="mt-md"><span class="chip chip-amarillo">📥 CSV</span></div>
+        <div class="card">
+          <div class="card-header"><h3 class="card-titulo">💵 Resumen financiero</h3></div>
+          <div id="resumen-financiero"><div class="loader"><div class="spinner"></div></div></div>
         </div>
       </div>
 
-      <!-- Resúmenes visuales -->
-      <div class="grid-2">
-
-        <!-- Asistencia por sala -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-titulo">📋 Asistencia por sala (mes actual)</h3>
-          </div>
-          <div id="chart-asistencia" class="mini-bar-chart">
-            <div class="loader"><div class="spinner"></div></div>
-          </div>
+      <!-- Descargas -->
+      <div id="zona-descargas">
+        <h2 class="seccion-titulo">📥 Descargar en Excel (CSV)</h2>
+        <p class="seccion-nota" id="nota-descargas"></p>
+        <div class="grid-4 mb-lg">
+          <button class="reporte-card" onclick="exportar('asistencia', this)">
+            <div class="reporte-icono" style="background:var(--turquesa-l)">📋</div>
+            <div class="reporte-titulo">Asistencia</div>
+            <div class="reporte-desc">Cada registro del mes: estado, horas, quién entregó y retiró</div>
+            <div class="mt-md"><span class="chip chip-turquesa">Del mes elegido</span></div>
+          </button>
+          <button class="reporte-card" onclick="exportar('cobros', this)">
+            <div class="reporte-icono" style="background:var(--verde-l)">💰</div>
+            <div class="reporte-titulo">Cobros</div>
+            <div class="reporte-desc">Cobros emitidos en el mes con lo pagado y el saldo de cada uno</div>
+            <div class="mt-md"><span class="chip chip-verde">Del mes elegido</span></div>
+          </button>
+          <button class="reporte-card" onclick="exportar('ninos', this)">
+            <div class="reporte-icono" style="background:var(--coral-l)">👶</div>
+            <div class="reporte-titulo">Niños inscritos</div>
+            <div class="reporte-desc">Inscripciones activas con sala, turno, alergias y tutores</div>
+            <div class="mt-md"><span class="chip chip-coral">Situación actual</span></div>
+          </button>
+          <button class="reporte-card" onclick="exportar('inventario', this)">
+            <div class="reporte-icono" style="background:var(--amarillo-l)">📦</div>
+            <div class="reporte-titulo">Inventario</div>
+            <div class="reporte-desc">Stock actual de cada ítem y cuáles están bajo el mínimo</div>
+            <div class="mt-md"><span class="chip chip-amarillo">Situación actual</span></div>
+          </button>
         </div>
-
-        <!-- Cobros por estado -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-titulo">💰 Cobros por estado</h3>
-          </div>
-          <div id="chart-cobros" class="mini-bar-chart">
-            <div class="loader"><div class="spinner"></div></div>
-          </div>
-        </div>
-
-        <!-- Niños por sala -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-titulo">👶 Niños por sala</h3>
-          </div>
-          <div id="chart-ninos-sala" class="mini-bar-chart">
-            <div class="loader"><div class="spinner"></div></div>
-          </div>
-        </div>
-
-        <!-- Resumen financiero del mes -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-titulo">💵 Resumen financiero del mes</h3>
-          </div>
-          <div id="resumen-financiero">
-            <div class="loader"><div class="spinner"></div></div>
-          </div>
-        </div>
-
       </div>
     </div>
   </main>
@@ -130,293 +145,162 @@
 <script src="{% static 'js/components.js' %}"></script>
 <script>
 initPanel('reportes', ['admin', 'directora', 'administrativo']);
-Auth.requerirAuth(['admin','directora','administrativo']);
-const usr = Auth.getUsuario();
-document.getElementById('usr-avatar').textContent = UI.iniciales(`${usr.nombres} ${usr.apellidos}`);
-document.getElementById('usr-nombre').textContent = `${usr.nombres} ${usr.apellidos}`;
-document.getElementById('usr-rol').textContent    = usr.rol_display || usr.rol;
 
-// Llenar selector de meses (últimos 12)
-const selMes = document.getElementById('filtro-mes-reporte');
-const ahora  = new Date();
-for (let i = 0; i < 12; i++) {
-  const d   = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
-  const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const opt = Object.assign(document.createElement('option'), {
-    value: val, textContent: `${meses[d.getMonth()]} ${d.getFullYear()}`
-  });
-  if (i === 0) opt.selected = true;
-  selMes.appendChild(opt);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num  = v => parseFloat(v || 0);
+const pct  = v => v == null ? '—' : (Number.isInteger(v) ? v : v.toFixed(1)) + '%';
+const bs   = v => UI.moneda(num(v));
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let token = 0;                  // descarta respuestas viejas si el filtro cambió mientras cargaba
+
+// ── Selector de meses (los últimos 12) ──
+(function () {
+  const hoy = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    $('filtro-mes-reporte').add(new Option(`${MESES[d.getMonth()]} ${d.getFullYear()}`,
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`));
+  }
+})();
+
+const getMes = () => $('filtro-mes-reporte').value;
+// La sucursal es la del selector de arriba (la misma que en el resto del panel).
+const paramsFiltro = () => {
+  const q = new URLSearchParams({ mes: getMes() });
+  if (Sucursal.getId()) q.set('sucursal', Sucursal.getId());
+  return q.toString();
+};
+
+// ── Piezas ──
+function kpi(etq, valor, sub, color) {
+  return `<div class="kpi"><div class="kpi-etq">${etq}</div>
+    <div class="kpi-valor" style="color:${color}">${valor}</div><div class="kpi-sub">${sub}</div></div>`;
+}
+function barraSimple(etq, valorTxt, pctAncho, color, titulo) {
+  return `<div class="bar-row" title="${esc(titulo || etq)}">
+    <span class="bar-label">${esc(etq)}</span>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.min(Math.max(pctAncho, 0), 100)}%;background:${color};border-radius:var(--radio-full)"></div></div>
+    <span class="bar-val">${valorTxt}</span></div>`;
 }
 
-// Sucursales
-async function cargarSucursales() {
+function renderKpis(r) {
+  const a = r.asistencia, o = r.ocupacion, c = r.caja;
+  $('kpis').innerHTML =
+    kpi('📋 Asistencia', pct(a.porcentaje), a.total ? `${a.presentes} presentes de ${a.total} registros` : 'Sin registros este mes', 'var(--turquesa-d)') +
+    kpi('✅ Cobrado en el mes', bs(c.caja_mes.neto), `${c.caja_mes.cantidad_pagos} pago(s)` + (c.caja_mes.cantidad_devoluciones ? ` · ${c.caja_mes.cantidad_devoluciones} devolución(es)` : ''), 'var(--verde-d)') +
+    kpi('⏳ Por cobrar hoy', bs(c.pendiente.monto), `${c.pendiente.cantidad} cobro(s)` + (c.vencido.cantidad ? ` · <span style="color:var(--coral-d)">${bs(c.vencido.monto)} vencido</span>` : ''), '#92400E') +
+    kpi('👶 Ocupación', pct(o.porcentaje), `${o.inscritos} niños de ${o.capacidad} lugares`, 'var(--violeta-d)');
+}
+
+function renderAsistencia(a) {
+  const cont = $('chart-asistencia');
+  if (!a.por_sala.length) { UI.vacio(cont, 'Sin registros de asistencia en este mes', '📋'); return; }
+  cont.innerHTML = a.por_sala.map(s => {
+    const seg = (n, color) => n ? `<div class="bar-fill" style="width:${n * 100 / s.total}%;background:${color}"></div>` : '';
+    return `<div class="bar-row" title="${esc(s.sala_nombre)}: ${s.presentes} presentes, ${s.ausentes} ausentes, ${s.justificados} justificados">
+      <span class="bar-label">${esc(s.sala_nombre)}</span>
+      <div class="bar-track">${seg(s.presentes, 'var(--verde)')}${seg(s.justificados, 'var(--amarillo)')}${seg(s.ausentes, 'var(--coral)')}</div>
+      <span class="bar-val">${pct(s.porcentaje)} · ${s.total}</span></div>`;
+  }).join('') + `<div class="leyenda">
+      <span><i style="background:var(--verde)"></i>Presentes ${a.presentes}</span>
+      <span><i style="background:var(--amarillo)"></i>Justificados ${a.justificados}</span>
+      <span><i style="background:var(--coral)"></i>Ausentes ${a.ausentes}</span></div>`;
+}
+
+function renderOcupacion(o) {
+  const cont = $('chart-ocupacion');
+  if (!o.por_sala.length) { UI.vacio(cont, 'No hay salas activas', '🏠'); return; }
+  cont.innerHTML = o.por_sala.map(s => {
+    const p = s.porcentaje || 0;
+    const color = p >= 100 ? 'var(--coral)' : p >= 80 ? 'var(--amarillo)' : 'var(--turquesa)';
+    return barraSimple(s.sala_nombre, `${s.inscritos}/${s.capacidad} · ${pct(s.porcentaje)}`, p, color,
+      `${s.sala_nombre} (${s.sucursal_nombre}): ${s.inscritos} de ${s.capacidad}`);
+  }).join('') + `<div class="leyenda">
+      <span><i style="background:var(--turquesa)"></i>Hasta 80%</span>
+      <span><i style="background:var(--amarillo)"></i>80–99%</span>
+      <span><i style="background:var(--coral)"></i>Llena</span></div>`;
+}
+
+function renderCobros(cm) {
+  const cont = $('chart-cobros');
+  if (!cm.cantidad) { UI.vacio(cont, 'No se emitieron cobros en este mes', '🧾'); return; }
+  const filas = [['pagado', 'Pagados', 'var(--verde)'], ['parcial', 'Pago parcial', 'var(--turquesa)'],
+                 ['pendiente', 'Pendientes', 'var(--amarillo)'], ['vencido', 'Vencidos', 'var(--coral)'],
+                 ['anulado', 'Anulados', 'var(--gris-400)']];
+  const max = Math.max(...filas.map(([k]) => cm.por_estado[k].cantidad), 1);
+  cont.innerHTML = filas.map(([k, etq, color]) => {
+    const e = cm.por_estado[k];
+    return barraSimple(etq, `${e.cantidad} · ${bs(e.monto)}`, e.cantidad * 100 / max, color);
+  }).join('');
+}
+
+function renderFinanciero(r) {
+  const cm = r.cobros_mes, c = r.caja;
+  const caja = (etq, val, bg, br, tx) => `<div class="fin-caja" style="background:${bg};border-color:${br};color:${tx}"><div class="e">${etq}</div><div class="v">${val}</div></div>`;
+  $('resumen-financiero').innerHTML = `
+    <div class="fin-sub" style="margin-top:0">Cobros emitidos en el mes</div>
+    <div class="fin-grid">
+      ${caja('Emitido', bs(cm.emitido), 'var(--gris-50)', 'var(--gris-200)', 'var(--texto)')}
+      ${caja('✅ Cobrado', bs(cm.cobrado), 'var(--verde-l)', 'var(--verde)', 'var(--verde-d)')}
+      ${caja('⏳ Falta cobrar', bs(cm.saldo), 'var(--amarillo-l)', 'var(--amarillo)', '#92400E')}
+    </div>
+    <div class="progreso" title="Porcentaje cobrado de lo emitido"><span style="width:${Math.min(cm.porcentaje_cobrado || 0, 100)}%"></span></div>
+    <div class="fin-fila"><span>% cobrado de lo emitido</span><b>${pct(cm.porcentaje_cobrado)}</b></div>
+    ${num(cm.condonado) ? `<div class="fin-fila"><span>Condonado</span><b>${bs(cm.condonado)}</b></div>` : ''}
+
+    <div class="fin-sub">Caja del mes <span style="font-weight:600;color:var(--texto-suave)">(dinero que entró y salió)</span></div>
+    <div class="fin-fila"><span>Pagos recibidos (${c.caja_mes.cantidad_pagos})</span><b>${bs(c.caja_mes.ingresos)}</b></div>
+    <div class="fin-fila"><span>Devoluciones (${c.caja_mes.cantidad_devoluciones})</span><b>− ${bs(c.caja_mes.devoluciones)}</b></div>
+    <div class="fin-fila"><span><b>Neto</b></span><b style="color:var(--verde-d)">${bs(c.caja_mes.neto)}</b></div>
+
+    <div class="fin-sub">Cartera hoy <span style="font-weight:600;color:var(--texto-suave)">(de todos los meses)</span></div>
+    <div class="fin-fila"><span>Por cobrar (${c.pendiente.cantidad})</span><b>${bs(c.pendiente.monto)}</b></div>
+    <div class="fin-fila"><span style="color:var(--coral-d)">De ese total, vencido (${c.vencido.cantidad})</span><b style="color:var(--coral-d)">${bs(c.vencido.monto)}</b></div>`;
+}
+
+// ── Carga: UNA sola llamada, todo calculado en el servidor ──
+async function cargar() {
+  const mi = ++token;
+  const opcMes = $('filtro-mes-reporte').selectedOptions[0];
+  $('contexto').textContent = `${opcMes ? opcMes.textContent : ''} · ${Sucursal.getNombre()}`;
+  $('nota-descargas').textContent = `Los reportes “del mes” usan ${opcMes ? opcMes.textContent : 'el mes elegido'} y ${Sucursal.getNombre().toLowerCase()}.`;
+  const cargando = '<div class="loader"><div class="spinner"></div></div>';
+  ['chart-asistencia', 'chart-ocupacion', 'chart-cobros', 'resumen-financiero'].forEach(id => $(id).innerHTML = cargando);
   try {
-    const data = await API.get('/core/sucursales/');
-    UI.llenarSelect(document.getElementById('filtro-suc-reporte'), data.results||data, 'id', 'nombre');
-  } catch {}
+    const r = await API.get('/reportes/resumen/?' + paramsFiltro());
+    if (mi !== token) return;
+    renderKpis(r);
+    renderAsistencia(r.asistencia);
+    renderOcupacion(r.ocupacion);
+    renderCobros(r.cobros_mes);
+    renderFinanciero(r);
+  } catch (err) {
+    if (mi !== token) return;
+    const msg = `<div class="estado-error">⚠️ No se pudo cargar el reporte: ${esc(err.message)}<br>
+      <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="cargar()">Reintentar</button></div>`;
+    ['chart-asistencia', 'chart-ocupacion', 'chart-cobros', 'resumen-financiero'].forEach(id => $(id).innerHTML = msg);
+    $('kpis').innerHTML = '';
+  }
 }
 
-function getMes() { return document.getElementById('filtro-mes-reporte').value; }
-function getSuc() { return document.getElementById('filtro-suc-reporte').value; }
-
-// ── Renderizar barra horizontal ──
-function renderBarra(label, valor, max, color, prefijo='', sufijo='') {
-  const pct = max > 0 ? Math.round((valor/max)*100) : 0;
-  return `
-    <div class="bar-row">
-      <span class="bar-label">${label}</span>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${pct}%;background:${color}">
-          ${pct > 20 ? prefijo+valor+sufijo : ''}
-        </div>
-      </div>
-      <span class="bar-val">${prefijo}${valor}${sufijo}</span>
-    </div>`;
-}
-
-async function generarTodos() {
-  await Promise.all([
-    cargarChartAsistencia(),
-    cargarChartCobros(),
-    cargarChartNinosSala(),
-    cargarResumenFinanciero(),
-  ]);
-}
-
-async function cargarChartAsistencia() {
-  const cont = document.getElementById('chart-asistencia');
-  const mes  = getMes();
-  const [año, mesN] = mes.split('-');
+// ── Exportaciones: el servidor arma el CSV (escapado, con filtros y sin el tope de 25 registros) ──
+async function exportar(tipo, boton) {
+  boton.disabled = true;
+  UI.toast('Preparando el reporte…', 'info');
   try {
-    // Asistencia del mes agrupada por sala
-    const data  = await API.get(`/asistencia/asistencia/resumen-mensual/?año=${año}&mes=${mesN}`);
-    const salas = await API.get('/core/salas/?activa=true&page_size=50');
-    const listaSalas = salas.results || salas;
-
-    if (!listaSalas.length) { UI.vacio(cont,'Sin datos','📋'); return; }
-
-    const max = Math.max(data.presentes||1, 1);
-    cont.innerHTML = `
-      ${renderBarra('Presentes', data.presentes||0, max, 'var(--verde)', '', ' días')}
-      ${renderBarra('Ausentes',  data.ausentes||0,  Math.max(data.presentes,data.ausentes,1), 'var(--coral)', '', ' días')}
-      ${renderBarra('Justif.',   data.justificados||0, Math.max(data.presentes,data.ausentes,data.justificados,1), 'var(--amarillo)', '', ' días')}
-      <div style="margin-top:var(--gap-sm);font-size:var(--text-xs);color:var(--texto-suave);font-weight:600;text-align:center">
-        Total registros: ${data.total||0}
-      </div>
-    `;
-  } catch (err) { UI.vacio(cont, 'Error: '+err.message, '⚠️'); }
+    const r = await API.descargar(`/reportes/exportar/${tipo}/?${paramsFiltro()}`, { nombre: `${tipo}.csv`, omitirSiVacio: true });
+    if (!r.descargado) UI.toast('No hay registros para esa selección, no se descargó ningún archivo.', 'warn', 5000);
+    else UI.toast(`✅ ${r.filas ?? ''} registro(s) exportado(s): ${r.nombre}`, 'exito');
+  } catch (err) { UI.toast('Error: ' + err.message, 'error', 6000); }
+  boton.disabled = false;
 }
 
-async function cargarChartCobros() {
-  const cont = document.getElementById('chart-cobros');
-  try {
-    const [pend, venc, pag, anul] = await Promise.all([
-      API.get('/inscripciones/cobros/?estado=pendiente&page_size=1'),
-      API.get('/inscripciones/cobros/?estado=vencido&page_size=1'),
-      API.get('/inscripciones/cobros/?estado=pagado&page_size=1'),
-      API.get('/inscripciones/cobros/?estado=anulado&page_size=1'),
-    ]);
-    const vals = [pend.count||0, venc.count||0, pag.count||0, anul.count||0];
-    const max  = Math.max(...vals, 1);
-    cont.innerHTML = `
-      ${renderBarra('Pendientes', vals[0], max, 'var(--amarillo)')}
-      ${renderBarra('Vencidos',   vals[1], max, 'var(--coral)')}
-      ${renderBarra('Pagados',    vals[2], max, 'var(--verde)')}
-      ${renderBarra('Anulados',   vals[3], max, 'var(--gris-400)')}
-    `;
-  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
-}
+$('filtro-mes-reporte').addEventListener('change', cargar);
+window.addEventListener('sucursalChanged', cargar);
 
-async function cargarChartNinosSala() {
-  const cont = document.getElementById('chart-ninos-sala');
-  try {
-    const salas = await API.get('/core/salas/?activa=true&page_size=20');
-    const lista = salas.results || salas;
-    if (!lista.length) { UI.vacio(cont,'Sin salas','🏠'); return; }
-
-    // Contar inscritos por sala
-    const conteos = await Promise.all(
-      lista.map(s => API.get(`/inscripciones/inscripciones/?sala=${s.id}&activa=true&page_size=1`))
-    );
-    const max = Math.max(...conteos.map(r=>r.count||0), 1);
-    const colores = ['var(--turquesa)','var(--verde)','var(--coral)','var(--violeta)','var(--naranja)'];
-    cont.innerHTML = lista.map((sala, i) => {
-      const count = conteos[i].count || 0;
-      const pct   = Math.round((count/sala.capacidad_maxima)*100);
-      return renderBarra(
-        sala.nombre.slice(0,12),
-        count, max,
-        colores[i % colores.length],
-        '', `/${sala.capacidad_maxima}`
-      ) + `<div style="font-size:.65rem;color:${pct>80?'var(--coral-d)':'var(--texto-suave)'};
-        text-align:right;margin-top:-6px;margin-bottom:4px;font-weight:700">
-        ${pct}% ocupación
-      </div>`;
-    }).join('');
-  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
-}
-
-async function cargarResumenFinanciero() {
-  const cont = document.getElementById('resumen-financiero');
-  const mes  = getMes();
-  try {
-    const [pagados, pendientes, vencidos] = await Promise.all([
-      API.get(`/inscripciones/cobros/?estado=pagado&page_size=500`),
-      API.get(`/inscripciones/cobros/?estado=pendiente&page_size=500`),
-      API.get(`/inscripciones/cobros/?estado=vencido&page_size=500`),
-    ]);
-
-    const filtrarMes = (lista) => (lista.results||lista).filter(c =>
-      (c.fecha_pago||c.fecha_emision||'').startsWith(mes)
-    );
-
-    const listaP  = filtrarMes(pagados);
-    const listaPend = filtrarMes(pendientes);
-    const listaV  = filtrarMes(vencidos);
-
-    const sumP    = listaP.reduce((s,c)=>s+parseFloat(c.monto_final),0);
-    const sumPend = listaPend.reduce((s,c)=>s+parseFloat(c.monto_final),0);
-    const sumV    = listaV.reduce((s,c)=>s+parseFloat(c.monto_final),0);
-    const total   = sumP + sumPend + sumV;
-
-    cont.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:var(--gap-md)">
-        <div style="display:flex;justify-content:space-between;align-items:center;
-          padding:var(--gap-md);background:var(--verde-l);border-radius:var(--radio-lg);
-          border:1.5px solid var(--verde)">
-          <div>
-            <div style="font-size:var(--text-xs);font-weight:700;color:var(--verde-d);text-transform:uppercase">✅ Cobrado</div>
-            <div style="font-family:var(--font-display);font-size:var(--text-2xl);color:var(--verde-d)">${UI.moneda(sumP)}</div>
-          </div>
-          <div style="font-family:var(--font-display);font-size:var(--text-3xl);opacity:.3">💚</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;
-          padding:var(--gap-md);background:var(--amarillo-l);border-radius:var(--radio-lg);
-          border:1.5px solid var(--amarillo)">
-          <div>
-            <div style="font-size:var(--text-xs);font-weight:700;color:#92400E;text-transform:uppercase">⏳ Pendiente</div>
-            <div style="font-family:var(--font-display);font-size:var(--text-2xl);color:#92400E">${UI.moneda(sumPend)}</div>
-          </div>
-          <div style="font-family:var(--font-display);font-size:var(--text-3xl);opacity:.3">💛</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;
-          padding:var(--gap-md);background:var(--coral-l);border-radius:var(--radio-lg);
-          border:1.5px solid var(--coral)">
-          <div>
-            <div style="font-size:var(--text-xs);font-weight:700;color:var(--coral-d);text-transform:uppercase">🔴 Vencido sin pagar</div>
-            <div style="font-family:var(--font-display);font-size:var(--text-2xl);color:var(--coral-d)">${UI.moneda(sumV)}</div>
-          </div>
-          <div style="font-family:var(--font-display);font-size:var(--text-3xl);opacity:.3">❤️</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:.75rem var(--gap-md);
-          background:var(--gris-50);border-radius:var(--radio-lg);border:1.5px solid var(--gris-200)">
-          <span style="font-weight:700;color:var(--texto)">Total esperado</span>
-          <span style="font-family:var(--font-display);font-size:var(--text-xl)">${UI.moneda(total)}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:.5rem var(--gap-md)">
-          <span style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:600">% Cobrado</span>
-          <span style="font-weight:700;color:${total>0&&(sumP/total)>.7?'var(--verde-d)':'var(--coral-d)'}">
-            ${total > 0 ? Math.round((sumP/total)*100) : 0}%
-          </span>
-        </div>
-      </div>
-    `;
-  } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
-}
-
-// ── Exportaciones CSV ──
-async function exportarAsistenciaCSV() {
-  UI.toast('Preparando reporte de asistencia...', 'info');
-  try {
-    const mes = getMes();
-    const [año, mesN] = mes.split('-');
-    const data  = await API.get(`/asistencia/asistencia/?ordering=-fecha&page_size=1000`);
-    const lista = (data.results||data).filter(a => a.fecha?.startsWith(mes));
-
-    const filas = [
-      ['Niño','Sala','Turno','Fecha','Estado','Entrada','Salida','Motivo'].join(','),
-      ...lista.map(a => [
-        `"${a.nino_nombre}"`, `"${a.sala_nombre}"`, `"${a.turno_nombre}"`,
-        a.fecha, a.estado, a.hora_entrada||'', a.hora_salida||'',
-        `"${a.motivo_ausencia||''}"`
-      ].join(','))
-    ];
-    descargarCSV(filas, `asistencia_${mes}.csv`);
-    UI.toast(`✅ ${lista.length} registros exportados`, 'exito');
-  } catch (err) { UI.toast('Error: '+err.message, 'error'); }
-}
-
-async function exportarCobrosCSV() {
-  UI.toast('Preparando reporte de cobros...', 'info');
-  try {
-    const data  = await API.get('/inscripciones/cobros/?page_size=500&ordering=-fecha_emision');
-    const lista = data.results || data;
-    const filas = [
-      ['Niño','Tipo','Período','Monto base','Monto final','Vencimiento','Estado','Método pago','Fecha pago'].join(','),
-      ...lista.map(c => [
-        `"${c.nino_nombre}"`, c.tipo_display, c.periodo||'',
-        c.monto_base, c.monto_final, c.fecha_vencimiento,
-        c.estado, c.metodo_pago||'', c.fecha_pago||''
-      ].join(','))
-    ];
-    descargarCSV(filas, `cobros_${getMes()}.csv`);
-    UI.toast(`✅ ${lista.length} cobros exportados`, 'exito');
-  } catch (err) { UI.toast('Error: '+err.message, 'error'); }
-}
-
-async function exportarNinosCSV() {
-  UI.toast('Preparando listado de niños...', 'info');
-  try {
-    const data  = await API.get('/ninos/ninos/?activo=true&page_size=500');
-    const lista = data.results || data;
-    const filas = [
-      ['Nombres','Apellidos','Fecha nacimiento','Edad (meses)','Género','Alergias','Plan Misael'].join(','),
-      ...lista.map(n => [
-        `"${n.nombres}"`, `"${n.apellidos}"`, n.fecha_nacimiento,
-        n.edad_en_meses, n.genero, `"${n.alergias||''}"`,
-        n.tiene_plan_misael ? 'Sí' : 'No'
-      ].join(','))
-    ];
-    descargarCSV(filas, `ninos_${getMes()}.csv`);
-    UI.toast(`✅ ${lista.length} niños exportados`, 'exito');
-  } catch (err) { UI.toast('Error: '+err.message, 'error'); }
-}
-
-async function exportarStockCSV() {
-  UI.toast('Preparando reporte de inventario...', 'info');
-  try {
-    const data  = await API.get('/inventario/items/?activo=true&page_size=500');
-    const lista = data.results || data;
-    const filas = [
-      ['Sucursal','Nombre','Categoría','Unidad','Stock actual','Stock mínimo','Alerta stock'].join(','),
-      ...lista.map(i => [
-        `"${i.sucursal_nombre}"`, `"${i.nombre}"`, i.categoria_display,
-        i.unidad, i.stock_actual, i.stock_minimo,
-        i.alerta_stock_bajo ? 'SÍ' : 'No'
-      ].join(','))
-    ];
-    descargarCSV(filas, `inventario_${getMes()}.csv`);
-    UI.toast(`✅ ${lista.length} ítems exportados`, 'exito');
-  } catch (err) { UI.toast('Error: '+err.message, 'error'); }
-}
-
-function descargarCSV(filas, nombre) {
-  const BOM  = '\uFEFF'; // Para Excel con caracteres especiales
-  const blob = new Blob([BOM + filas.join('\n')], {type:'text/csv;charset=utf-8;'});
-  const url  = URL.createObjectURL(blob);
-  Object.assign(document.createElement('a'), {href:url, download:nombre}).click();
-  URL.revokeObjectURL(url);
-}
-
-// Actualizar cuando cambia el filtro
-document.getElementById('filtro-mes-reporte').addEventListener('change', generarTodos);
-document.getElementById('filtro-suc-reporte').addEventListener('change', generarTodos);
-
-cargarSucursales();
-generarTodos();
+(async () => { await Sucursal.cargar(); cargar(); })();
 </script>
 </body>
 </html>
