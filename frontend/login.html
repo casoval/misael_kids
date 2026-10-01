@@ -12,11 +12,14 @@
     body {
       font-family: var(--font-body);
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 1rem;
       background: linear-gradient(135deg, #E0FDF4 0%, #F0FFF4 35%, #FFF9DB 65%, #FFE4E4 100%);
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       position: relative;
     }
 
@@ -62,10 +65,11 @@
     .login-card {
       background: rgba(255,255,255,.92);
       backdrop-filter: blur(20px);
-      border-radius: 2rem;
-      padding: 2.8rem 2.5rem;
+      border-radius: 1.6rem;
+      padding: 2.2rem 2rem;
       width: 100%;
-      max-width: 420px;
+      max-width: 336px;           /* 80% de los 420px anteriores */
+      margin: auto;
       box-shadow:
         0 20px 60px rgba(0,0,0,.10),
         0 0 0 1.5px rgba(255,255,255,.6);
@@ -81,82 +85,35 @@
     /* ── Logo / header ── */
     .login-logo {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1.4rem;
     }
-    .logo-icono {
-      width: 80px; height: 80px;
-      background: linear-gradient(135deg, var(--turquesa), var(--verde));
-      border-radius: 1.5rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.4rem;
-      margin-bottom: 1rem;
-      box-shadow:
-        0 8px 24px rgba(45,212,191,.4),
-        0 0 0 4px rgba(45,212,191,.15);
-      animation: pulsar 3s ease-in-out infinite;
+    .logo-img {
+      display: block;
+      width: 190px;
+      max-width: 70%;
+      height: auto;
+      margin: 0 auto .6rem;
+      mix-blend-mode: multiply;   /* el fondo blanco del JPG se funde con la tarjeta */
     }
-    @keyframes pulsar {
-      0%,100% { box-shadow: 0 8px 24px rgba(45,212,191,.4), 0 0 0 4px rgba(45,212,191,.15); }
-      50%      { box-shadow: 0 8px 32px rgba(45,212,191,.6), 0 0 0 8px rgba(45,212,191,.10); }
-    }
-    .login-logo h1 {
-      font-family: 'Fredoka One', cursive;
-      font-size: 2.2rem;
-      background: linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1;
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; overflow: hidden;
+      clip: rect(0 0 0 0); white-space: nowrap;
     }
     .login-logo p {
-      font-size: .85rem;
-      color: var(--texto-suave);
-      font-weight: 600;
-      margin-top: .3rem;
-    }
-
-    /* ── Divisor de rol ── */
-    .rol-tabs {
-      display: flex;
-      gap: .5rem;
-      background: var(--gris-100);
-      padding: .35rem;
-      border-radius: 1rem;
-      margin-bottom: 1.6rem;
-    }
-    .rol-tab {
-      flex: 1;
-      padding: .55rem;
-      border: none;
-      border-radius: .7rem;
-      background: transparent;
-      font-family: var(--font-body);
-      font-weight: 700;
       font-size: .8rem;
-      color: var(--gris-500);
-      cursor: pointer;
-      transition: all .2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: .4rem;
-    }
-    .rol-tab.activo {
-      background: var(--blanco);
-      color: var(--turquesa-d);
-      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      color: var(--texto-suave);
+      font-weight: 700;
+      letter-spacing: .02em;
     }
 
     /* ── Formulario ── */
-    .form-grupo { margin-bottom: 1.1rem; }
+    .form-grupo { margin-bottom: .9rem; }
     .form-label {
       display: block;
-      font-size: .82rem;
+      font-size: .8rem;
       font-weight: 700;
       color: var(--gris-600);
-      margin-bottom: .35rem;
+      margin-bottom: .3rem;
     }
     .input-wrap {
       position: relative;
@@ -165,17 +122,17 @@
     }
     .input-icon {
       position: absolute;
-      left: .9rem;
-      font-size: 1.1rem;
+      left: .75rem;
+      font-size: .95rem;
       pointer-events: none;
     }
     .form-input {
       width: 100%;
-      padding: .72rem 1rem .72rem 2.6rem;
+      padding: .6rem .85rem .6rem 2.2rem;
       border: 2px solid var(--gris-200);
-      border-radius: .85rem;
+      border-radius: .7rem;
       font-family: var(--font-body);
-      font-size: .9rem;
+      font-size: .85rem;
       color: var(--texto);
       background: var(--blanco);
       transition: border-color .2s, box-shadow .2s;
@@ -187,25 +144,28 @@
     }
     .toggle-pass {
       position: absolute;
-      right: .9rem;
+      right: .5rem;
       background: none;
       border: none;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: .95rem;
       color: var(--gris-400);
-      padding: 0;
+      padding: .3rem;
+      border-radius: .5rem;
     }
+    .toggle-pass:focus-visible { outline: 2px solid var(--turquesa); }
+    .form-input { padding-right: 2.4rem; }
 
     /* ── Botón de login ── */
     .btn-login {
       width: 100%;
-      padding: .85rem;
+      padding: .7rem;
       background: linear-gradient(135deg, var(--turquesa), var(--verde));
       color: white;
       border: none;
       border-radius: var(--radio-full);
       font-family: var(--font-display);
-      font-size: 1.1rem;
+      font-size: 1rem;
       cursor: pointer;
       transition: all .25s;
       box-shadow: 0 6px 20px rgba(45,212,191,.4);
@@ -213,8 +173,9 @@
       align-items: center;
       justify-content: center;
       gap: .5rem;
-      margin-top: .5rem;
+      margin-top: .4rem;
     }
+    .btn-login:focus-visible { outline: 3px solid var(--turquesa-d); outline-offset: 2px; }
     .btn-login:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 10px 28px rgba(45,212,191,.5);
@@ -228,13 +189,13 @@
       color: var(--coral-d);
       border: 1.5px solid var(--coral);
       border-radius: .75rem;
-      padding: .7rem 1rem;
-      font-size: .84rem;
+      padding: .6rem .85rem;
+      font-size: .8rem;
       font-weight: 700;
       display: none;
       align-items: center;
       gap: .5rem;
-      margin-bottom: 1rem;
+      margin-bottom: .9rem;
     }
     .error-msg.visible { display: flex; animation: sacudir .4s; }
     @keyframes sacudir {
@@ -242,16 +203,6 @@
       20%,60%  { transform:translateX(-6px); }
       40%,80%  { transform:translateX(6px); }
     }
-
-    /* ── Footer ── */
-    .login-footer {
-      text-align: center;
-      margin-top: 1.5rem;
-      font-size: .78rem;
-      color: var(--gris-400);
-      font-weight: 600;
-    }
-    .login-footer span { color: var(--turquesa-d); }
 
     /* ── Spinner dentro del botón ── */
     .btn-spinner {
@@ -262,6 +213,11 @@
       animation: girar .6s linear infinite;
     }
     @keyframes girar { to { transform: rotate(360deg); } }
+
+    @media (max-width: 380px) { .login-card { padding: 1.8rem 1.4rem; border-radius: 1.3rem; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -283,28 +239,14 @@
   <div class="login-card">
     <!-- Logo -->
     <div class="login-logo">
-      <div class="logo-icono">🌱</div>
-      <h1>Misael Kids</h1>
-      <p>Jardín Infantil — La Paz, Bolivia</p>
+      <img class="logo-img" src="{% static 'img/logo_misael.jpg' %}" width="400" height="429"
+           alt="Misael Kids — Jardín Infantil">
+      <h1 class="sr-only">Misael Kids</h1>
+      <p>Jardín Infantil — Parvulario</p>
     </div>
-
-    <!-- Tabs de rol -->
-    <div class="rol-tabs" role="tablist">
-      <button class="rol-tab activo" id="tab-personal" onclick="cambiarRol('personal')" role="tab">
-        👩‍🏫 Personal
-      </button>
-      <button class="rol-tab" id="tab-padre" onclick="cambiarRol('padre')" role="tab">
-        👨‍👩‍👧 Padres
-      </button>
-    </div>
-
-    <!-- Mensaje contextual -->
-    <p id="msg-contexto" style="font-size:.82rem;color:var(--texto-suave);margin-bottom:1rem;font-weight:600;text-align:center;">
-      Acceso para directoras, educadoras y recepcionistas
-    </p>
 
     <!-- Error -->
-    <div class="error-msg" id="error-msg">
+    <div class="error-msg" id="error-msg" role="alert" aria-live="assertive">
       <span>⚠️</span>
       <span id="error-texto">Credenciales incorrectas. Intenta de nuevo.</span>
     </div>
@@ -313,15 +255,18 @@
     <form id="form-login" novalidate>
       <!-- Nombre de usuario -->
       <div class="form-grupo">
-        <label class="form-label" for="email">Nombre de usuario</label>
+        <label class="form-label" for="usuario">Nombre de usuario</label>
         <div class="input-wrap">
-          <span class="input-icon">🆔</span>
+          <span class="input-icon" aria-hidden="true">🆔</span>
           <input
             type="text"
-            id="email"
+            id="usuario"
             class="form-input"
             placeholder="Tu nombre de usuario"
             autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            autofocus
             required
           >
         </div>
@@ -331,7 +276,7 @@
       <div class="form-grupo">
         <label class="form-label" for="password">Contraseña</label>
         <div class="input-wrap">
-          <span class="input-icon">🔒</span>
+          <span class="input-icon" aria-hidden="true">🔒</span>
           <input
             type="password"
             id="password"
@@ -340,7 +285,7 @@
             autocomplete="current-password"
             required
           >
-          <button type="button" class="toggle-pass" id="toggle-pass" title="Mostrar / ocultar">
+          <button type="button" class="toggle-pass" id="toggle-pass" title="Mostrar / ocultar contraseña" aria-label="Mostrar contraseña" aria-pressed="false">
             👁️
           </button>
         </div>
@@ -351,11 +296,6 @@
         <span id="btn-texto">✨ Ingresar</span>
       </button>
     </form>
-
-    <!-- Footer -->
-    <div class="login-footer">
-      <p>¿Problemas para ingresar? Contacta a<br><span>administracion@misaelkids.com</span></p>
-    </div>
   </div>
 
   <script src="{% static 'js/api.js' %}"></script>
@@ -363,26 +303,15 @@
     // ── Si ya está logueado, redirigir ──
     if (Auth.estaLogueado()) Auth.redirigirSegunRol();
 
-    let modoActual = 'personal';
-
-    // ── Cambiar tab de rol ──
-    function cambiarRol(modo) {
-      modoActual = modo;
-      document.getElementById('tab-personal').classList.toggle('activo', modo === 'personal');
-      document.getElementById('tab-padre').classList.toggle('activo', modo === 'padre');
-      document.getElementById('msg-contexto').textContent =
-        modo === 'personal'
-          ? 'Acceso para directoras, educadoras y recepcionistas'
-          : 'Acceso para padres y tutores del jardín';
-      ocultarError();
-    }
-
     // ── Mostrar / ocultar contraseña ──
     document.getElementById('toggle-pass').addEventListener('click', () => {
       const input = document.getElementById('password');
       const esPass = input.type === 'password';
       input.type = esPass ? 'text' : 'password';
-      document.getElementById('toggle-pass').textContent = esPass ? '🙈' : '👁️';
+      const btn = document.getElementById('toggle-pass');
+      btn.textContent = esPass ? '🙈' : '👁️';
+      btn.setAttribute('aria-pressed', esPass ? 'true' : 'false');
+      btn.setAttribute('aria-label', esPass ? 'Ocultar contraseña' : 'Mostrar contraseña');
     });
 
     // ── Helpers de error ──
@@ -412,7 +341,7 @@
       e.preventDefault();
       ocultarError();
 
-      const email    = document.getElementById('email').value.trim();
+      const email    = document.getElementById('usuario').value.trim();
       const password = document.getElementById('password').value;
 
       if (!email || !password) {
@@ -428,20 +357,6 @@
         const rol = data.usuario?.rol;
         const esPersonal = ['admin','directora','educadora','ayudante','recepcionista','cocina','profesional'].includes(rol);
         const esPadre    = rol === 'tutor';
-
-        // Verificar que el modo seleccionado corresponde al rol real
-        if (modoActual === 'padre' && !esPadre) {
-          mostrarError('Esta cuenta no es de un padre/tutor. Usa la pestaña "Personal".');
-          Auth.cerrar();
-          setLoading(false);
-          return;
-        }
-        if (modoActual === 'personal' && esPadre) {
-          mostrarError('Esta cuenta es de un padre/tutor. Usa la pestaña "Padres".');
-          Auth.cerrar();
-          setLoading(false);
-          return;
-        }
 
         // Redirigir según rol
         if (esPadre) {
@@ -465,7 +380,7 @@
     });
 
     // ── Limpiar error al escribir ──
-    ['email','password'].forEach(id => {
+    ['usuario','password'].forEach(id => {
       document.getElementById(id).addEventListener('input', ocultarError);
     });
   </script>
