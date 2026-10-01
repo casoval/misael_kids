@@ -6,11 +6,12 @@ from .models import PlanificacionGrupal, PlanIndividual, ObjetivoIndividual, Reg
 class RegistroObjetivoSerializer(serializers.ModelSerializer):
     resultado_display = serializers.CharField(source="get_resultado_display", read_only=True)
     educadora_nombre  = serializers.CharField(source="educadora.nombre_completo", read_only=True, default=None)
+    modificado_por_nombre = serializers.CharField(source="modificado_por.nombre_completo", read_only=True, default=None)
 
     class Meta:
         model  = RegistroObjetivo
-        fields = ["id","objetivo","educadora","educadora_nombre","fecha","resultado","resultado_display","observacion","created_at","updated_at"]
-        read_only_fields = ["id","educadora","created_at","updated_at"]
+        fields = ["id","objetivo","educadora","educadora_nombre","fecha","resultado","resultado_display","observacion","modificado_por","modificado_por_nombre","created_at","updated_at"]
+        read_only_fields = ["id","educadora","modificado_por","created_at","updated_at"]
         validators = [
             UniqueTogetherValidator(
                 queryset=RegistroObjetivo.objects.all(),
@@ -24,11 +25,12 @@ class ObjetivoIndividualSerializer(serializers.ModelSerializer):
     area_display   = serializers.CharField(source="get_area_display", read_only=True)
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
     registros      = RegistroObjetivoSerializer(many=True, read_only=True)
+    modificado_por_nombre = serializers.CharField(source="modificado_por.nombre_completo", read_only=True, default=None)
 
     class Meta:
         model  = ObjetivoIndividual
-        fields = ["id","plan","descripcion","area","area_display","estado","estado_display","orden","registros","created_at","updated_at"]
-        read_only_fields = ["id","created_at","updated_at"]
+        fields = ["id","plan","descripcion","area","area_display","estado","estado_display","orden","registros","modificado_por","modificado_por_nombre","created_at","updated_at"]
+        read_only_fields = ["id","modificado_por","created_at","updated_at"]
 
 
 class PlanIndividualSerializer(serializers.ModelSerializer):
@@ -38,11 +40,12 @@ class PlanIndividualSerializer(serializers.ModelSerializer):
     origen_display    = serializers.CharField(source="get_origen_display", read_only=True)
     creado_por_nombre = serializers.CharField(source="creado_por.nombre_completo", read_only=True, default=None)
     objetivos         = ObjetivoIndividualSerializer(many=True, read_only=True)
+    modificado_por_nombre = serializers.CharField(source="modificado_por.nombre_completo", read_only=True, default=None)
 
     class Meta:
         model  = PlanIndividual
-        fields = ["id","nino","nino_nombre","nino_foto","nino_sala","creado_por","creado_por_nombre","origen","origen_display","descripcion","fecha_inicio","fecha_fin","activo","objetivos","created_at","updated_at"]
-        read_only_fields = ["id","creado_por","created_at","updated_at"]
+        fields = ["id","nino","nino_nombre","nino_foto","nino_sala","creado_por","creado_por_nombre","origen","origen_display","descripcion","fecha_inicio","fecha_fin","activo","objetivos","modificado_por","modificado_por_nombre","created_at","updated_at"]
+        read_only_fields = ["id","creado_por","modificado_por","created_at","updated_at"]
 
     def get_nino_sala(self, obj):
         """'Sala · Turno' de la inscripción activa del niño (vacío si no tiene)."""

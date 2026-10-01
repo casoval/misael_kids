@@ -10,7 +10,7 @@ from .filters import PlanificacionFilter, PlanIndividualFilter
 from .serializers import PlanificacionGrupalSerializer, PlanIndividualSerializer, ObjetivoIndividualSerializer, RegistroObjetivoSerializer
 from accounts.permissions import (
     filtrar_por_alcance, NoEsTutor, ROLES_DE_SALA, salas_asignadas,
-    exigir_nino_en_alcance, exigir_sala_en_alcance,
+    exigir_nino_en_alcance, exigir_sala_en_alcance, PermisoAgenda,
 )
 
 
@@ -27,7 +27,7 @@ def _personal_del_usuario(request):
 class PlanificacionGrupalViewSet(viewsets.ModelViewSet):
     queryset = PlanificacionGrupal.objects.select_related("sala","turno","educadora").all()
     serializer_class   = PlanificacionGrupalSerializer
-    permission_classes = [IsAuthenticated, NoEsTutor]
+    permission_classes = [IsAuthenticated, PermisoAgenda]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class    = PlanificacionFilter
     ordering           = ["-fecha"]
@@ -79,7 +79,7 @@ class PlanIndividualViewSet(viewsets.ModelViewSet):
         ),
     ).all()
     serializer_class   = PlanIndividualSerializer
-    permission_classes = [IsAuthenticated, NoEsTutor]
+    permission_classes = [IsAuthenticated, PermisoAgenda]
     filter_backends    = [DjangoFilterBackend, filters.SearchFilter]
     search_fields      = ["nino__nombres","nino__apellidos"]
     filterset_class    = PlanIndividualFilter
@@ -91,10 +91,16 @@ class PlanIndividualViewSet(viewsets.ModelViewSet):
         exigir_nino_en_alcance(self.request.user, serializer.validated_data['nino'])
         serializer.save(creado_por=_personal_del_usuario(self.request))
 
+    def perform_update(self, serializer):
+        nino = serializer.validated_data.get('nino')
+        if nino is not None:
+            exigir_nino_en_alcance(self.request.user, nino)
+        serializer.save(modificado_por=self.request.user)
+
 class ObjetivoIndividualViewSet(viewsets.ModelViewSet):
     queryset           = ObjetivoIndividual.objects.select_related("plan").prefetch_related("registros").all()
     serializer_class   = ObjetivoIndividualSerializer
-    permission_classes = [IsAuthenticated, NoEsTutor]
+    permission_classes = [IsAuthenticated, PermisoAgenda]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ["plan","area","estado"]
 
@@ -105,10 +111,16 @@ class ObjetivoIndividualViewSet(viewsets.ModelViewSet):
         exigir_nino_en_alcance(self.request.user, serializer.validated_data['plan'].nino_id)
         serializer.save()
 
+    def perform_update(self, serializer):
+        plan = serializer.validated_data.get('plan')
+        if plan is not None:
+            exigir_nino_en_alcance(self.request.user, plan.nino_id)
+        serializer.save(modificado_por=self.request.user)
+
 class RegistroObjetivoViewSet(viewsets.ModelViewSet):
     queryset           = RegistroObjetivo.objects.select_related("objetivo","educadora").all()
     serializer_class   = RegistroObjetivoSerializer
-    permission_classes = [IsAuthenticated, NoEsTutor]
+    permission_classes = [IsAuthenticated, PermisoAgenda]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields   = ["objetivo","educadora","fecha","resultado"]
     ordering           = ["-fecha"]
@@ -141,4 +153,7 @@ class RegistroObjetivoViewSet(viewsets.ModelViewSet):
         self._avanzar_objetivo(registro)
 
     def perform_update(self, serializer):
-        self._avanzar_objetivo(serializer.save())
+        objetivo = serializer.validated_data.get('objetivo')
+        if objetivo is not None:
+            exigir_nino_en_alcance(self.request.user, objetivo.plan.nino_id)
+        self._avanzar_objetivo(serializer.save(modificado_por=self.request.user))

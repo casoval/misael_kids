@@ -47,6 +47,9 @@ class PlanIndividual(ModeloBase):
     fecha_inicio = models.DateField()
     fecha_fin    = models.DateField(null=True, blank=True)
     activo       = models.BooleanField(default=True)
+    modificado_por = models.ForeignKey('accounts.Usuario', on_delete=models.SET_NULL,
+                                       null=True, blank=True, related_name='+',
+                                       help_text='Última persona que modificó este registro')
 
     class Meta:
         verbose_name = 'Plan individual'
@@ -86,6 +89,9 @@ class ObjetivoIndividual(ModeloBase):
     area         = models.CharField(max_length=25, choices=AREAS)
     estado       = models.CharField(max_length=15, choices=ESTADOS, default=ESTADO_PENDIENTE)
     orden        = models.PositiveSmallIntegerField(default=1)
+    modificado_por = models.ForeignKey('accounts.Usuario', on_delete=models.SET_NULL,
+                                       null=True, blank=True, related_name='+',
+                                       help_text='Última persona que modificó este registro')
 
     class Meta:
         verbose_name = 'Objetivo individual'
@@ -111,6 +117,9 @@ class RegistroObjetivo(ModeloBase):
     fecha        = models.DateField()
     resultado    = models.CharField(max_length=20, choices=RESULTADOS)
     observacion  = models.TextField(blank=True)
+    modificado_por = models.ForeignKey('accounts.Usuario', on_delete=models.SET_NULL,
+                                       null=True, blank=True, related_name='+',
+                                       help_text='Última persona que modificó este registro')
 
     class Meta:
         verbose_name    = 'Registro de objetivo'

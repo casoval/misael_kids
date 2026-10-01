@@ -249,6 +249,48 @@ class PermisoDesarrollo(BasePermission):
         return u.rol in self.ROLES_ESCRITURA
 
 
+class PermisoAgenda(BasePermission):
+    """
+    Agenda pedagógica (planificación grupal, planes individuales, objetivos y avances).
+    Lectura: cualquier autenticado (el tutor ve solo lo de su hijo/sala, lo controla cada
+    ViewSet). Escritura: solo quien trabaja lo pedagógico — admin, directora, educadora y
+    ayudante (estas dos, dentro de sus salas: `exigir_*_en_alcance`). Antes bastaba con no ser
+    tutor, así que cocina, recepcionista o profesional podían crear y editar planificaciones.
+    """
+    ROLES_ESCRITURA = ('admin', 'directora', 'educadora', 'ayudante')
+
+    def has_permission(self, request, view):
+        u = request.user
+        if not (u and u.is_authenticated):
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        return u.rol in self.ROLES_ESCRITURA
+
+
+class PermisoInventario(BasePermission):
+    """
+    Inventario (ítems y movimientos de stock).
+    Lectura: todo el personal del centro, nunca el tutor (el dashboard consulta las alertas
+    de stock también desde la cuenta del profesional). Escritura (crear/editar ítems y
+    registrar movimientos): admin, directora, recepcionista, educadora, ayudante y cocina.
+    Desactivar un ítem (DELETE): solo oficina. Antes bastaba con estar autenticado: un
+    padre/tutor podía crear, borrar ítems y cambiar el stock.
+    """
+    ROLES_ESCRITURA = ('admin', 'directora', 'recepcionista', 'educadora', 'ayudante', 'cocina')
+    ROLES_GESTION   = ('admin', 'directora', 'recepcionista')
+
+    def has_permission(self, request, view):
+        u = request.user
+        if not (u and u.is_authenticated):
+            return False
+        if request.method in SAFE_METHODS:
+            return u.rol != 'tutor'
+        if request.method == 'DELETE':
+            return u.rol in self.ROLES_GESTION
+        return u.rol in self.ROLES_ESCRITURA
+
+
 class PermisoCatalogoHitos(BasePermission):
     """
     Catálogo de hitos. Lectura: los mismos roles que ven el desarrollo.

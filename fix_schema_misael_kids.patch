@@ -1,0 +1,49 @@
+diff --git a/templates/core/misael_kids.html b/templates/core/misael_kids.html
+index 6301694..d592c7f 100644
+--- a/templates/core/misael_kids.html
++++ b/templates/core/misael_kids.html
+@@ -54,24 +54,23 @@
+     "email": "info@neuromisael.com",
+     "address": {
+         "@type": "PostalAddress",
+-        "streetAddress": "Calle Japón #28 entre Daza y Calderón, a lado de la EPI-10, Zona Baja",
++        "streetAddress": "Calle Cochabamba a lado de ENTEL, casi esquina Bolívar, Zona Central",
+         "addressLocality": "Potosí",
+         "addressRegion": "Potosí",
+         "addressCountry": "BO"
+     },
+-    "geo": { "@type": "GeoCoordinates", "latitude": -19.57586, "longitude": -65.76807 },
+     "openingHoursSpecification": [
+         {
+             "@type": "OpeningHoursSpecification",
+             "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+-            "opens": "09:00",
+-            "closes": "19:00"
++            "opens": "08:00",
++            "closes": "13:30"
+         },
+         {
+             "@type": "OpeningHoursSpecification",
+-            "dayOfWeek": "Saturday",
+-            "opens": "09:00",
+-            "closes": "12:00"
++            "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
++            "opens": "14:00",
++            "closes": "19:30"
+         }
+     ],
+     "audience": {
+@@ -93,8 +92,11 @@
+         "@type": "OfferCatalog",
+         "name": "Programas Misael Kids",
+         "itemListElement": [
+-            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Jardín Infantil (0–3 años)" } },
+-            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Parvulario (3–6 años)" } },
++            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Sala Cuna (3 meses a 1 año)" } },
++            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Maternal I (1 a 2 años)" } },
++            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Maternal II (2 a 3 años)" } },
++            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Pre-jardín (3 a 4 años)" } },
++            { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Jardín Inicial (4 a 6 años)" } },
+             { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Estimulación Temprana" } },
+             { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Educación Inicial Inclusiva" } }
+         ]

@@ -26,7 +26,7 @@ class ItemInventario(ModeloBase):
     descripcion   = models.TextField(blank=True)
     unidad        = models.CharField(max_length=50, help_text='Ej: unidades, cajas, litros')
     stock_actual  = models.PositiveIntegerField(default=0)
-    stock_minimo  = models.PositiveIntegerField(default=1, help_text='Alerta cuando stock baje de este valor')
+    stock_minimo  = models.PositiveIntegerField(default=1, help_text='Se avisa cuando el stock sea igual o menor a este valor')
     activo        = models.BooleanField(default=True)
 
     class Meta:
@@ -56,12 +56,16 @@ class MovimientoInventario(ModeloBase):
     registrado_por = models.ForeignKey('accounts.Usuario', on_delete=models.SET_NULL, null=True)
     fecha        = models.DateField()
     tipo         = models.CharField(max_length=10, choices=TIPOS)
-    cantidad     = models.PositiveIntegerField()
+    cantidad     = models.PositiveIntegerField(help_text='Entrada/salida: unidades que se mueven. Ajuste: nuevo stock total')
     motivo       = models.CharField(max_length=300)
+    # Foto del stock antes y después del movimiento (nulos en movimientos anteriores a este campo).
+    # Permite auditar cada cambio, sobre todo los ajustes, cuya `cantidad` es el total y no la diferencia.
+    stock_anterior   = models.PositiveIntegerField(null=True, blank=True)
+    stock_resultante = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'Movimiento de inventario'
-        ordering     = ['-fecha']
+        ordering     = ['-fecha', '-created_at']
 
     def __str__(self):
         return f'{self.item.nombre} — {self.get_tipo_display()} {self.cantidad} ({self.fecha})'

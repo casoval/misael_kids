@@ -90,10 +90,9 @@ Rol:      Administrador (acceso total al panel interno)
 ## 📱 Flujo de login
 
 1. El usuario abre `login.html`
-2. Selecciona su tab: **Personal** (directora/educadora) o **Padres**
-3. Ingresa email y contraseña
-4. El sistema llama a `/api/auth/login/` y obtiene el JWT
-5. Según el rol del usuario, redirige automáticamente:
+2. Ingresa su nombre de usuario y contraseña (no hay pestañas: el rol de la cuenta decide a dónde entra)
+3. El sistema llama a `/api/auth/login/` y obtiene el JWT
+4. Según el rol del usuario, redirige automáticamente:
    - `admin`, `directora`, `educadora`, `ayudante`, `recepcionista`, `cocina` → `pages/panel/dashboard.html`
    - `tutor` → `pages/portal/inicio.html`
 6. El token se guarda en `localStorage` (`mk_token`, `mk_refresh`, `mk_usuario`)
@@ -153,7 +152,7 @@ UI.chipAsistencia('presente')                    // → HTML chip
 ### Panel interno
 | Página | Descripción | Características destacadas |
 |--------|-------------|---------------------------|
-| `login.html` | Login compartido | Tabs por rol, JWT automático, redirige según rol |
+| `login.html` | Login compartido | Un solo formulario, JWT automático, redirige según el rol de la cuenta |
 | `dashboard.html` | Inicio del panel | Stats en tiempo real, asistencia de hoy, alertas, avisos |
 | `asistencia.html` | Asistencia diaria | Grid de tarjetas por niño, marcar masivo, cobro diario automático, exportar CSV |
 | `ninos.html` | Gestión de niños | Búsqueda en tiempo real, paginación, panel lateral de perfil, alergias destacadas |

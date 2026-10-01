@@ -136,6 +136,12 @@
     .cat-limpieza   { background: var(--verde-l); }
     .cat-mobiliario { background: var(--violeta-l); }
     .cat-otro       { background: var(--gris-100); }
+
+    .hint { font-size: var(--text-xs); color: var(--texto-suave); font-weight: 600; margin-top: 3px; }
+    .preview-ok  { background: var(--turquesa-l); color: var(--turquesa-d); }
+    .preview-mal { background: var(--coral-l);    color: var(--coral-d); }
+    .mov-meta { font-size: var(--text-xs); color: var(--texto-suave); }
+    .stat-sub { font-size: var(--text-xs); color: var(--texto-suave); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -147,7 +153,7 @@
     <header class="topbar">
       <h1 class="topbar-titulo">📦 Inventario</h1>
       <div class="topbar-acciones">
-        <button class="btn btn-primary" onclick="UI.abrirModal('modal-nuevo-item')">
+        <button class="btn btn-primary" onclick="abrirNuevoItem()">
           ➕ Nuevo ítem
         </button>
       </div>
@@ -167,7 +173,7 @@
           <div class="stat-icon turquesa">📦</div>
           <div class="stat-info">
             <div class="valor" id="stat-total-items">—</div>
-            <div class="etiqueta">Ítems registrados</div>
+            <div class="etiqueta">Ítems activos</div>
           </div>
         </div>
         <div class="stat-card">
@@ -216,7 +222,6 @@
             <option value="alerta">⚠️ Solo alertas</option>
           </select>
         </div>
-        <button class="btn btn-primary" onclick="cargarItems()">🔍 Filtrar</button>
       </div>
 
       <!-- Grid de ítems -->
@@ -231,20 +236,20 @@
   </main>
 </div>
 
-<!-- ══ MODAL: Nuevo ítem ══ -->
+<!-- ══ MODAL: Crear / editar ítem ══ -->
 <div class="modal-overlay" id="modal-nuevo-item">
   <div class="modal">
     <div class="modal-header">
-      <h3 class="modal-titulo">📦 Nuevo ítem de inventario</h3>
+      <h3 class="modal-titulo" id="titulo-item">📦 Nuevo ítem de inventario</h3>
       <button class="modal-cerrar">✕</button>
     </div>
     <div class="grid-2">
       <div class="form-grupo" style="grid-column:1/-1">
-        <label class="form-label">Nombre del ítem *</label>
-        <input type="text" id="ni-nombre" class="form-input" placeholder="Ej: Bloques de madera, Crayones...">
+        <label class="form-label" for="ni-nombre">Nombre del ítem *</label>
+        <input type="text" id="ni-nombre" class="form-input" maxlength="200" placeholder="Ej: Bloques de madera, Crayones...">
       </div>
       <div class="form-grupo">
-        <label class="form-label">Categoría *</label>
+        <label class="form-label" for="ni-categoria">Categoría *</label>
         <select id="ni-categoria" class="form-select">
           <option value="">Seleccionar...</option>
           <option value="didactico">📚 Material didáctico</option>
@@ -255,32 +260,34 @@
         </select>
       </div>
       <div class="form-grupo">
-        <label class="form-label">🏢 Sucursal *</label>
+        <label class="form-label" for="ni-sucursal">🏢 Sucursal *</label>
         <select id="ni-sucursal" class="form-select">
           <option value="">Seleccionar...</option>
         </select>
       </div>
       <div class="form-grupo">
-        <label class="form-label">Unidad de medida *</label>
-        <input type="text" id="ni-unidad" class="form-input" placeholder="unidades, cajas, litros...">
+        <label class="form-label" for="ni-unidad">Unidad de medida *</label>
+        <input type="text" id="ni-unidad" class="form-input" maxlength="50" placeholder="unidades, cajas, litros...">
       </div>
       <div class="form-grupo">
-        <label class="form-label">Stock inicial *</label>
-        <input type="number" id="ni-stock" class="form-input" placeholder="0" min="0">
+        <label class="form-label" for="ni-stock" id="label-ni-stock">Stock inicial</label>
+        <input type="number" id="ni-stock" class="form-input" placeholder="0" min="0" step="1">
+        <div class="hint" id="hint-ni-stock" style="display:none">El stock se cambia registrando un movimiento (queda en el historial).</div>
       </div>
       <div class="form-grupo">
-        <label class="form-label">Stock mínimo (alerta) *</label>
-        <input type="number" id="ni-stock-min" class="form-input" placeholder="5" min="0">
+        <label class="form-label" for="ni-stock-min">Stock mínimo (alerta)</label>
+        <input type="number" id="ni-stock-min" class="form-input" placeholder="1" min="0" step="1">
+        <div class="hint">Se avisa cuando el stock sea igual o menor a este número.</div>
       </div>
       <div class="form-grupo" style="grid-column:1/-1">
-        <label class="form-label">Descripción</label>
+        <label class="form-label" for="ni-descripcion">Descripción</label>
         <textarea id="ni-descripcion" class="form-textarea" style="min-height:60px"
           placeholder="Descripción o detalles adicionales..."></textarea>
       </div>
     </div>
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-nuevo-item')">Cancelar</button>
-      <button class="btn btn-primary" onclick="crearItem()">📦 Crear ítem</button>
+      <button class="btn btn-primary" id="btn-guardar-item" onclick="guardarItem()">📦 Guardar</button>
     </div>
   </div>
 </div>
@@ -297,15 +304,15 @@
       padding:var(--gap-md);margin-bottom:var(--gap-lg)"></div>
 
     <div class="tipo-movimiento-btns">
-      <button class="tipo-mov-btn entrada sel" onclick="seleccionarTipoMov('entrada',this)">
+      <button type="button" class="tipo-mov-btn entrada sel" onclick="seleccionarTipoMov('entrada',this)">
         <span class="t-icono">📥</span>
         <span class="t-label" style="color:var(--verde-d)">Entrada</span>
       </button>
-      <button class="tipo-mov-btn salida" onclick="seleccionarTipoMov('salida',this)">
+      <button type="button" class="tipo-mov-btn salida" onclick="seleccionarTipoMov('salida',this)">
         <span class="t-icono">📤</span>
         <span class="t-label" style="color:var(--coral-d)">Salida</span>
       </button>
-      <button class="tipo-mov-btn ajuste" onclick="seleccionarTipoMov('ajuste',this)">
+      <button type="button" class="tipo-mov-btn ajuste" onclick="seleccionarTipoMov('ajuste',this)">
         <span class="t-icono">⚖️</span>
         <span class="t-label" style="color:#92400E">Ajuste</span>
       </button>
@@ -313,27 +320,26 @@
 
     <div class="grid-2">
       <div class="form-grupo">
-        <label class="form-label" id="label-cantidad">Cantidad *</label>
-        <input type="number" id="mov-cantidad" class="form-input" placeholder="0" min="1">
+        <label class="form-label" id="label-cantidad" for="mov-cantidad">Cantidad a agregar *</label>
+        <input type="number" id="mov-cantidad" class="form-input" placeholder="0" min="1" step="1">
       </div>
       <div class="form-grupo">
-        <label class="form-label">📅 Fecha</label>
+        <label class="form-label" for="mov-fecha">📅 Fecha</label>
         <input type="date" id="mov-fecha" class="form-input">
       </div>
     </div>
     <div class="form-grupo">
-      <label class="form-label">Motivo / descripción *</label>
-      <textarea id="mov-motivo" class="form-textarea" style="min-height:70px"
+      <label class="form-label" for="mov-motivo">Motivo / descripción *</label>
+      <textarea id="mov-motivo" class="form-textarea" maxlength="300" style="min-height:70px"
         placeholder="Ej: Compra de materiales, uso en sala cuna, inventario físico..."></textarea>
     </div>
 
-    <div id="nuevo-stock-preview" style="display:none;background:var(--turquesa-l);
-      border-radius:var(--radio-lg);padding:var(--gap-md);margin-bottom:var(--gap-md);
-      font-weight:700;color:var(--turquesa-d);text-align:center"></div>
+    <div id="nuevo-stock-preview" style="display:none;border-radius:var(--radio-lg);
+      padding:var(--gap-md);margin-bottom:var(--gap-md);font-weight:700;text-align:center"></div>
 
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-movimiento')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarMovimiento()">✅ Registrar</button>
+      <button class="btn btn-primary" id="btn-registrar-mov" onclick="confirmarMovimiento()">✅ Registrar</button>
     </div>
   </div>
 </div>
@@ -354,19 +360,26 @@
 <script src="{% static 'js/api.js' %}"></script>
 <script src="{% static 'js/components.js' %}"></script>
 <script>
-initPanel('inventario', ['admin', 'directora', 'educadora', 'ayudante', 'recepcionista']);
-Auth.requerirAuth(['admin','directora','recepcionista','educadora']);
+// Mismos roles que el servidor (PermisoInventario). Antes la página dejaba entrar a "ayudante" en el
+// menú pero lo expulsaba con un segundo requerirAuth, y cocina no podía entrar aunque el README lo indica.
+const ROLES_INVENTARIO = ['admin', 'directora', 'recepcionista', 'educadora', 'ayudante', 'cocina'];
+initPanel('inventario', ROLES_INVENTARIO);
 
-const usr = Auth.getUsuario();
-document.getElementById('usr-avatar').textContent = UI.iniciales(`${usr.nombres} ${usr.apellidos}`);
-document.getElementById('usr-nombre').textContent = `${usr.nombres} ${usr.apellidos}`;
-document.getElementById('usr-rol').textContent    = usr.rol_display || usr.rol;
+// Desactivar ítems: solo oficina (el servidor también lo exige).
+const PUEDE_GESTIONAR = ['admin', 'directora', 'recepcionista'].includes(Auth.getRol());
 
-let itemActual  = null;
+// (La cabecera de usuario la pinta el menú lateral: esos ids #usr-* no existen en el HTML y escribir en ellos
+//  lanzaba un error que impedía cargar la lista, dejando la pantalla en "Cargando inventario...".)
+
+const $   = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+const itemsPorId = new Map();     // id → ítem (los botones pasan solo el id, no el objeto entero en el HTML)
+let itemActual    = null;
 let tipoMovActual = 'entrada';
-
-// Fecha de hoy para movimientos
-document.getElementById('mov-fecha').value = new Date().toISOString().split('T')[0];
+let editandoId    = null;
+let cargaSeq      = 0;
+let enviando      = false;
 
 // ── Iconos y colores por categoría ──
 const catConfig = {
@@ -374,286 +387,362 @@ const catConfig = {
   juguetes:   { icono:'🧸', clase:'cat-juguetes',   label:'Juguetes'  },
   limpieza:   { icono:'🧹', clase:'cat-limpieza',   label:'Limpieza'  },
   mobiliario: { icono:'🪑', clase:'cat-mobiliario', label:'Mobiliario'},
-  otro:       { icono:'📦', clase:'cat-otro',        label:'Otro'      },
+  otro:       { icono:'📦', clase:'cat-otro',       label:'Otro'      },
 };
 
 async function inicializar() {
   await cargarSucursales();
-  await Promise.all([cargarAlertas(), cargarItems()]);
+  await cargarItems();
 }
 
 async function cargarSucursales() {
   try {
-    const data = await API.get('/core/sucursales/');
+    const data = await API.get('/core/sucursales/?activa=true&page_size=100');
     const lista = data.results || data;
-    UI.llenarSelect(document.getElementById('filtro-suc-inv'), lista, 'id', 'nombre');
-    UI.llenarSelect(document.getElementById('ni-sucursal'), lista, 'id', 'nombre');
+    UI.llenarSelect($('filtro-suc-inv'), lista, 'id', 'nombre', 'Todas');
+    UI.llenarSelect($('ni-sucursal'), lista, 'id', 'nombre');
+    // Sigue la sucursal elegida arriba en la barra (igual que reportes y agenda).
+    if (Sucursal.getId()) $('filtro-suc-inv').value = Sucursal.getId();
   } catch {}
 }
 
-async function cargarAlertas() {
-  try {
-    const data   = await API.get('/inventario/items/alertas-stock/');
-    const banner = document.getElementById('alertas-banner');
-    const lista  = document.getElementById('lista-alertas-stock');
-    document.getElementById('stat-alertas').textContent = data.length;
-
-    if (data.length) {
-      banner.classList.add('visible');
-      lista.innerHTML = data.map(item => `
-        <div class="alerta-stock-item">
-          <span>${catConfig[item.categoria]?.icono || '📦'}</span>
-          <span style="flex:1">${item.nombre} (${item.sucursal_nombre})</span>
-          <span style="font-family:var(--font-display)">
-            ${item.stock_actual}/${item.stock_minimo} ${item.unidad}
-          </span>
-        </div>
-      `).join('');
-    }
-  } catch {}
+// Filtros comunes a la lista, a las alertas y a los totales (así los tres números coinciden).
+function filtrosActuales() {
+  const q = new URLSearchParams({ activo: 'true' });
+  const buscar = $('buscar-item').value.trim();
+  if (buscar)                   q.set('search', buscar);
+  if ($('filtro-categoria').value) q.set('categoria', $('filtro-categoria').value);
+  if ($('filtro-suc-inv').value)   q.set('sucursal', $('filtro-suc-inv').value);
+  return q;
 }
 
 async function cargarItems() {
-  const grid     = document.getElementById('items-grid');
-  const buscar   = document.getElementById('buscar-item').value.trim();
-  const cat      = document.getElementById('filtro-categoria').value;
-  const suc      = document.getElementById('filtro-suc-inv').value;
-  const soloAlert = document.getElementById('filtro-alerta').value;
+  const grid = $('items-grid');
+  const seq  = ++cargaSeq;
+  const soloAlertas = $('filtro-alerta').value === 'alerta';
+  const base = filtrosActuales();
 
   UI.mostrarLoader(grid, 'Cargando inventario...');
 
-  let url = '/inventario/items/?activo=true&page_size=100';
-  if (buscar) url += `&search=${encodeURIComponent(buscar)}`;
-  if (cat)    url += `&categoria=${cat}`;
-  if (suc)    url += `&sucursal=${suc}`;
+  const lista = new URLSearchParams(base);
+  lista.set('page_size', '1000');
+  if (soloAlertas) lista.set('bajo_stock', 'true');
 
   try {
-    let data  = await API.get(url);
-    let items = data.results || data;
+    const [data, alertas, total] = await Promise.all([
+      API.get('/inventario/items/?' + lista),
+      API.get('/inventario/items/alertas-stock/?' + base),
+      // Con "solo alertas" la lista ya viene recortada: el total de ítems se pide aparte.
+      soloAlertas ? API.get('/inventario/items/?' + new URLSearchParams({ ...Object.fromEntries(base), page_size: '1' }))
+                  : null,
+    ]);
+    if (seq !== cargaSeq) return;                       // llegó una respuesta vieja: se ignora
 
-    // Filtrar alertas localmente
-    if (soloAlert === 'alerta') {
-      items = items.filter(i => i.alerta_stock_bajo);
-    }
+    const items = data.results || data;
+    itemsPorId.clear();
+    items.forEach(i => itemsPorId.set(i.id, i));
 
-    // Stats
-    document.getElementById('stat-total-items').textContent = items.length;
-    document.getElementById('stat-ok').textContent = items.filter(i => !i.alerta_stock_bajo).length;
+    const totalItems = soloAlertas ? (total.count ?? alertas.length) : (data.count ?? items.length);
+    $('stat-total-items').textContent = totalItems;
+    $('stat-alertas').textContent     = alertas.length;
+    $('stat-ok').textContent          = Math.max(0, totalItems - alertas.length);
+    pintarAlertas(alertas);
 
     if (!items.length) {
       grid.innerHTML = `<div class="loader" style="grid-column:1/-1">
         <div style="font-size:3rem">📦</div>
-        <p style="color:var(--texto-suave);font-weight:600">Sin ítems con esos filtros</p>
+        <p style="color:var(--texto-suave);font-weight:600">${soloAlertas ? 'No hay ítems con stock bajo 🎉' : 'Sin ítems con esos filtros'}</p>
       </div>`;
       return;
     }
-
-    grid.innerHTML = items.map(item => {
-      const cc       = catConfig[item.categoria] || catConfig.otro;
-      const porcentaje = Math.min(100, Math.round((item.stock_actual / Math.max(item.stock_minimo * 2, 1)) * 100));
-      const colorBarra = item.alerta_stock_bajo
-        ? 'var(--coral)'
-        : porcentaje < 70 ? 'var(--amarillo)' : 'var(--verde)';
-      return `
-        <div class="item-card ${item.alerta_stock_bajo ? 'alerta-stock' : ''}">
-          <div class="item-header">
-            <div class="item-icono ${cc.clase}">${cc.icono}</div>
-            <div style="flex:1;min-width:0">
-              <div class="item-nombre">${item.nombre}</div>
-              <div class="item-categoria">${cc.label} · ${item.sucursal_nombre}</div>
-            </div>
-            ${item.alerta_stock_bajo
-              ? '<span style="font-size:1.1rem" title="Stock bajo">⚠️</span>'
-              : ''}
-          </div>
-
-          <!-- Barra de stock -->
-          <div class="stock-bar-wrap">
-            <div class="stock-bar-labels">
-              <span style="color:var(--texto-suave)">Stock actual</span>
-              <span style="font-family:var(--font-display);font-size:var(--text-lg);color:${
-                item.alerta_stock_bajo ? 'var(--coral-d)' : 'var(--texto)'
-              }">${item.stock_actual} <span style="font-size:var(--text-xs);font-weight:700;font-family:var(--font-body)">${item.unidad}</span></span>
-            </div>
-            <div class="stock-bar">
-              <div class="stock-bar-fill" style="width:${porcentaje}%;background:${colorBarra}"></div>
-            </div>
-            <div style="font-size:var(--text-xs);color:var(--texto-suave);font-weight:600;text-align:right">
-              Mínimo: ${item.stock_minimo} ${item.unidad}
-            </div>
-          </div>
-
-          <div class="item-acciones">
-            <button class="btn btn-primary btn-sm" style="flex:1"
-              onclick="abrirMovimiento(${JSON.stringify(item).replace(/"/g,'&quot;')})">
-              📦 Movimiento
-            </button>
-            <button class="btn btn-outline btn-sm"
-              onclick="verHistorial(${JSON.stringify(item).replace(/"/g,'&quot;')})">
-              📜
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-
+    grid.innerHTML = items.map(tarjetaItem).join('');
   } catch (err) {
+    if (seq !== cargaSeq) return;
     grid.innerHTML = `<div class="loader" style="grid-column:1/-1">
-      <p style="color:var(--coral);font-weight:700">Error: ${err.message}</p>
+      <p style="color:var(--coral);font-weight:700">Error: ${esc(err.message)}</p>
     </div>`;
   }
 }
 
-// ── Seleccionar tipo de movimiento ──
+function pintarAlertas(alertas) {
+  const banner = $('alertas-banner');
+  banner.classList.toggle('visible', alertas.length > 0);        // antes nunca se volvía a ocultar
+  $('lista-alertas-stock').innerHTML = alertas.map(item => `
+    <div class="alerta-stock-item">
+      <span>${catConfig[item.categoria]?.icono || '📦'}</span>
+      <span style="flex:1">${esc(item.nombre)} (${esc(item.sucursal_nombre)})</span>
+      <span style="font-family:var(--font-display)">${item.stock_actual}/${item.stock_minimo} ${esc(item.unidad)}</span>
+    </div>`).join('');
+}
+
+function tarjetaItem(item) {
+  const cc  = catConfig[item.categoria] || catConfig.otro;
+  const pct = Math.min(100, Math.round((item.stock_actual / Math.max(item.stock_minimo * 2, 1)) * 100));
+  const colorBarra = item.alerta_stock_bajo ? 'var(--coral)' : pct < 70 ? 'var(--amarillo)' : 'var(--verde)';
+  const id = esc(item.id);
+  return `
+    <div class="item-card ${item.alerta_stock_bajo ? 'alerta-stock' : ''}">
+      <div class="item-header">
+        <div class="item-icono ${cc.clase}">${cc.icono}</div>
+        <div style="flex:1;min-width:0">
+          <div class="item-nombre" style="overflow-wrap:anywhere">${esc(item.nombre)}</div>
+          <div class="item-categoria">${esc(cc.label)} · ${esc(item.sucursal_nombre)}</div>
+        </div>
+        ${item.alerta_stock_bajo ? '<span style="font-size:1.1rem" title="Stock bajo">⚠️</span>' : ''}
+      </div>
+
+      <div class="stock-bar-wrap">
+        <div class="stock-bar-labels">
+          <span style="color:var(--texto-suave)">Stock actual</span>
+          <span style="font-family:var(--font-display);font-size:var(--text-lg);color:${item.alerta_stock_bajo ? 'var(--coral-d)' : 'var(--texto)'}">${item.stock_actual}
+            <span style="font-size:var(--text-xs);font-weight:700;font-family:var(--font-body)">${esc(item.unidad)}</span></span>
+        </div>
+        <div class="stock-bar"><div class="stock-bar-fill" style="width:${pct}%;background:${colorBarra}"></div></div>
+        <div style="font-size:var(--text-xs);color:var(--texto-suave);font-weight:600;text-align:right">
+          Mínimo: ${item.stock_minimo} ${esc(item.unidad)}
+        </div>
+      </div>
+
+      <div class="item-acciones">
+        <button class="btn btn-primary btn-sm" style="flex:1" data-id="${id}" onclick="abrirMovimiento(this.dataset.id)">📦 Movimiento</button>
+        <button class="btn btn-outline btn-sm" data-id="${id}" onclick="verHistorial(this.dataset.id)" title="Ver historial" aria-label="Ver historial">📜</button>
+        <button class="btn btn-outline btn-sm" data-id="${id}" onclick="abrirEditarItem(this.dataset.id)" title="Editar ítem" aria-label="Editar ítem">✏️</button>
+        ${PUEDE_GESTIONAR ? `<button class="btn btn-outline btn-sm" data-id="${id}" onclick="desactivarItem(this.dataset.id)" title="Desactivar ítem" aria-label="Desactivar ítem">🗑️</button>` : ''}
+      </div>
+    </div>`;
+}
+
+// ── Filtros automáticos ──
+let _t;
+$('buscar-item').addEventListener('input', () => { clearTimeout(_t); _t = setTimeout(cargarItems, 300); });
+['filtro-categoria', 'filtro-suc-inv', 'filtro-alerta'].forEach(id => $(id).addEventListener('change', cargarItems));
+window.addEventListener('sucursalChanged', e => {
+  const id = e.detail?.id || '';
+  if ($('filtro-suc-inv').value !== id) { $('filtro-suc-inv').value = id; cargarItems(); }
+});
+
+// ═════════ Movimientos ═════════
 function seleccionarTipoMov(tipo, btn) {
   tipoMovActual = tipo;
   document.querySelectorAll('.tipo-mov-btn').forEach(b => b.classList.remove('sel'));
   btn.classList.add('sel');
-
-  const labelCant = document.getElementById('label-cantidad');
+  const cant = $('mov-cantidad');
   if (tipo === 'ajuste') {
-    labelCant.textContent = 'Nuevo stock total *';
-    document.getElementById('mov-cantidad').placeholder = 'Ingresa el stock total actual';
+    $('label-cantidad').textContent = 'Nuevo stock total *';
+    cant.placeholder = 'Stock contado hoy';
+    cant.min = '0';                       // un ajuste puede dejar el stock en 0
   } else {
-    labelCant.textContent = `Cantidad a ${tipo === 'entrada' ? 'agregar' : 'retirar'} *`;
-    document.getElementById('mov-cantidad').placeholder = '0';
+    $('label-cantidad').textContent = `Cantidad a ${tipo === 'entrada' ? 'agregar' : 'retirar'} *`;
+    cant.placeholder = '0';
+    cant.min = '1';
   }
-
-  // Preview del nuevo stock
   actualizarPreviewStock();
 }
 
-function actualizarPreviewStock() {
-  if (!itemActual) return;
-  const cant    = parseInt(document.getElementById('mov-cantidad').value) || 0;
-  const preview = document.getElementById('nuevo-stock-preview');
-  let nuevo;
-  if (tipoMovActual === 'entrada')  nuevo = itemActual.stock_actual + cant;
-  if (tipoMovActual === 'salida')   nuevo = Math.max(0, itemActual.stock_actual - cant);
-  if (tipoMovActual === 'ajuste')   nuevo = cant;
-  if (cant > 0) {
-    preview.style.display = '';
-    preview.textContent   = `Stock resultante: ${nuevo} ${itemActual.unidad}`;
-  } else {
-    preview.style.display = 'none';
+// Devuelve { nuevo, error } según el tipo y la cantidad escrita (null si aún no hay cantidad válida).
+function calcularStock() {
+  const txt = $('mov-cantidad').value.trim();
+  if (!itemActual || txt === '' || !/^\d+$/.test(txt)) return null;
+  const cant = parseInt(txt, 10);
+  const actual = itemActual.stock_actual;
+  if (tipoMovActual === 'entrada') return cant < 1 ? null : { nuevo: actual + cant };
+  if (tipoMovActual === 'salida') {
+    if (cant < 1) return null;
+    return cant > actual ? { error: `No hay suficiente stock: hay ${actual} ${itemActual.unidad}` } : { nuevo: actual - cant };
   }
+  return { nuevo: cant };
 }
 
-function abrirMovimiento(item) {
-  itemActual      = item;
-  tipoMovActual   = 'entrada';
-  document.getElementById('mov-cantidad').value = '';
-  document.getElementById('mov-motivo').value   = '';
-  document.getElementById('nuevo-stock-preview').style.display = 'none';
-  document.querySelectorAll('.tipo-mov-btn').forEach((b,i) => {
-    b.classList.toggle('sel', i === 0);
-  });
-  document.getElementById('label-cantidad').textContent = 'Cantidad a agregar *';
-  document.getElementById('titulo-movimiento').textContent = `📦 ${item.nombre}`;
-  document.getElementById('info-item-modal').innerHTML = `
+function actualizarPreviewStock() {
+  const preview = $('nuevo-stock-preview');
+  const r = calcularStock();
+  if (!r) { preview.style.display = 'none'; return; }
+  preview.style.display = '';
+  preview.className = r.error ? 'preview-mal' : 'preview-ok';
+  preview.textContent = r.error || `Stock resultante: ${r.nuevo} ${itemActual.unidad}`;
+}
+
+function abrirMovimiento(id) {
+  const item = itemsPorId.get(id);
+  if (!item) return;
+  itemActual    = item;
+  tipoMovActual = 'entrada';
+  $('mov-cantidad').value = '';
+  $('mov-cantidad').min   = '1';
+  $('mov-motivo').value   = '';
+  $('mov-fecha').value    = UI.fechaHoyISO();      // hora local (toISOString da "mañana" después de las 20:00)
+  $('mov-fecha').max      = UI.fechaHoyISO();
+  $('nuevo-stock-preview').style.display = 'none';
+  document.querySelectorAll('.tipo-mov-btn').forEach((b, i) => b.classList.toggle('sel', i === 0));
+  $('label-cantidad').textContent = 'Cantidad a agregar *';
+  $('titulo-movimiento').textContent = `📦 ${item.nombre}`;
+  $('info-item-modal').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-weight:700">${item.nombre}</div>
-        <div style="font-size:var(--text-xs);color:var(--texto-suave)">${item.sucursal_nombre}</div>
+        <div style="font-weight:700;overflow-wrap:anywhere">${esc(item.nombre)}</div>
+        <div style="font-size:var(--text-xs);color:var(--texto-suave)">${esc(item.sucursal_nombre)}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-family:var(--font-display);font-size:var(--text-2xl)">
-          ${item.stock_actual}
-        </div>
-        <div style="font-size:var(--text-xs);color:var(--texto-suave);font-weight:700">
-          ${item.unidad} en stock
-        </div>
+        <div style="font-family:var(--font-display);font-size:var(--text-2xl)">${item.stock_actual}</div>
+        <div style="font-size:var(--text-xs);color:var(--texto-suave);font-weight:700">${esc(item.unidad)} en stock</div>
       </div>
-    </div>
-  `;
+    </div>`;
   UI.abrirModal('modal-movimiento');
 }
 
-document.getElementById('mov-cantidad').addEventListener('input', actualizarPreviewStock);
+$('mov-cantidad').addEventListener('input', actualizarPreviewStock);
 
 async function confirmarMovimiento() {
-  const cantidad = parseInt(document.getElementById('mov-cantidad').value);
-  const motivo   = document.getElementById('mov-motivo').value.trim();
-  const fecha    = document.getElementById('mov-fecha').value;
+  if (enviando) return;
+  const txt    = $('mov-cantidad').value.trim();
+  const motivo = $('mov-motivo').value.trim();
+  const fecha  = $('mov-fecha').value;
+  const minimo = tipoMovActual === 'ajuste' ? 0 : 1;       // antes "0" se rechazaba también en ajustes
 
-  if (!cantidad || cantidad < 0 || !motivo) {
-    UI.toast('Completa cantidad y motivo', 'warn');
-    return;
+  if (!/^\d+$/.test(txt) || parseInt(txt, 10) < minimo) {
+    UI.toast(tipoMovActual === 'ajuste' ? 'Indica el stock total (0 o más)' : 'La cantidad debe ser un número mayor a 0', 'warn'); return;
   }
+  if (!motivo) { UI.toast('Indica el motivo del movimiento', 'warn'); return; }
+  const calc = calcularStock();
+  if (calc?.error) { UI.toast(calc.error, 'warn'); return; }
 
+  enviando = true; $('btn-registrar-mov').disabled = true;      // evita registrar dos veces con doble clic
   try {
     await API.post(`/inventario/items/${itemActual.id}/registrar-movimiento/`, {
-      tipo:     tipoMovActual,
-      cantidad, motivo, fecha,
+      tipo: tipoMovActual, cantidad: parseInt(txt, 10), motivo, fecha,
     });
     UI.cerrarModal('modal-movimiento');
     UI.toast('✅ Movimiento registrado', 'exito');
     cargarItems();
-    cargarAlertas();
   } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+  finally { enviando = false; $('btn-registrar-mov').disabled = false; }
 }
 
-// ── Ver historial ──
-async function verHistorial(item) {
-  document.getElementById('titulo-historial').textContent = `📜 ${item.nombre}`;
+// ═════════ Historial ═════════
+async function verHistorial(id) {
+  const item = itemsPorId.get(id);
+  if (!item) return;
+  $('titulo-historial').textContent = `📜 ${item.nombre}`;
   UI.abrirModal('modal-historial');
-  const cont = document.getElementById('contenido-historial');
+  const cont = $('contenido-historial');
   UI.mostrarLoader(cont, 'Cargando historial...');
 
   try {
-    const data = await API.get(`/inventario/movimientos/?item=${item.id}&ordering=-fecha`);
+    // page_size explícito: por defecto el servidor devuelve solo 25 y el resto quedaba oculto.
+    const data  = await API.get(`/inventario/movimientos/?item=${encodeURIComponent(id)}&page_size=200`);
     const lista = data.results || data;
+    const signo = { entrada: '+', salida: '−', ajuste: '=' };
+    const color = { entrada: 'var(--verde-d)', salida: 'var(--coral-d)', ajuste: 'var(--amarillo-d)' };
+    const icono = { entrada: '📥', salida: '📤', ajuste: '⚖️' };
 
     cont.innerHTML = lista.length ? lista.map(m => `
       <div class="movimiento-item">
-        <div class="mov-icono ${m.tipo}">
-          ${m.tipo==='entrada'?'📥':m.tipo==='salida'?'📤':'⚖️'}
-        </div>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:var(--text-sm)">${m.motivo}</div>
-          <div style="font-size:var(--text-xs);color:var(--texto-suave)">${UI.fecha(m.fecha)}</div>
+        <div class="mov-icono ${esc(m.tipo)}">${icono[m.tipo] || '📦'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:var(--text-sm);overflow-wrap:anywhere">${esc(m.motivo)}</div>
+          <div class="mov-meta">${esc(UI.fecha(m.fecha))}${m.registrado_por_nombre ? ' · ' + esc(m.registrado_por_nombre) : ''}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-family:var(--font-display);font-size:var(--text-lg);
-            color:${m.tipo==='entrada'?'var(--verde-d)':m.tipo==='salida'?'var(--coral-d)':'var(--amarillo-d)'}">
-            ${m.tipo==='entrada'?'+':m.tipo==='salida'?'-':'='} ${m.cantidad}
+          <div style="font-family:var(--font-display);font-size:var(--text-lg);color:${color[m.tipo] || 'inherit'}">
+            ${signo[m.tipo] || ''} ${m.cantidad}
           </div>
-          <div style="font-size:var(--text-xs);color:var(--texto-suave)">${item.unidad}</div>
+          <div class="mov-meta">${m.stock_resultante != null
+            ? `${m.stock_anterior} → ${m.stock_resultante} ${esc(item.unidad)}` : esc(item.unidad)}</div>
         </div>
-      </div>
-    `).join('') : `<div class="loader">
-      <div style="font-size:2rem">📜</div>
-      <p style="color:var(--texto-suave);font-weight:600">Sin movimientos registrados</p>
-    </div>`;
+      </div>`).join('') + (data.count > lista.length
+        ? `<p class="hint" style="text-align:center">Mostrando los ${lista.length} más recientes de ${data.count}.</p>` : '')
+    : `<div class="loader">
+        <div style="font-size:2rem">📜</div>
+        <p style="color:var(--texto-suave);font-weight:600">Sin movimientos registrados</p>
+      </div>`;
   } catch (err) {
-    cont.innerHTML = `<div class="alerta alerta-peligro">Error: ${err.message}</div>`;
+    cont.innerHTML = `<div class="alerta alerta-peligro">Error: ${esc(err.message)}</div>`;
   }
 }
 
-// ── Crear ítem ──
-async function crearItem() {
-  const nombre    = document.getElementById('ni-nombre').value.trim();
-  const categoria = document.getElementById('ni-categoria').value;
-  const sucursal  = document.getElementById('ni-sucursal').value;
-  const unidad    = document.getElementById('ni-unidad').value.trim();
-  const stock     = parseInt(document.getElementById('ni-stock').value) || 0;
-  const stockMin  = parseInt(document.getElementById('ni-stock-min').value) || 1;
+// ═════════ Crear / editar / desactivar ítem ═════════
+function limpiarFormItem() {
+  ['ni-nombre', 'ni-categoria', 'ni-sucursal', 'ni-unidad', 'ni-stock', 'ni-stock-min', 'ni-descripcion']
+    .forEach(id => { $(id).value = ''; });
+}
+
+function abrirNuevoItem() {
+  editandoId = null;
+  limpiarFormItem();
+  $('titulo-item').textContent        = '📦 Nuevo ítem de inventario';
+  $('btn-guardar-item').textContent   = '📦 Crear ítem';
+  $('label-ni-stock').textContent     = 'Stock inicial';
+  $('ni-stock').disabled              = false;
+  $('ni-sucursal').disabled           = false;
+  $('hint-ni-stock').style.display    = 'none';
+  const suc = $('filtro-suc-inv').value || Sucursal.getId();
+  if (suc) $('ni-sucursal').value = suc;
+  else if ($('ni-sucursal').options.length === 2) $('ni-sucursal').selectedIndex = 1;   // una sola sucursal
+  UI.abrirModal('modal-nuevo-item');
+}
+
+function abrirEditarItem(id) {
+  const item = itemsPorId.get(id);
+  if (!item) return;
+  editandoId = id;
+  $('titulo-item').textContent      = '✏️ Editar ítem';
+  $('btn-guardar-item').textContent = '💾 Guardar cambios';
+  $('ni-nombre').value      = item.nombre;
+  $('ni-categoria').value   = item.categoria;
+  $('ni-sucursal').value    = item.sucursal;
+  $('ni-unidad').value      = item.unidad;
+  $('ni-stock').value       = item.stock_actual;
+  $('ni-stock-min').value   = item.stock_minimo;
+  $('ni-descripcion').value = item.descripcion || '';
+  // El stock y la sucursal no se cambian aquí: el stock se mueve con movimientos (queda historial).
+  $('label-ni-stock').textContent  = 'Stock actual';
+  $('ni-stock').disabled           = true;
+  $('ni-sucursal').disabled        = true;
+  $('hint-ni-stock').style.display = '';
+  UI.abrirModal('modal-nuevo-item');
+}
+
+async function guardarItem() {
+  if (enviando) return;
+  const nombre    = $('ni-nombre').value.trim();
+  const categoria = $('ni-categoria').value;
+  const sucursal  = $('ni-sucursal').value;
+  const unidad    = $('ni-unidad').value.trim();
+  const txtStock  = $('ni-stock').value.trim();
+  const txtMin    = $('ni-stock-min').value.trim();
 
   if (!nombre || !categoria || !sucursal || !unidad) {
-    UI.toast('Completa todos los campos obligatorios', 'warn'); return;
+    UI.toast('Completa nombre, categoría, sucursal y unidad', 'warn'); return;
   }
+  if ((txtStock !== '' && !/^\d+$/.test(txtStock)) || (txtMin !== '' && !/^\d+$/.test(txtMin))) {
+    UI.toast('El stock debe ser un número entero de 0 o más', 'warn'); return;
+  }
+  // Vacío → valor por defecto; "0" es válido (antes `|| 1` convertía un mínimo de 0 en 1).
+  const datos = {
+    nombre, categoria, sucursal, unidad,
+    stock_minimo: txtMin === '' ? 1 : parseInt(txtMin, 10),
+    descripcion:  $('ni-descripcion').value.trim(),
+  };
+  if (!editandoId) datos.stock_actual = txtStock === '' ? 0 : parseInt(txtStock, 10);
 
+  enviando = true; $('btn-guardar-item').disabled = true;
   try {
-    await API.post('/inventario/items/', {
-      nombre, categoria, sucursal, unidad,
-      stock_actual:  stock,
-      stock_minimo:  stockMin,
-      descripcion:   document.getElementById('ni-descripcion').value,
-    });
+    if (editandoId) await API.patch(`/inventario/items/${editandoId}/`, datos);
+    else            await API.post('/inventario/items/', datos);
     UI.cerrarModal('modal-nuevo-item');
-    UI.toast('✅ Ítem creado correctamente', 'exito');
-    ['ni-nombre','ni-categoria','ni-sucursal','ni-unidad','ni-stock','ni-stock-min','ni-descripcion']
-      .forEach(id => { document.getElementById(id).value = ''; });
+    UI.toast(editandoId ? '✅ Ítem actualizado' : '✅ Ítem creado correctamente', 'exito');
+    cargarItems();
+  } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+  finally { enviando = false; $('btn-guardar-item').disabled = false; }
+}
+
+async function desactivarItem(id) {
+  const item = itemsPorId.get(id);
+  if (!item) return;
+  if (!confirm(`¿Desactivar "${item.nombre}"?\n\nDejará de aparecer en el inventario, pero su historial de movimientos se conserva.`)) return;
+  try {
+    await API.delete(`/inventario/items/${id}/`);
+    UI.toast('Ítem desactivado', 'exito');
     cargarItems();
   } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
 }

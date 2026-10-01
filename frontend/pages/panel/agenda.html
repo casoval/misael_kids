@@ -57,6 +57,13 @@
     .pl-acc { display:flex;gap:4px; }
     .pl-texto { font-size:var(--text-sm);color:var(--texto);white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:6px; }
     .pl-obs { font-size:var(--text-xs);color:var(--texto-suave);font-style:italic;margin-top:6px;white-space:pre-wrap; }
+    /* Roles que solo consultan la agenda (p. ej. cocina): se ocultan los botones que escriben.
+       El servidor también lo impide (PermisoAgenda), esto solo evita ofrecer acciones que fallarían. */
+    body.solo-lectura :is(
+      [onclick^="abrirNuevaPlanif"], [onclick^="abrirNuevoPlanInd"], [onclick^="cambiarActivoPlanInd"],
+      [onclick^="abrirRegistroObj"], [onclick^="abrirEditarObjetivo"], [onclick^="editarPlanif"],
+      [onclick^="editarPlanInd"], [onclick^="duplicarPlanif"], [onclick^="eliminar"]
+    ) { display: none !important; }
     .pl-autor { font-size:var(--text-xs);color:var(--gris-500);font-weight:700;margin-top:6px; }
     .pl-pendiente {
       display:flex;align-items:center;justify-content:space-between;gap:var(--gap-sm);flex-wrap:wrap;
@@ -416,6 +423,8 @@
 <script src="{% static 'js/components.js' %}"></script>
 <script>
 initPanel('agenda', ['admin', 'directora', 'educadora', 'ayudante', 'cocina']);
+// Solo estos roles escriben en la agenda; el resto (cocina) la consulta.
+if (!['admin', 'directora', 'educadora', 'ayudante'].includes(Auth.getRol())) document.body.classList.add('solo-lectura');
 const $ = id => document.getElementById(id);
 const hoy      = new Date();
 const hoyISO   = UI.fechaHoyISO(hoy);
@@ -1027,7 +1036,7 @@ async function verDetallePlan(id) {
     cont.innerHTML = `
       <div style="background:var(--gris-50);border-radius:var(--radio-lg);padding:var(--gap-md);margin-bottom:var(--gap-md)">
         <div style="font-weight:700">${esc(p.nino_nombre)} · <span class="chip ${p.origen === 'centro_misael' ? 'chip-coral' : 'chip-violeta'}" style="font-size:.7rem">${esc(p.origen_display)}</span></div>
-        <div class="plan-sub" style="margin-top:2px">${esc(p.nino_sala || '')} · Desde ${esc(UI.fecha(p.fecha_inicio))}${p.fecha_fin ? ' hasta ' + esc(UI.fecha(p.fecha_fin)) : ' · vigente'}${p.creado_por_nombre ? ' · ' + esc(p.creado_por_nombre) : ''}</div>
+        <div class="plan-sub" style="margin-top:2px">${esc(p.nino_sala || '')} · Desde ${esc(UI.fecha(p.fecha_inicio))}${p.fecha_fin ? ' hasta ' + esc(UI.fecha(p.fecha_fin)) : ' · vigente'}${p.creado_por_nombre ? ' · ' + esc(p.creado_por_nombre) : ''}${p.modificado_por_nombre ? ' · ✏️ Editado por ' + esc(p.modificado_por_nombre) + ' (' + esc(fechaHoraLocal(p.updated_at)) + ')' : ''}</div>
         <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-top:6px;white-space:pre-wrap;overflow-wrap:anywhere">${esc(p.descripcion)}</p>
       </div>
       <div id="lista-objetivos-detalle">
@@ -1050,7 +1059,7 @@ async function verDetallePlan(id) {
             ${regs.length ? `<details class="avances"><summary>Avances registrados (${regs.length})</summary>
               ${regs.slice(0, 10).map(r => `<div class="avance-row"><span class="f">${esc(UI.fecha(r.fecha))}</span>
                 <span class="chip ${r.resultado === 'logrado' ? 'chip-verde' : r.resultado === 'trabajado' ? 'chip-turquesa' : 'chip-gris'}" style="font-size:.6rem">${esc(r.resultado_display)}</span>
-                <span style="flex:1;overflow-wrap:anywhere">${esc(r.observacion || '')}${r.educadora_nombre ? ' <i style="color:var(--gris-400)">— ' + esc(r.educadora_nombre) + '</i>' : ''}</span></div>`).join('')}
+                <span style="flex:1;overflow-wrap:anywhere">${esc(r.observacion || '')}${r.educadora_nombre ? ' <i style="color:var(--gris-400)">— ' + esc(r.educadora_nombre) + '</i>' : ''}${r.modificado_por_nombre ? ' <i style="color:var(--gris-400)" title="Última modificación: ' + esc(fechaHoraLocal(r.updated_at)) + '">· ✏️ ' + esc(r.modificado_por_nombre) + '</i>' : ''}</span></div>`).join('')}
               ${regs.length > 10 ? '<div style="color:var(--gris-500);padding:.3rem 0">Se muestran los 10 más recientes.</div>' : ''}
             </details>` : ''}
           </div>`; }).join('')

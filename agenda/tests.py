@@ -318,3 +318,91 @@ class ModificadoPorPlanificacionTests(AgendaBase):
         self.client.force_authenticate(ana)
         r = self.client.patch(f'{URL_PLANIF}{p.id}/', {'sala': str(self.sala2.id), 'turno': str(self.man2.id)})
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, r.data)
+
+
+class PermisoAgendaTests(AgendaBase):
+    """Cocina (y demás roles ajenos a lo pedagógico) pueden mirar la agenda pero no escribir."""
+
+    def _usuario(self, rol, email):
+        return Usuario.objects.create_user(email=email, password='x12345678',
+                                           nombres='Pepe', apellidos='Rol', rol=rol)
+
+    def test_cocina_puede_leer_pero_no_crear_ni_editar_ni_borrar(self):
+        p = self.planif()
+        self.client.force_authenticate(self._usuario(Usuario.ROL_COCINA, 'c@x.test'))
+        self.assertEqual(self.client.get(URL_PLANIF).status_code, status.HTTP_200_OK)
+        r = self.client.post(URL_PLANIF, {'sala': str(self.sala.id), 'turno': str(self.man.id),
+                                          'fecha': '2026-10-01', 'actividades': 'x'})
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.patch(f'{URL_PLANIF}{p.id}/', {'actividades': 'x'}).status_code,
+                         status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.delete(f'{URL_PLANIF}{p.id}/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(PlanificacionGrupal.objects.filter(pk=p.pk, actividades='Juego libre').exists())
+
+    def test_cocina_tampoco_escribe_planes_objetivos_ni_avances(self):
+        self.client.force_authenticate(self._usuario(Usuario.ROL_COCINA, 'c@x.test'))
+        for url, datos in [
+            (URL_PLANES, {'nino': str(self.nino.id), 'descripcion': 'x', 'fecha_inicio': '2026-09-01'}),
+            (URL_OBJ,    {'plan': '00000000-0000-0000-0000-000000000000', 'descripcion': 'x', 'area': 'lenguaje'}),
+            (URL_REG,    {'objetivo': '00000000-0000-0000-0000-000000000000', 'fecha': '2026-09-29', 'resultado': 'trabajado'}),
+        ]:
+            self.assertEqual(self.client.post(url, datos).status_code, status.HTTP_403_FORBIDDEN, url)
+
+    def test_recepcionista_y_profesional_tampoco_escriben(self):
+        for rol, email in [(Usuario.ROL_RECEPCIONISTA, 'r@x.test'), (Usuario.ROL_PROFESIONAL, 'pr@x.test')]:
+            self.client.force_authenticate(self._usuario(rol, email))
+            r = self.client.post(URL_PLANIF, {'sala': str(self.sala.id), 'turno': str(self.man.id),
+                                              'fecha': '2026-10-02', 'actividades': 'x'})
+            self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, rol)
+
+    def test_directora_y_ayudante_si_pueden_escribir(self):
+        from personal.models import Personal, AsignacionPersonal
+        u = self._usuario(Usuario.ROL_AYUDANTE, 'ay@x.test')
+        pe = Personal.objects.create(usuario=u, nombres='Pepe', apellidos='Rol', ci='999',
+                                     rol='ayudante', fecha_ingreso=date(2025, 1, 1))
+        AsignacionPersonal.objects.create(personal=pe, sucursal=self.suc, sala=self.sala,
+                                          turno=self.man, fecha_inicio=date(2025, 1, 1))
+        self.client.force_authenticate(u)
+        r = self.client.post(URL_PLANIF, {'sala': str(self.sala.id), 'turno': str(self.man.id),
+                                          'fecha': '2026-10-03', 'actividades': 'x'})
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        self.client.force_authenticate(self.staff)      # directora
+        r = self.client.post(URL_PLANIF, {'sala': str(self.sala.id), 'turno': str(self.tar.id),
+                                          'fecha': '2026-10-03', 'actividades': 'y'})
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+
+
+class ModificadoPorPlanIndividualTests(AgendaBase):
+    def setUp(self):
+        super().setUp()
+        self.plan = PlanIndividual.objects.create(nino=self.nino, descripcion='Lenguaje',
+                                                  fecha_inicio=date(2026, 9, 1))
+        self.obj = ObjetivoIndividual.objects.create(plan=self.plan, descripcion='Dice 5 palabras', area='lenguaje')
+
+    def test_plan_sin_editar_no_tiene_modificador(self):
+        r = self.client.get(f'{URL_PLANES}{self.plan.id}/')
+        self.assertIsNone(r.data['modificado_por'])
+        self.assertIsNone(r.data['modificado_por_nombre'])
+
+    def test_editar_plan_guarda_quien_lo_hizo(self):
+        r = self.client.patch(f'{URL_PLANES}{self.plan.id}/', {'descripcion': 'Lenguaje y juego'})
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['modificado_por_nombre'], 'Jackie Castro')
+
+    def test_editar_objetivo_guarda_quien_lo_hizo(self):
+        r = self.client.patch(f'{URL_OBJ}{self.obj.id}/', {'descripcion': 'Dice 10 palabras'})
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['modificado_por_nombre'], 'Jackie Castro')
+
+    def test_corregir_avance_guarda_quien_lo_hizo_y_la_autora_no_cambia(self):
+        reg = RegistroObjetivo.objects.create(objetivo=self.obj, fecha=date(2026, 9, 29), resultado='trabajado')
+        r = self.client.patch(f'{URL_REG}{reg.id}/', {'observacion': 'Con ayuda'})
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['modificado_por_nombre'], 'Jackie Castro')
+        self.assertIsNone(r.data['educadora'])
+
+    def test_el_cliente_no_puede_falsear_el_modificador_en_plan(self):
+        otro = Usuario.objects.create_user(email='o@x.test', password='x12345678', nombres='Otra',
+                                           apellidos='Persona', rol=Usuario.ROL_DIRECTORA)
+        r = self.client.patch(f'{URL_PLANES}{self.plan.id}/', {'descripcion': 'z', 'modificado_por': str(otro.id)})
+        self.assertEqual(r.data['modificado_por_nombre'], 'Jackie Castro')
