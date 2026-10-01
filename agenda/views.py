@@ -60,6 +60,15 @@ class PlanificacionGrupalViewSet(viewsets.ModelViewSet):
         exigir_sala_en_alcance(self.request.user, serializer.validated_data['sala'])
         serializer.save(educadora=_personal_del_usuario(self.request))
 
+    def perform_update(self, serializer):
+        # Si en la edición se cambia de sala, la sala destino también debe ser de la usuaria
+        # (el queryset solo protege el registro original). La autora original no cambia;
+        # lo que se registra aquí es QUIÉN hizo esta modificación.
+        sala = serializer.validated_data.get('sala')
+        if sala is not None:
+            exigir_sala_en_alcance(self.request.user, sala)
+        serializer.save(modificado_por=self.request.user)
+
 class PlanIndividualViewSet(viewsets.ModelViewSet):
     queryset = PlanIndividual.objects.select_related("nino","creado_por").prefetch_related(
         "objetivos__registros__educadora",

@@ -16,6 +16,11 @@ class PlanificacionGrupal(ModeloBase):
     areas_trabajadas = models.CharField(max_length=500, blank=True, help_text='Áreas de desarrollo abordadas')
     observaciones  = models.TextField(blank=True)
     visible_padres = models.BooleanField(default=True)
+    # Quién guardó la última modificación (vacío si nunca se ha editado desde su creación).
+    # Es un Usuario (no Personal) para que también quede registrado un admin/directora sin ficha.
+    modificado_por = models.ForeignKey('accounts.Usuario', on_delete=models.SET_NULL,
+                                       null=True, blank=True, related_name='+',
+                                       help_text='Última persona que modificó la planificación')
 
     class Meta:
         verbose_name    = 'Planificación grupal'

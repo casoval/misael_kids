@@ -3,7 +3,8 @@ from .models import PlanificacionGrupal, PlanIndividual, ObjetivoIndividual, Reg
 
 @admin.register(PlanificacionGrupal)
 class PlanificacionGrupalAdmin(admin.ModelAdmin):
-    list_display  = ['sala', 'turno', 'educadora', 'fecha', 'visible_padres']
+    list_display  = ['sala', 'turno', 'educadora', 'modificado_por', 'fecha', 'visible_padres']
+    readonly_fields = ['modificado_por']
     list_filter   = ['sala__sucursal', 'sala', 'turno', 'visible_padres']
     date_hierarchy = 'fecha'
 

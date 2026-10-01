@@ -262,3 +262,59 @@ class EliminarPlanIndividualTests(AgendaBase):
         PlanIndividual.objects.filter(id=self.plan.id).update(activo=False)
         self.assertEqual(self.client.get(URL_PLANES + '?activo=true').data['count'], 0)
         self.assertEqual(self.client.get(URL_PLANES).data['count'], 1)
+
+
+class ModificadoPorPlanificacionTests(AgendaBase):
+    """Se guarda quién hizo la última modificación; la autora original no cambia."""
+
+    def _educadora(self, email, nombres, ci, sala=None):
+        from personal.models import Personal, AsignacionPersonal
+        u = Usuario.objects.create_user(email=email, password='x12345678', nombres=nombres,
+                                        apellidos='Test', rol=Usuario.ROL_EDUCADORA)
+        p = Personal.objects.create(usuario=u, nombres=nombres, apellidos='Test', ci=ci,
+                                    rol='educadora', fecha_ingreso=date(2025, 1, 1))
+        sala = sala or self.sala
+        AsignacionPersonal.objects.create(personal=p, sucursal=sala.sucursal, sala=sala,
+                                          turno=sala.turnos.first(), fecha_inicio=date(2025, 1, 1))
+        return u
+
+    def test_al_crear_no_hay_modificador(self):
+        self.client.force_authenticate(self._educadora('a@x.test', 'Ana', '111'))
+        r = self.client.post(URL_PLANIF, {'sala': str(self.sala.id), 'turno': str(self.man.id),
+                                          'fecha': '2026-09-29', 'actividades': 'Cuentos'})
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        self.assertEqual(r.data['educadora_nombre'], 'Ana Test')
+        self.assertIsNone(r.data['modificado_por'])
+
+    def test_al_editar_se_guarda_quien_modifico_y_la_autora_no_cambia(self):
+        ana  = self._educadora('a@x.test', 'Ana', '111')
+        rosa = self._educadora('r@x.test', 'Rosa', '222')
+        self.client.force_authenticate(ana)
+        creada = self.client.post(URL_PLANIF, {'sala': str(self.sala.id), 'turno': str(self.man.id),
+                                               'fecha': '2026-09-29', 'actividades': 'Cuentos'})
+        pid = creada.data['id']
+        self.client.force_authenticate(rosa)
+        r = self.client.patch(f'{URL_PLANIF}{pid}/', {'actividades': 'Cuentos y pintura'})
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['modificado_por_nombre'], 'Rosa Test')
+        self.assertEqual(r.data['educadora_nombre'], 'Ana Test')       # la autora original sigue igual
+
+    def test_la_directora_sin_ficha_tambien_queda_registrada(self):
+        p = self.planif()
+        r = self.client.patch(f'{URL_PLANIF}{p.id}/', {'observaciones': 'Revisada'})   # self.staff = directora
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['modificado_por_nombre'], 'Jackie Castro')
+
+    def test_el_cliente_no_puede_falsear_el_modificador(self):
+        p = self.planif()
+        otro = Usuario.objects.create_user(email='o@x.test', password='x12345678',
+                                           nombres='Otra', apellidos='Persona', rol=Usuario.ROL_DIRECTORA)
+        r = self.client.patch(f'{URL_PLANIF}{p.id}/', {'observaciones': 'x', 'modificado_por': str(otro.id)})
+        self.assertEqual(r.data['modificado_por_nombre'], 'Jackie Castro')
+
+    def test_educadora_no_puede_mover_planificacion_a_sala_ajena(self):
+        ana = self._educadora('a@x.test', 'Ana', '111')
+        p = self.planif()
+        self.client.force_authenticate(ana)
+        r = self.client.patch(f'{URL_PLANIF}{p.id}/', {'sala': str(self.sala2.id), 'turno': str(self.man2.id)})
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN, r.data)

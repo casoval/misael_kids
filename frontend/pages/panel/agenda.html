@@ -433,6 +433,11 @@ const MESES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agost
 const DIAS_SM = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
 // ── Utilidades ──
+// updated_at llega con hora (UTC); UI.fecha solo sirve para fechas sin hora. Se muestra en hora local.
+const fechaHoraLocal = iso => {
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleString('es-BO', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+};
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
   {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hh  = s => (s || '').slice(0, 5);
@@ -700,6 +705,8 @@ function mostrarPlanifDia(fecha) {
         .map(a => '<span class="chip chip-violeta" style="font-size:.65rem;margin:2px">' + esc(a) + '</span>').join('') + '</div>' : ''}
       ${p.observaciones ? '<p class="pl-obs">“' + esc(p.observaciones) + '”</p>' : ''}
       ${p.educadora_nombre ? '<div class="pl-autor">👩‍🏫 ' + esc(p.educadora_nombre) + '</div>' : ''}
+      ${p.modificado_por_nombre ? '<div class="pl-autor" style="font-weight:600;margin-top:2px">✏️ Editado por ' + esc(p.modificado_por_nombre)
+        + ' · ' + esc(fechaHoraLocal(p.updated_at)) + '</div>' : ''}
     </div>`).join('');
   html += pendientes.map(t => `
     <div class="pl-pendiente">

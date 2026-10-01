@@ -64,11 +64,13 @@ class PlanificacionGrupalSerializer(serializers.ModelSerializer):
     sala_nombre      = serializers.CharField(source="sala.nombre", read_only=True)
     turno_nombre     = serializers.CharField(source="turno.nombre", read_only=True)
     educadora_nombre = serializers.CharField(source="educadora.nombre_completo", read_only=True, default=None)
+    modificado_por_nombre = serializers.CharField(source="modificado_por.nombre_completo", read_only=True, default=None)
 
     class Meta:
         model  = PlanificacionGrupal
-        fields = ["id","sala","sala_nombre","turno","turno_nombre","educadora","educadora_nombre","fecha","actividades","areas_trabajadas","observaciones","visible_padres","created_at","updated_at"]
-        read_only_fields = ["id","educadora","created_at","updated_at"]
+        fields = ["id","sala","sala_nombre","turno","turno_nombre","educadora","educadora_nombre","fecha","actividades","areas_trabajadas","observaciones","visible_padres","modificado_por","modificado_por_nombre","created_at","updated_at"]
+        # `modificado_por` lo pone el servidor según quién inicia sesión; el cliente no lo decide.
+        read_only_fields = ["id","educadora","modificado_por","created_at","updated_at"]
         validators = [
             UniqueTogetherValidator(
                 queryset=PlanificacionGrupal.objects.all(),
