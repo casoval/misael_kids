@@ -33,6 +33,65 @@
       background:linear-gradient(90deg,var(--turquesa),var(--verde));
       transition:width .6s ease;
     }
+    /* ── Selector de hitos por secciones (modal Nueva evaluación) ── */
+    .hp { border:1.5px solid var(--gris-200);border-radius:var(--radio-lg);padding:var(--gap-sm);background:var(--gris-50); }
+    .hp-seleccion {
+      display:flex;align-items:flex-start;gap:var(--gap-sm);justify-content:space-between;
+      background:var(--blanco);border:1.5px dashed var(--gris-300);border-radius:var(--radio-md);
+      padding:8px 12px;margin-bottom:var(--gap-sm);font-size:var(--text-sm);color:var(--texto-suave);font-weight:600;
+    }
+    .hp-seleccion.con-hito { border-style:solid;border-color:var(--turquesa);background:var(--turquesa-l);color:var(--texto); }
+    .hp-seleccion small { display:block;font-weight:600;color:var(--texto-suave);margin-top:2px; }
+    .hp-quitar { border:none;background:none;cursor:pointer;font-size:var(--text-base);color:var(--gris-500);padding:0 4px; }
+    .hp-barra { display:flex;flex-wrap:wrap;gap:var(--gap-sm);margin-bottom:var(--gap-sm);align-items:center; }
+    .hp-barra .form-input { flex:1 1 180px;min-width:0; }
+    .hp-seg { display:inline-flex;border:1.5px solid var(--gris-200);border-radius:var(--radio-full);overflow:hidden;background:var(--blanco); }
+    .hp-seg button { border:none;background:none;padding:6px 12px;font-size:var(--text-xs);font-weight:800;color:var(--gris-600);cursor:pointer;font-family:inherit; }
+    .hp-seg button.activo { background:var(--turquesa);color:var(--blanco); }
+    .hp-areas { display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:var(--gap-xs); }
+    .hp-area-chip {
+      flex-shrink:0;border:1.5px solid var(--gris-200);background:var(--blanco);border-radius:var(--radio-full);
+      padding:5px 11px;font-size:var(--text-xs);font-weight:800;color:var(--gris-600);cursor:pointer;font-family:inherit;white-space:nowrap;
+    }
+    .hp-area-chip.activo { background:var(--turquesa-l);border-color:var(--turquesa);color:var(--turquesa-d); }
+    .hp-area-chip.vacio { opacity:.45; }
+    .hp-lista { max-height:min(340px,45vh);overflow-y:auto;padding-right:2px; }
+    .hp-grupo { margin-bottom:6px;background:var(--blanco);border:1px solid var(--gris-200);border-radius:var(--radio-md);overflow:hidden; }
+    .hp-grupo > summary {
+      cursor:pointer;list-style:none;padding:8px 12px;font-weight:800;font-size:var(--text-sm);
+      display:flex;align-items:center;gap:8px;background:var(--gris-100);position:sticky;top:0;z-index:1;
+    }
+    .hp-grupo > summary::-webkit-details-marker { display:none; }
+    .hp-grupo > summary::after { content:'▾';margin-left:auto;color:var(--gris-500); }
+    .hp-grupo:not([open]) > summary::after { content:'▸'; }
+    .hp-grupo-meta { font-size:var(--text-xs);color:var(--texto-suave);font-weight:700; }
+    .hp-item {
+      display:flex;gap:10px;align-items:flex-start;padding:9px 12px;cursor:pointer;
+      border-top:1px solid var(--gris-100);transition:background var(--trans-fast);
+    }
+    .hp-item:hover { background:var(--gris-50); }
+    .hp-item.sel { background:var(--turquesa-l); }
+    .hp-radio { width:16px;height:16px;border-radius:50%;border:2px solid var(--gris-300);flex-shrink:0;margin-top:2px; }
+    .hp-item.sel .hp-radio { border-color:var(--turquesa-d);background:radial-gradient(var(--turquesa-d) 45%,transparent 50%); }
+    .hp-nombre { font-weight:700;font-size:var(--text-sm);line-height:1.3; }
+    .hp-desc { font-size:var(--text-xs);color:var(--texto-suave);margin-top:2px;line-height:1.35; }
+    .hp-badges { display:flex;gap:4px;flex-wrap:wrap;margin-top:4px; }
+    .hp-vacio { text-align:center;padding:var(--gap-lg);color:var(--texto-suave);font-weight:600;font-size:var(--text-sm); }
+    /* ── Botones de estado (Logrado / En proceso / No logrado) ── */
+    .estado-btns { display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap-sm); }
+    .estado-btn {
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+      min-height:64px;padding:8px 6px;border:2px solid var(--gris-200);border-radius:var(--radio-lg);
+      background:var(--blanco);cursor:pointer;font-family:inherit;font-weight:800;font-size:var(--text-sm);
+      color:var(--gris-600);transition:all var(--trans-fast);text-align:center;line-height:1.2;
+    }
+    .estado-btn .ico { font-size:1.5rem; }
+    .estado-btn:hover { border-color:var(--gris-400); }
+    .estado-btn.activo[data-estado="logrado"]    { border-color:var(--verde-d);background:var(--verde-l);color:var(--verde-d); }
+    .estado-btn.activo[data-estado="en_proceso"] { border-color:var(--amarillo-d);background:var(--amarillo-l);color:#92400E; }
+    .estado-btn.activo[data-estado="no_logrado"] { border-color:var(--gris-500);background:var(--gris-100);color:var(--gris-700); }
+    .estado-btn.activo { box-shadow:var(--sombra-sm); }
+    .estado-btn:focus-visible { outline:3px solid var(--turquesa);outline-offset:2px; }
     .eval-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--gap-md); }
   </style>
 </head>
@@ -150,7 +209,7 @@
 
 <!-- Modal: Nueva evaluación -->
 <div class="modal-overlay" id="modal-nueva-eval">
-  <div class="modal" style="max-width:580px">
+  <div class="modal" style="max-width:720px">
     <div class="modal-header">
       <h3 class="modal-titulo" id="titulo-modal-eval">Nueva evaluación</h3>
       <button class="modal-cerrar">✕</button>
@@ -165,25 +224,35 @@
         <span class="form-error" data-error="eval-nino"></span>
       </div>
       <div class="form-grupo">
-        <label class="form-label">Hito a evaluar *</label>
-        <select id="eval-hito" class="form-select">
-          <option value="">Primero selecciona niño</option>
-        </select>
-        <span class="form-error" data-error="eval-hito"></span>
-      </div>
-      <div class="form-grupo">
         <label class="form-label">Fecha de evaluación *</label>
         <input type="date" id="eval-fecha" class="form-input" max="">
         <span class="form-error" data-error="eval-fecha"></span>
       </div>
-      <div class="form-grupo">
+      <div class="form-grupo" style="grid-column:1/-1">
+        <label class="form-label">Hito a evaluar *</label>
+        <input type="hidden" id="eval-hito">
+        <div class="hp">
+          <div class="hp-seleccion" id="hp-seleccion">Ningún hito seleccionado</div>
+          <div class="hp-barra">
+            <input type="search" id="hp-texto" class="form-input" placeholder="🔍 Buscar hito (ej: camina, vocabulario...)" oninput="renderPickerHitos()">
+            <div class="hp-seg">
+              <button type="button" id="hp-seg-edad"  class="activo" onclick="setPickerEdad(true)">Para su edad</button>
+              <button type="button" id="hp-seg-todas" onclick="setPickerEdad(false)">Todas las edades</button>
+            </div>
+          </div>
+          <div class="hp-areas" id="hp-areas"></div>
+          <div class="hp-lista" id="hp-lista"><div class="hp-vacio">Primero selecciona un niño/a</div></div>
+        </div>
+        <span class="form-error" data-error="eval-hito"></span>
+      </div>
+      <div class="form-grupo" style="grid-column:1/-1">
         <label class="form-label">Estado *</label>
-        <select id="eval-estado" class="form-select" onchange="sincronizarAlerta()">
-          <option value="">Seleccionar...</option>
-          <option value="logrado">✅ Logrado</option>
-          <option value="en_proceso">⏳ En proceso</option>
-          <option value="no_logrado">❌ No logrado aún</option>
-        </select>
+        <input type="hidden" id="eval-estado">
+        <div class="estado-btns" role="radiogroup" aria-label="Estado del hito">
+          <button type="button" class="estado-btn" data-estado="logrado"    role="radio" aria-checked="false" onclick="setEstado('logrado')"><span class="ico">✅</span>Logrado</button>
+          <button type="button" class="estado-btn" data-estado="en_proceso" role="radio" aria-checked="false" onclick="setEstado('en_proceso')"><span class="ico">⏳</span>En proceso</button>
+          <button type="button" class="estado-btn" data-estado="no_logrado" role="radio" aria-checked="false" onclick="setEstado('no_logrado')"><span class="ico">❌</span>No logrado aún</button>
+        </div>
         <span class="form-error" data-error="eval-estado"></span>
       </div>
       <div class="form-grupo" style="grid-column:1/-1">
@@ -252,7 +321,7 @@ async function cargarSelectores() {
   try {
     const [ninos, hitos] = await Promise.all([
       API.get('/ninos/ninos/?activo=true&page_size=500'),
-      API.get('/evaluacion/hitos/?activo=true&page_size=500'),
+      API.get('/evaluacion/hitos/?activo=true&page_size=1000'),
     ]);
     ninosData = ninos.results||ninos;
     hitosData = hitos.results||hitos;
@@ -501,6 +570,18 @@ function limpiarErroresModal() {
   document.querySelectorAll('#modal-nueva-eval .input-error').forEach(el=>el.classList.remove('input-error'));
 }
 
+// Fija el estado (o lo limpia con ''), resalta el botón y ajusta la alerta de rezago.
+function setEstado(v) {
+  document.getElementById('eval-estado').value = v || '';
+  document.querySelectorAll('.estado-btn').forEach(b => {
+    const on = b.dataset.estado === v;
+    b.classList.toggle('activo', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+  const err = document.querySelector('[data-error="eval-estado"]'); if (err && v) err.textContent = '';
+  sincronizarAlerta();
+}
+
 // Si el hito ya está logrado no tiene sentido una alerta de rezago (el servidor también lo impide).
 function sincronizarAlerta() {
   const logrado = document.getElementById('eval-estado').value === 'logrado';
@@ -520,36 +601,137 @@ async function abrirNuevaEval(ninoId, hitoId) {
   document.getElementById('eval-id').value          = '';
   document.getElementById('eval-nino').value        = ninoId;
   document.getElementById('eval-fecha').value       = hoy;
-  document.getElementById('eval-estado').value      = '';
+  setEstado('');
   document.getElementById('eval-observacion').value = '';
   document.getElementById('eval-alerta').checked    = false;
   sincronizarAlerta();
   await cargarHitosModal();
-  if (hitoId) document.getElementById('eval-hito').value = hitoId;
+  if (hitoId) seleccionarHito(hitoId);
   UI.abrirModal('modal-nueva-eval');
 }
 
+// ── Selector de hitos por secciones ─────────────────────────────────
+// Estado del selector: niño elegido, edad, filtros y última evaluación de cada hito.
+const picker = { ninoId:'', edad:0, soloEdad:true, area:'', ultimas:new Map(), peticion:0 };
+const sinTildes = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const rangoEdad = h => h.edad_min_meses+'–'+h.edad_max_meses+' m';
+const hitoEsDeEdad = h => picker.edad >= h.edad_min_meses && picker.edad <= h.edad_max_meses;
+
 async function cargarHitosModal() {
   const ninoId = document.getElementById('eval-nino').value;
-  const sel    = document.getElementById('eval-hito');
-  if (!ninoId) { sel.innerHTML='<option value="">Primero selecciona niño</option>'; return; }
+  const lista  = document.getElementById('hp-lista');
+  seleccionarHito('');                                   // al cambiar de niño se limpia la selección
+  picker.ninoId = ninoId; picker.area = ''; picker.ultimas = new Map(); picker.soloEdad = true;
+  document.getElementById('hp-texto').value = '';
+  actualizarSegmento();
+  if (!ninoId) {
+    document.getElementById('hp-areas').innerHTML = '';
+    lista.innerHTML = '<div class="hp-vacio">Primero selecciona un niño/a</div>';
+    return;
+  }
   const nino = ninosData.find(n=>n.id===ninoId);
-  const edad = nino?.edad_en_meses ?? 0;
+  picker.edad = nino?.edad_en_meses ?? 0;
+  const mia = ++picker.peticion;
+  lista.innerHTML = '<div class="hp-vacio">Cargando hitos...</div>';
   try {
-    if (!hitosData.length) {
-      const data = await API.get('/evaluacion/hitos/?activo=true&page_size=1000');
-      hitosData = data.results||data;
-    }
-    const para = h => edad >= h.edad_min_meses && edad <= h.edad_max_meses;
-    const etiqueta = h => h.nombre+' ('+h.edad_min_meses+'–'+h.edad_max_meses+'m) — '+h.area_display;
-    const porEdad = (a,b) => ordenArea(a.area)-ordenArea(b.area) || a.edad_min_meses-b.edad_min_meses;
-    const relevantes = hitosData.filter(para).sort(porEdad);
-    const otros      = hitosData.filter(h=>!para(h)).sort((a,b)=>a.edad_min_meses-b.edad_min_meses || ordenArea(a.area)-ordenArea(b.area));
-    const opciones = (lista) => lista.map(h => `<option value="${h.id}">${esc(etiqueta(h))}</option>`).join('');
-    sel.innerHTML = '<option value="">Seleccionar hito...</option>'
-      + (relevantes.length ? `<optgroup label="★ Para su edad (${edad} meses)">${opciones(relevantes)}</optgroup>` : '')
-      + (otros.length      ? `<optgroup label="Otras edades">${opciones(otros)}</optgroup>` : '');
-  } catch (err) { sel.innerHTML='<option value="">No se pudieron cargar los hitos</option>'; UI.toast('Error: '+err.message,'error'); }
+    const [catalogo, evals] = await Promise.all([
+      hitosData.length ? null : API.get('/evaluacion/hitos/?activo=true&page_size=1000'),
+      API.get('/evaluacion/evaluaciones/?nino='+ninoId+'&page_size=1000').catch(() => []),
+    ]);
+    if (catalogo) hitosData = catalogo.results||catalogo;
+    if (mia !== picker.peticion) return;                 // el usuario cambió de niño mientras cargaba
+    const todas = (evals.results||evals).slice()
+      .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||'') || (b.created_at||'').localeCompare(a.created_at||''));
+    todas.forEach(ev => { if (!picker.ultimas.has(ev.hito)) picker.ultimas.set(ev.hito, ev); });
+    renderPickerHitos();
+  } catch (err) {
+    lista.innerHTML = '<div class="hp-vacio">No se pudieron cargar los hitos</div>';
+    UI.toast('Error: '+err.message,'error');
+  }
+}
+
+function actualizarSegmento() {
+  document.getElementById('hp-seg-edad').classList.toggle('activo', picker.soloEdad);
+  document.getElementById('hp-seg-todas').classList.toggle('activo', !picker.soloEdad);
+  document.getElementById('hp-seg-edad').textContent = picker.ninoId ? 'Para su edad ('+picker.edad+' m)' : 'Para su edad';
+}
+function setPickerEdad(solo) { picker.soloEdad = solo; picker.area = ''; actualizarSegmento(); renderPickerHitos(); }
+function setPickerArea(a)    { picker.area = a; renderPickerHitos(); }
+
+function renderPickerHitos() {
+  if (!picker.ninoId) return;
+  const texto = sinTildes(document.getElementById('hp-texto').value.trim());
+  const buscando = texto !== '';
+  const sel = document.getElementById('eval-hito').value;
+  // Filtros de texto y edad (el área se aplica después para poder contar cada sección).
+  let base = hitosData.filter(h => (!picker.soloEdad || hitoEsDeEdad(h))
+    && (!buscando || sinTildes(h.nombre+' '+h.descripcion).includes(texto)));
+
+  const conteo = {}; base.forEach(h => conteo[h.area] = (conteo[h.area]||0)+1);
+  document.getElementById('hp-areas').innerHTML =
+    `<button type="button" class="hp-area-chip ${picker.area===''?'activo':''}" onclick="setPickerArea('')">Todas (${base.length})</button>`
+    + AREAS_ORDEN.map(a => `<button type="button" class="hp-area-chip ${picker.area===a?'activo':''} ${conteo[a]?'':'vacio'}"
+        onclick="setPickerArea('${a}')">${areaIcons[a]} ${esc(areaNombres[a])} (${conteo[a]||0})</button>`).join('');
+
+  const lista = document.getElementById('hp-lista');
+  if (picker.area) base = base.filter(h => h.area === picker.area);
+  if (!base.length) {
+    lista.innerHTML = `<div class="hp-vacio">${buscando ? 'Ningún hito coincide con la búsqueda.' : 'No hay hitos con estos filtros.'}
+      ${picker.soloEdad ? '<br><a href="#" onclick="setPickerEdad(false);return false" style="color:var(--turquesa-d)">Ver hitos de todas las edades</a>' : ''}</div>`;
+    return;
+  }
+  const porArea = {};
+  base.forEach(h => (porArea[h.area] ||= []).push(h));
+  const areas = Object.keys(porArea).sort((a,b) => ordenArea(a)-ordenArea(b));
+  lista.innerHTML = areas.map(a => {
+    const hs = porArea[a].sort((x,y) => x.edad_min_meses-y.edad_min_meses || x.nombre.localeCompare(y.nombre));
+    const hechos = hs.filter(h => picker.ultimas.has(h.id)).length;
+    // Con pocas secciones, búsqueda o un área elegida se muestran abiertas; en "todas las edades" se pliegan
+    // (salvo la que contiene el hito elegido) para no mostrar 200 filas de golpe.
+    const abierta = picker.soloEdad || buscando || picker.area || hs.some(h => h.id === sel);
+    return `<details class="hp-grupo" ${abierta?'open':''}>
+      <summary>${areaIcons[a]||'🌱'} ${esc(areaNombres[a]||a)}
+        <span class="hp-grupo-meta">${hs.length} hitos · ${hechos} evaluados</span></summary>
+      ${hs.map(h => itemHito(h, h.id===sel)).join('')}
+    </details>`;
+  }).join('');
+}
+
+function itemHito(h, seleccionado) {
+  const u = picker.ultimas.get(h.id);
+  const badgeEstado = u
+    ? `<span class="chip ${chipEstado(u.estado)}">${esc(u.estado_display)} · ${esc(UI.fecha(u.fecha))}</span>`
+    : '<span class="chip chip-gris">Sin evaluar</span>';
+  const badgeEdad = `<span class="chip chip-turquesa">${esc(rangoEdad(h))}</span>`;
+  const fuera = !hitoEsDeEdad(h) ? '<span class="chip chip-amarillo">Otra edad</span>' : '';
+  return `<div class="hp-item ${seleccionado?'sel':''}" data-id="${esc(h.id)}" onclick="seleccionarHito(this.dataset.id)">
+    <span class="hp-radio"></span>
+    <div style="flex:1;min-width:0">
+      <div class="hp-nombre">${esc(h.nombre)}</div>
+      ${h.descripcion ? `<div class="hp-desc">${esc(h.descripcion)}</div>` : ''}
+      <div class="hp-badges">${badgeEdad}${fuera}${badgeEstado}</div>
+    </div>
+  </div>`;
+}
+
+// Fija (o limpia, con id vacío) el hito elegido y actualiza el resumen de arriba.
+function seleccionarHito(id) {
+  document.getElementById('eval-hito').value = id || '';
+  const caja = document.getElementById('hp-seleccion');
+  const h = id ? hitosData.find(x => x.id === id) : null;
+  if (!h) {
+    caja.className = 'hp-seleccion';
+    caja.textContent = id ? 'Hito desactivado (se conserva el de la evaluación original)' : 'Ningún hito seleccionado';
+    document.querySelectorAll('#hp-lista .hp-item.sel').forEach(el => el.classList.remove('sel'));
+    return;
+  }
+  const u = picker.ultimas.get(id);
+  caja.className = 'hp-seleccion con-hito';
+  caja.innerHTML = `<div>✔ <b>${esc(h.nombre)}</b>
+      <small>${esc(areaNombres[h.area]||h.area_display)} · ${esc(rangoEdad(h))}${u ? ' · Última evaluación: '+esc(u.estado_display)+' ('+esc(UI.fecha(u.fecha))+')' : ' · Aún sin evaluar'}</small></div>
+    <button type="button" class="hp-quitar" title="Quitar selección" onclick="seleccionarHito('')">✕</button>`;
+  document.querySelectorAll('#hp-lista .hp-item').forEach(el => el.classList.toggle('sel', el.dataset.id === id));
+  const errEl = document.querySelector('[data-error="eval-hito"]'); if (errEl) errEl.textContent = '';
 }
 
 async function editarEval(id) {
@@ -560,14 +742,15 @@ async function editarEval(id) {
     document.getElementById('eval-id').value   = id;
     document.getElementById('eval-nino').value = ev.nino;
     await cargarHitosModal();
-    const selHito = document.getElementById('eval-hito');
-    if (![...selHito.options].some(o => o.value === ev.hito)) {     // hito desactivado: se conserva la opción
-      const o = document.createElement('option'); o.value = ev.hito; o.textContent = ev.hito_nombre+' (desactivado)';
-      selHito.appendChild(o);
-    }
-    selHito.value = ev.hito;
+    // Si el hito no es de la edad actual del niño, se muestran todas las edades para que se vea marcado.
+    const hitoEv = hitosData.find(h => h.id === ev.hito);
+    if (hitoEv && !hitoEsDeEdad(hitoEv)) setPickerEdad(false);
+    if (!hitoEv) hitosData.push({ id: ev.hito, nombre: ev.hito_nombre+' (desactivado)', area: ev.hito_area_codigo,
+      area_display: ev.hito_area, edad_min_meses: 0, edad_max_meses: 0, descripcion: '', activo: false });
+    seleccionarHito(ev.hito);
+    renderPickerHitos();
     document.getElementById('eval-fecha').value       = ev.fecha;
-    document.getElementById('eval-estado').value      = ev.estado;
+    setEstado(ev.estado);
     document.getElementById('eval-observacion').value = ev.observacion||'';
     document.getElementById('eval-alerta').checked    = ev.alerta_rezago;
     sincronizarAlerta();
