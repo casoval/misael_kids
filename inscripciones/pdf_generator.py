@@ -181,8 +181,10 @@ def _construir_contexto(obj, es_devolucion):
     único formato interno que usan todas las funciones de dibujo, para no
     andar adivinando con getattr/hasattr por todos lados.
     """
-    cobro = obj.cobro
-    inscripcion = cobro.inscripcion
+    # Un AbonoDiario (modalidad por día) no cuelga de un cobro sino directo
+    # de la inscripción: el dinero se recibe antes de saber qué días cubrirá.
+    cobro = getattr(obj, 'cobro', None)
+    inscripcion = cobro.inscripcion if cobro is not None else obj.inscripcion
     nino = inscripcion.nino
     tutor = _tutor_principal(nino)
     sucursal = inscripcion.sucursal
@@ -201,8 +203,11 @@ def _construir_contexto(obj, es_devolucion):
         registrado_por=registrado_por,
         nino_nombre=nino.nombre_completo,
         tutor_nombre=f"{tutor.nombres} {tutor.apellidos}" if tutor else "—",
-        concepto=_concepto_cobro(cobro),
-        tipo_display=cobro.get_tipo_display(),
+        concepto=(_concepto_cobro(cobro) if cobro is not None
+                  else 'Devolución del saldo a favor' if es_devolucion
+                  else 'Abono a cuenta — asistencia por día'),
+        tipo_display=(cobro.get_tipo_display() if cobro is not None
+                      else 'Saldo a favor' if es_devolucion else 'Abono por día'),
         sucursal_nombre=sucursal.nombre,
         sucursal_direccion=sucursal.direccion,
         sucursal_telefono=sucursal.telefono,
@@ -212,6 +217,12 @@ def _construir_contexto(obj, es_devolucion):
 
 def generar_recibo_pdf(pago):
     contexto = _construir_contexto(pago, es_devolucion=False)
+    return generar_pdf_maestro(contexto)
+
+
+def generar_recibo_abono_pdf(abono):
+    """Recibo del dinero recibido en la modalidad por día (AbonoDiario)."""
+    contexto = _construir_contexto(abono, es_devolucion=False)
     return generar_pdf_maestro(contexto)
 
 

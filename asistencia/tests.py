@@ -146,7 +146,8 @@ class GeneracionDeCobrosTests(AsistenciaTestBase):
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
         self.assertEqual(Cobro.objects.filter(inscripcion=self.insc_mensual, tipo=Cobro.TIPO_MENSUALIDAD).count(), 1)
 
-    def test_ausente_no_genera_cobro(self):
+    def test_ausente_sin_aviso_en_diaria_si_cobra_el_dia(self):
+        """Regla de la modalidad por día: la falta sin aviso se cobra."""
         self.client.force_authenticate(self.staff)
         resp = self.client.post(self.url_lista(), {
             'inscripcion': str(self.insc_diaria.id),
@@ -154,7 +155,29 @@ class GeneracionDeCobrosTests(AsistenciaTestBase):
             'estado': Asistencia.ESTADO_AUSENTE,
         })
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(Cobro.objects.filter(inscripcion=self.insc_diaria).count(), 1)
+
+    def test_ausente_justificado_no_genera_cobro(self):
+        """Una falta avisada (justificada) no se cobra."""
+        self.client.force_authenticate(self.staff)
+        resp = self.client.post(self.url_lista(), {
+            'inscripcion': str(self.insc_diaria.id),
+            'fecha': date.today().isoformat(),
+            'estado': Asistencia.ESTADO_AUSENTE_JUSTIFICADO,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
         self.assertEqual(Cobro.objects.filter(inscripcion=self.insc_diaria).count(), 0)
+
+    def test_ausente_en_mensual_no_genera_cobro_nuevo(self):
+        """La mensualidad no cambia: solo la asistencia presente genera su ciclo."""
+        self.client.force_authenticate(self.staff)
+        resp = self.client.post(self.url_lista(), {
+            'inscripcion': str(self.insc_mensual.id),
+            'fecha': date.today().isoformat(),
+            'estado': Asistencia.ESTADO_AUSENTE,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(Cobro.objects.filter(inscripcion=self.insc_mensual).count(), 0)
 
 
 class ValidacionHorasTests(AsistenciaTestBase):
@@ -382,20 +405,21 @@ class CobroSigueAlEstadoTests(AsistenciaTestBase):
             periodo=self.hoy.strftime('%Y-%m-%d'),
         ).first()
 
-    def test_presente_a_ausente_anula_cobro_sin_pagos(self):
+    def test_presente_a_justificado_anula_cobro_sin_pagos(self):
         aid = self._crear(self.insc_diaria)
         self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PENDIENTE)
-        r = self._cambiar(aid, 'ausente')
+        r = self._cambiar(aid, 'ausente_justificado')
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data['cobro_info']['accion'], 'anulado')
         cobro = self._cobro_diario()
         self.assertEqual(cobro.estado, Cobro.ESTADO_ANULADO)
         self.assertIn('Anulado automáticamente', cobro.observacion)
 
-    def test_tambien_anula_al_pasar_a_justificado(self):
+    def test_presente_a_ausente_sin_aviso_sigue_cobrando(self):
         aid = self._crear(self.insc_diaria)
-        self._cambiar(aid, 'ausente_justificado')
-        self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_ANULADO)
+        r = self._cambiar(aid, 'ausente')
+        self.assertNotIn('cobro_info', r.data)
+        self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PENDIENTE)
 
     def test_con_pago_parcial_no_se_anula_y_avisa(self):
         from inscripciones.models import Pago
@@ -403,7 +427,7 @@ class CobroSigueAlEstadoTests(AsistenciaTestBase):
         cobro = self._cobro_diario()
         Pago.objects.create(cobro=cobro, monto='10.00', registrado_por=self.staff)
         cobro.recalcular_estado()
-        r = self._cambiar(aid, 'ausente')
+        r = self._cambiar(aid, 'ausente_justificado')
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data['cobro_info']['accion'], 'no_anulado')
         self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PARCIAL)
@@ -414,19 +438,19 @@ class CobroSigueAlEstadoTests(AsistenciaTestBase):
         cobro = self._cobro_diario()
         Pago.objects.create(cobro=cobro, monto=cobro.monto_final, registrado_por=self.staff)
         cobro.recalcular_estado()
-        self._cambiar(aid, 'ausente')
+        self._cambiar(aid, 'ausente_justificado')
         self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PAGADO)
 
-    def test_ausente_a_presente_genera_el_cobro_que_antes_faltaba(self):
-        aid = self._crear(self.insc_diaria, estado='ausente')
+    def test_justificado_a_presente_genera_el_cobro_que_antes_faltaba(self):
+        aid = self._crear(self.insc_diaria, estado='ausente_justificado')
         self.assertIsNone(self._cobro_diario())
         self._cambiar(aid, 'presente')
         self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_PENDIENTE)
 
-    def test_presente_ausente_presente_reactiva_el_mismo_cobro(self):
+    def test_presente_justificado_presente_reactiva_el_mismo_cobro(self):
         aid = self._crear(self.insc_diaria)
         cobro_id = self._cobro_diario().id
-        self._cambiar(aid, 'ausente')
+        self._cambiar(aid, 'ausente_justificado')
         r = self._cambiar(aid, 'presente')
         self.assertEqual(r.data['cobro_info']['accion'], 'reactivado')
         self.assertEqual(Cobro.objects.filter(inscripcion=self.insc_diaria, tipo=Cobro.TIPO_DIARIO).count(), 1)
@@ -438,7 +462,7 @@ class CobroSigueAlEstadoTests(AsistenciaTestBase):
         aid = self._crear(self.insc_diaria)
         Cobro.objects.filter(id=self._cobro_diario().id).update(
             estado=Cobro.ESTADO_ANULADO, observacion='Anulado por la directora')
-        self._cambiar(aid, 'ausente')
+        self._cambiar(aid, 'ausente_justificado')
         self._cambiar(aid, 'presente')
         self.assertEqual(self._cobro_diario().estado, Cobro.ESTADO_ANULADO)
 

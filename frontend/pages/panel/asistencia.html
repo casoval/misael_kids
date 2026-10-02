@@ -596,6 +596,7 @@ async function cargarAsistencia() {
         inscripcion: i.inscripcion, nino: i.nino, nino_nombre: i.nino_nombre,
         nino_foto: i.nino_foto, personas: i.personas || [],
         sala_nombre: i.sala_nombre, turno_nombre: i.turno_nombre,
+        modalidad_pago: i.modalidad_pago, dias_semana_display: i.dias_semana_display,
         fecha, estado: ex?.estado||null,
         hora_entrada: ex?.hora_entrada?.slice(0,5)||'',
         hora_salida:  ex?.hora_salida?.slice(0,5)||'',
@@ -622,8 +623,12 @@ function claseEstado(r) {
 }
 
 function estadoBtnsHTML(r) {
+  const porDia = r.modalidad_pago === 'diaria';
+  const ayuda = porDia
+    ? { ausente: 'Falta sin aviso: se cobra el día', ausente_justificado: 'Falta avisada: no se cobra', presente: 'Presente: se cobra el día' }
+    : {};
   const b = (est, cls, ico, txt) =>
-    `<button type="button" class="est-btn ${r.estado===est?cls:''}" title="${txt}"
+    `<button type="button" class="est-btn ${r.estado===est?cls:''}" title="${ayuda[est] || txt}"
        onclick="setEstado('${r.inscripcion}','${est}')"><span>${ico}</span><span>${txt}</span></button>`;
   return `<div class="est-grupo">
     ${b('presente','sel-presente','✅','Presente')}
@@ -736,7 +741,7 @@ function cardHTML(r) {
         ${avatarHTML(r.nino_nombre, r.nino_foto, 'av-lg')}
         <div class="nc-info">
           <div class="nc-nombre">${esc(r.nino_nombre)}</div>
-          <div class="nc-meta">${esc(r.sala_nombre)} · ${esc(r.turno_nombre)}</div>
+          <div class="nc-meta">${esc(r.sala_nombre)} · ${esc(r.turno_nombre)}${r.modalidad_pago==='diaria' ? ' · <strong title="Falta sin aviso se cobra; justificada no">Por día' + (r.dias_semana_display && r.dias_semana_display !== 'Todos los días' ? ' (' + esc(r.dias_semana_display) + ')' : '') + '</strong>' : ''}</div>
         </div>
         <button type="button" class="btn-editar" title="Editar detalle" onclick="abrirDetalle('${r.inscripcion}')">✏️</button>
       </div>
@@ -761,7 +766,7 @@ function filaHTML(r, n) {
         ${avatarHTML(r.nino_nombre, r.nino_foto, 'av-md')}
         <div class="nc-info">
           <div class="nc-nombre">${esc(r.nino_nombre)}</div>
-          <div class="nc-meta">${esc(r.sala_nombre)} · ${esc(r.turno_nombre)}</div>
+          <div class="nc-meta">${esc(r.sala_nombre)} · ${esc(r.turno_nombre)}${r.modalidad_pago==='diaria' ? ' · <strong title="Falta sin aviso se cobra; justificada no">Por día' + (r.dias_semana_display && r.dias_semana_display !== 'Todos los días' ? ' (' + esc(r.dias_semana_display) + ')' : '') + '</strong>' : ''}</div>
         </div>
       </div>
       <div class="fila-estado">${estadoBtnsHTML(r)}</div>

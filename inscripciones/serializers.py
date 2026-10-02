@@ -2,7 +2,7 @@
 inscripciones/serializers.py
 """
 from rest_framework import serializers
-from .models import Inscripcion, Cobro, Pago, Devolucion
+from .models import Inscripcion, Cobro, Pago, Devolucion, AbonoDiario
 
 
 class PagoSerializer(serializers.ModelSerializer):
@@ -13,9 +13,39 @@ class PagoSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'cobro', 'monto', 'fecha_pago',
             'metodo_pago', 'metodo_pago_display', 'comprobante',
-            'registrado_por', 'observacion', 'numero_recibo', 'created_at',
+            'registrado_por', 'observacion', 'numero_recibo', 'abono_origen', 'created_at',
         ]
-        read_only_fields = ['id', 'numero_recibo', 'created_at']
+        read_only_fields = ['id', 'numero_recibo', 'abono_origen', 'created_at']
+
+
+class AbonoDiarioSerializer(serializers.ModelSerializer):
+    metodo_pago_display = serializers.CharField(source='get_metodo_pago_display', read_only=True)
+    monto_aplicado      = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
+    monto_disponible    = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
+
+    class Meta:
+        model  = AbonoDiario
+        fields = [
+            'id', 'inscripcion', 'monto', 'fecha_pago', 'metodo_pago', 'metodo_pago_display',
+            'comprobante', 'registrado_por', 'observacion', 'numero_recibo', 'es_traspaso',
+            'monto_aplicado', 'monto_disponible', 'created_at',
+        ]
+        read_only_fields = ['id', 'numero_recibo', 'registrado_por', 'created_at']
+
+
+def validar_dias_semana(valor):
+    """Lista de enteros 0-6 (0=lunes), sin repetir y ordenada. Vacío = todos los días."""
+    if valor in (None, ''):
+        return []
+    if not isinstance(valor, (list, tuple)):
+        raise serializers.ValidationError('Debe ser una lista de días (0=lunes ... 6=domingo).')
+    try:
+        dias = sorted({int(d) for d in valor})
+    except (TypeError, ValueError):
+        raise serializers.ValidationError('Los días deben ser números del 0 (lunes) al 6 (domingo).')
+    if any(d < 0 or d > 6 for d in dias):
+        raise serializers.ValidationError('Los días deben estar entre 0 (lunes) y 6 (domingo).')
+    return dias
 
 
 class DevolucionSerializer(serializers.ModelSerializer):
@@ -24,11 +54,11 @@ class DevolucionSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Devolucion
         fields = [
-            'id', 'cobro', 'monto', 'fecha',
+            'id', 'cobro', 'inscripcion', 'monto', 'fecha',
             'metodo_pago', 'metodo_pago_display', 'motivo',
-            'registrado_por', 'numero_recibo', 'created_at',
+            'registrado_por', 'numero_recibo', 'a_cuenta', 'created_at',
         ]
-        read_only_fields = ['id', 'numero_recibo', 'created_at']
+        read_only_fields = ['id', 'numero_recibo', 'a_cuenta', 'created_at']
 
 
 class CobroSerializer(serializers.ModelSerializer):
@@ -86,6 +116,7 @@ class InscripcionSerializer(serializers.ModelSerializer):
     modalidad_display     = serializers.CharField(source='get_modalidad_pago_display', read_only=True)
     costo_mensual_final   = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     costo_diario_final    = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
+    dias_semana_display   = serializers.CharField(read_only=True)
     cobros                = CobroSerializer(many=True, read_only=True)
 
     class Meta:
@@ -97,6 +128,7 @@ class InscripcionSerializer(serializers.ModelSerializer):
             'turno', 'turno_nombre',
             'modalidad_pago', 'modalidad_display',
             'fecha_inicio', 'fecha_fin',
+            'dias_semana', 'dias_semana_display',
             'costo_mensual', 'costo_diario',
             'tipo_ajuste', 'tipo_ajuste_display',
             'porcentaje_ajuste', 'monto_ajuste', 'motivo_ajuste',
@@ -106,7 +138,16 @@ class InscripcionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def validate_dias_semana(self, valor):
+        return validar_dias_semana(valor)
+
     def validate(self, data):
+        # Los días de la semana solo existen en la modalidad por día: en una
+        # mensualidad se ignoran (se guardan vacíos) para no dejar basura.
+        modalidad = data.get('modalidad_pago', getattr(self.instance, 'modalidad_pago', None))
+        if modalidad == Inscripcion.MODALIDAD_MENSUAL:
+            data['dias_semana'] = []
+
         # Un niño solo puede tener UNA inscripción activa en todo el sistema.
         # Para cambiarlo de sala/turno/sucursal se debe usar el endpoint
         # de transferencia (POST /inscripciones/{id}/transferir/), no crear
@@ -166,6 +207,8 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
     turno_nombre        = serializers.CharField(source='turno.nombre', read_only=True)
     modalidad_display   = serializers.CharField(source='get_modalidad_pago_display', read_only=True)
     costo_mensual_final = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
+    costo_diario_final  = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
+    dias_semana_display = serializers.CharField(read_only=True)
 
     class Meta:
         model  = Inscripcion
@@ -173,5 +216,7 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
             'id', 'nino', 'nino_nombre',
             'sucursal_nombre', 'sala_nombre', 'turno_nombre',
             'modalidad_pago', 'modalidad_display', 'tipo_ajuste',
-            'costo_mensual_final', 'activa', 'fecha_inicio',
+            'costo_mensual_final', 'costo_diario_final',
+            'dias_semana', 'dias_semana_display',
+            'activa', 'fecha_inicio',
         ]

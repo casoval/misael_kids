@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Inscripcion, Cobro, Pago
+from .models import Inscripcion, Cobro, Pago, AbonoDiario, DiasContratados
 
 class CobroInline(admin.TabularInline):
     model  = Cobro
@@ -14,7 +14,7 @@ class PagoInline(admin.TabularInline):
 
 @admin.register(Inscripcion)
 class InscripcionAdmin(admin.ModelAdmin):
-    list_display  = ['nino', 'sucursal', 'sala', 'turno', 'modalidad_pago', 'tipo_ajuste', 'costo_mensual_final', 'activa']
+    list_display  = ['nino', 'sucursal', 'sala', 'turno', 'modalidad_pago', 'dias_semana', 'tipo_ajuste', 'costo_mensual_final', 'activa']
     list_filter   = ['sucursal', 'sala', 'modalidad_pago', 'tipo_ajuste', 'activa']
     search_fields = ['nino__nombres', 'nino__apellidos']
     inlines       = [CobroInline]
@@ -34,3 +34,15 @@ class PagoAdmin(admin.ModelAdmin):
     list_display  = ['cobro', 'monto', 'fecha_pago', 'metodo_pago', 'registrado_por']
     list_filter   = ['metodo_pago', 'fecha_pago']
     date_hierarchy = 'fecha_pago'
+
+
+@admin.register(AbonoDiario)
+class AbonoDiarioAdmin(admin.ModelAdmin):
+    list_display   = ['inscripcion', 'monto', 'fecha_pago', 'metodo_pago', 'numero_recibo', 'registrado_por']
+    list_filter    = ['metodo_pago', 'fecha_pago']
+    date_hierarchy = 'fecha_pago'
+
+@admin.register(DiasContratados)
+class DiasContratadosAdmin(admin.ModelAdmin):
+    list_display = ['inscripcion', 'tipo', 'cantidad', 'fecha', 'registrado_por']
+    list_filter  = ['tipo']

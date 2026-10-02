@@ -618,7 +618,7 @@ async function cargarMovimientos() {
           </td>
           <td>
             <span class="chip ${esPago ? 'chip-verde' : 'chip-coral'}">
-              ${esPago ? '💵 Pago' : '↩️ Devolución'}
+              ${m.es_abono ? '💵 Abono por día' : esPago ? '💵 Pago' : '↩️ Devolución'}
             </span>
           </td>
           <td style="font-family:var(--font-display);font-weight:700;color:${esPago ? 'var(--verde-d)' : 'var(--coral-d)'}">
@@ -628,7 +628,7 @@ async function cargarMovimientos() {
           <td style="font-size:var(--text-sm);color:var(--texto-suave)">${m.registrado_por || '—'}</td>
           <td>
             ${m.numero_recibo
-              ? `<button class="btn btn-outline btn-sm" onclick="verRecibo('${m.tipo}','${m.id}')">Ver recibo</button>`
+              ? `<button class="btn btn-outline btn-sm" onclick="verRecibo('${m.es_abono ? 'abono' : m.tipo}','${m.id}')">Ver recibo</button>`
               : '—'}
           </td>
         </tr>
@@ -656,9 +656,8 @@ async function cargarMovimientos() {
 let reciboBlobUrlActual = null;
 
 async function verRecibo(tipo, id) {
-  const url = tipo === 'pago'
-    ? `/inscripciones/recibos/pago/${id}/`
-    : `/inscripciones/recibos/devolucion/${id}/`;
+  // tipo: 'pago' | 'devolucion' | 'abono' (abono = dinero recibido por adelantado en la modalidad por día)
+  const url = `/inscripciones/recibos/${tipo}/${id}/`;
   try {
     const resp = await fetch(API_BASE + url, {
       headers: { Authorization: `Bearer ${Auth.getToken()}` },

@@ -11,7 +11,7 @@ from .models import Asistencia
 from .serializers import AsistenciaSerializer
 from inscripciones.models import Cobro, Inscripcion
 from personal.models import AsignacionPersonal
-from inscripciones.services import generar_ciclo_mensual
+from inscripciones.services import generar_ciclo_mensual, aplicar_saldo, liberar_aplicaciones
 from accounts.permissions import (
     filtrar_por_alcance, NoEsTutor, ROLES_DE_SALA, salas_asignadas,
     exigir_nino_en_alcance,
@@ -53,47 +53,19 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
 
     def _generar_cobros_por_presencia(self, asistencia):
         """
-        Genera (o reactiva) el cobro que corresponde a un niño que está presente.
+        Genera (o reactiva) el cobro que corresponde a la asistencia.
         Devuelve 'reactivado' si volvió a abrir un cobro diario que el sistema
         había anulado, o None en cualquier otro caso.
         """
         inscripcion = asistencia.inscripcion
+
+        if inscripcion.modalidad_pago == Inscripcion.MODALIDAD_DIARIA:
+            return self._cobro_diario_por_asistencia(asistencia)
+
         if asistencia.estado != Asistencia.ESTADO_PRESENTE:
             return None
 
-        if inscripcion.modalidad_pago == Inscripcion.MODALIDAD_DIARIA:
-            # Cobro diario: uno por cada día que asiste
-            periodo = asistencia.fecha.strftime('%Y-%m-%d')
-            cobro = Cobro.objects.filter(
-                inscripcion=inscripcion, periodo=periodo, tipo=Cobro.TIPO_DIARIO
-            ).first()
-            if cobro is None:
-                try:
-                    Cobro.objects.create(
-                        inscripcion       = inscripcion,
-                        tipo              = Cobro.TIPO_DIARIO,
-                        periodo           = periodo,
-                        monto_base        = inscripcion.costo_diario,
-                        monto_final       = inscripcion.costo_diario_final,
-                        fecha_vencimiento = asistencia.fecha,
-                        registrado_por    = self.request.user,
-                    )
-                except IntegrityError:
-                    # Mismo caso que en generar_ciclo_mensual: dos marcas de
-                    # asistencia casi simultáneas para el mismo niño y día.
-                    pass
-            elif (cobro.estado == Cobro.ESTADO_ANULADO
-                  and self.MARCA_ANULACION_AUTO in (cobro.observacion or '')):
-                # El niño volvió a quedar "presente" tras haberse anulado el
-                # cobro por error de marcado: se reabre el mismo cobro (la
-                # restricción de "un cobro diario por día" impide crear otro).
-                cobro.estado = Cobro.ESTADO_PENDIENTE
-                self._anotar(cobro, 'Reactivado: la asistencia volvió a marcarse como presente.')
-                cobro.save(update_fields=['estado', 'observacion'])
-                cobro.recalcular_estado()   # lo pasa a "vencido" si corresponde
-                return 'reactivado'
-
-        elif inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
+        if inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
             # Mensualidad: la primera vez que el niño asiste dentro de un
             # ciclo que todavía no tiene cobro generado, se genera solo —
             # es la confirmación real de que continúa, no una suposición
@@ -112,6 +84,53 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
                 generar_ciclo_mensual(inscripcion, usuario=self.request.user)
         return None
 
+    def _cobro_diario_por_asistencia(self, asistencia):
+        """
+        Modalidad por día. Según Inscripcion.debe_cobrarse: presente y ausente
+        sin aviso generan el cobro del día; la falta justificada no. Si hay
+        saldo a favor (abonos del tutor), el cobro se cubre solo.
+        """
+        inscripcion = asistencia.inscripcion
+        if not inscripcion.debe_cobrarse(asistencia.estado, asistencia.fecha):
+            return None
+
+        periodo = asistencia.fecha.strftime('%Y-%m-%d')
+        cobro = Cobro.objects.filter(
+            inscripcion=inscripcion, periodo=periodo, tipo=Cobro.TIPO_DIARIO
+        ).first()
+        resultado = None
+        if cobro is None:
+            try:
+                with transaction.atomic():
+                    Cobro.objects.create(
+                        inscripcion       = inscripcion,
+                        tipo              = Cobro.TIPO_DIARIO,
+                        periodo           = periodo,
+                        monto_base        = inscripcion.costo_diario,
+                        monto_final       = inscripcion.costo_diario_final,
+                        fecha_vencimiento = asistencia.fecha,
+                        registrado_por    = self.request.user,
+                        observacion       = ('Falta sin aviso: se cobra el día.'
+                                             if asistencia.estado == Asistencia.ESTADO_AUSENTE else ''),
+                    )
+            except IntegrityError:
+                # Mismo caso que en generar_ciclo_mensual: dos marcas de
+                # asistencia casi simultáneas para el mismo niño y día.
+                pass
+        elif (cobro.estado == Cobro.ESTADO_ANULADO
+              and self.MARCA_ANULACION_AUTO in (cobro.observacion or '')):
+            # El niño volvió a quedar con un estado que cobra tras haberse
+            # anulado el cobro (p. ej. falta justificada corregida): se reabre
+            # el mismo cobro (la restricción de "un cobro diario por día"
+            # impide crear otro).
+            cobro.estado = Cobro.ESTADO_PENDIENTE
+            self._anotar(cobro, f'Reactivado: la asistencia cambió a "{asistencia.get_estado_display()}".')
+            cobro.save(update_fields=['estado', 'observacion'])
+            cobro.recalcular_estado()   # lo pasa a "vencido" si corresponde
+            resultado = 'reactivado'
+        aplicar_saldo(inscripcion)      # si hay saldo a favor, cubre este y otros días abiertos
+        return resultado
+
     def _anular_cobro_diario(self, asistencia):
         """
         El niño dejó de estar "presente" (se marcó por error, o cambió a
@@ -129,17 +148,26 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         ).first()
         if cobro is None or cobro.estado == Cobro.ESTADO_ANULADO:
             return None
+        # Los pagos que son solo la aplicación de un abono (saldo a favor) no
+        # cuentan como "dinero tocado": el dinero sigue siendo del tutor y
+        # vuelve a su saldo al anular el día. Un pago real, una devolución o
+        # una condonación sí bloquean la anulación automática.
+        pagos_reales  = cobro.pagos.filter(abono_origen__isnull=True).exists()
+        tiene_aplicac = cobro.pagos.filter(abono_origen__isnull=False).exists()
         con_movimientos = (
-            cobro.estado in (Cobro.ESTADO_PARCIAL, Cobro.ESTADO_PAGADO)
-            or cobro.pagos.exists() or cobro.devoluciones.exists()
+            pagos_reales
+            or (cobro.estado in (Cobro.ESTADO_PARCIAL, Cobro.ESTADO_PAGADO) and not tiene_aplicac)
+            or cobro.devoluciones.exists()
             or cobro.monto_condonado > 0
         )
         if con_movimientos:
             return 'con_pagos'
+        liberar_aplicaciones(cobro)
         cobro.estado = Cobro.ESTADO_ANULADO
         self._anotar(cobro, f'{self.MARCA_ANULACION_AUTO}: la asistencia del '
                             f'{asistencia.fecha:%d/%m/%Y} cambió a "{asistencia.get_estado_display()}".')
         cobro.save(update_fields=['estado', 'observacion'])
+        aplicar_saldo(inscripcion)      # el saldo liberado cubre otros días que estuvieran abiertos
         return 'anulado'
 
     def perform_create(self, serializer):
@@ -161,7 +189,26 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
             anterior   = serializer.instance.estado
             asistencia = serializer.save()
             self._cobro_info = None
-            if anterior != asistencia.estado:
+            if anterior != asistencia.estado and asistencia.inscripcion.modalidad_pago == Inscripcion.MODALIDAD_DIARIA:
+                insc, fecha = asistencia.inscripcion, asistencia.fecha
+                cobraba, cobra = insc.debe_cobrarse(anterior, fecha), insc.debe_cobrarse(asistencia.estado, fecha)
+                if cobra and not cobraba:
+                    if self._generar_cobros_por_presencia(asistencia) == 'reactivado':
+                        self._cobro_info = {
+                            'accion': 'reactivado',
+                            'mensaje': 'Se reactivó el cobro del día que se había anulado.'}
+                elif cobraba and not cobra:
+                    resultado = self._anular_cobro_diario(asistencia)
+                    if resultado == 'anulado':
+                        self._cobro_info = {
+                            'accion': 'anulado',
+                            'mensaje': 'Se anuló el cobro del día: la falta quedó como justificada o ya no está presente.'}
+                    elif resultado == 'con_pagos':
+                        self._cobro_info = {
+                            'accion': 'no_anulado',
+                            'mensaje': 'El cobro del día NO se anuló porque ya tiene pagos, devoluciones '
+                                       'o condonación. Revísalo en Cobros.'}
+            elif anterior != asistencia.estado:
                 if asistencia.estado == Asistencia.ESTADO_PRESENTE:
                     if self._generar_cobros_por_presencia(asistencia) == 'reactivado':
                         self._cobro_info = {
@@ -178,6 +225,16 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
                             'accion': 'no_anulado',
                             'mensaje': 'El cobro del día NO se anuló porque ya tiene pagos, devoluciones '
                                        'o condonación. Revísalo en Cobros.'}
+
+    def perform_destroy(self, instance):
+        # En modalidad por día, eliminar el registro de un día que cobraba
+        # anula ese cobro (si nadie tocó plata real), igual que cuando la
+        # asistencia deja de cobrar al editarla.
+        with transaction.atomic():
+            if (instance.inscripcion.modalidad_pago == Inscripcion.MODALIDAD_DIARIA
+                    and instance.inscripcion.debe_cobrarse(instance.estado, instance.fecha)):
+                self._anular_cobro_diario(instance)
+            instance.delete()
 
     def update(self, request, *args, **kwargs):
         self._cobro_info = None
@@ -373,6 +430,15 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         ).prefetch_related(
             'nino__tutores__tutor', 'nino__autorizados'
         ).filter(activa=True)
+        # Modalidad por día: el niño aparece desde su primer día de asistencia
+        # (no antes), hasta su fecha_fin si la tiene, y solo los días de la
+        # semana que le tocan (vacío = todos). Si ya tiene un registro de
+        # asistencia ese día (p. ej. vino un día que no le tocaba), también
+        # aparece. La mensualidad se lista igual que siempre.
+        inscripciones = inscripciones.filter(
+            Q(modalidad_pago=Inscripcion.MODALIDAD_MENSUAL)
+            | Q(Q(fecha_inicio__lte=fecha) & (Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=fecha)))
+        )
         if mis_salas is not None:
             inscripciones = inscripciones.filter(sala_id__in=mis_salas)
         if sucursal:
@@ -383,6 +449,15 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
             inscripciones = inscripciones.filter(turno=turno)
         inscripciones = inscripciones.order_by('nino__apellidos', 'nino__nombres')
 
+        con_registro = set(Asistencia.objects.filter(fecha=fecha).values_list('inscripcion_id', flat=True))
+        inscripciones = [
+            i for i in inscripciones
+            if i.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL
+            or not i.dias_semana
+            or fecha.weekday() in i.dias_semana
+            or i.id in con_registro
+        ]
+
         ninos = [{
             'inscripcion': i.id,
             'nino': i.nino_id,
@@ -390,6 +465,9 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
             'nino_foto': self._url_media(request, i.nino.foto),
             'sala': i.sala_id, 'sala_nombre': i.sala.nombre,
             'turno': i.turno_id, 'turno_nombre': i.turno.nombre,
+            'modalidad_pago': i.modalidad_pago,
+            'dias_semana': i.dias_semana,
+            'dias_semana_display': i.dias_semana_display,
             'personas': self._personas_del_nino(i.nino, fecha),
         } for i in inscripciones]
 

@@ -30,6 +30,21 @@
     .pg-dia.pg-bloqueado { background:var(--gris-100);color:var(--gris-500);cursor:not-allowed; }
     .pg-dia.pg-sin { background:var(--gris-50);color:var(--texto-suave); }
     .pg-dia.pg-finde { background:transparent; }
+    .pg-dia.pg-justificado { background:var(--violeta-l);color:var(--violeta-d); }
+    .pg-dia.pg-esperado { background:var(--blanco);color:var(--texto);border:1.5px dashed var(--gris-300); }
+    .pg-dia.pg-futuro { background:var(--blanco);color:var(--texto-suave);border:1.5px dotted var(--gris-200); }
+    .dias-pills { display:flex;gap:6px;flex-wrap:wrap; }
+    .dia-pill { display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;
+      border:1.5px solid var(--gris-200);border-radius:50%;font-size:var(--text-sm);font-weight:700;
+      color:var(--texto-suave);cursor:pointer;user-select:none;background:var(--blanco); }
+    .dia-pill input { position:absolute;opacity:0;pointer-events:none; }
+    .dia-pill:has(input:checked) { border-color:var(--turquesa);background:var(--turquesa-l);color:var(--turquesa-d); }
+    .dia-pill:has(input:focus-visible) { outline:2px solid var(--turquesa-d);outline-offset:2px; }
+    .pg-cuenta { background:var(--blanco);border:1.5px solid var(--gris-200);border-radius:var(--radio-lg);
+      padding:.85rem 1rem;margin-bottom:var(--gap-md); }
+    .pg-cuenta-cifras { display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px; }
+    .pg-cifra small { display:block;font-size:var(--text-xs);color:var(--texto-suave); }
+    .pg-cifra strong { display:block;font-family:var(--font-display);font-size:var(--text-lg); }
   </style>
 </head>
 <body>
@@ -191,9 +206,30 @@
         </select>
       </div>
       <div class="form-grupo">
-        <label class="form-label">Fecha de inicio *</label>
+        <label class="form-label" id="i-inicio-label">Fecha de inicio *</label>
         <input type="date" id="i-inicio" class="form-input">
         <span class="form-error" data-error="i-inicio"></span>
+      </div>
+      <div class="form-grupo" id="grupo-dias-semana" style="display:none;grid-column:1/-1">
+        <label class="form-label">Días de la semana en que asiste (opcional)</label>
+        <div class="dias-pills" id="i-dias-semana">
+          <label class="dia-pill" title="Lunes"><input type="checkbox" value="0">L</label>
+          <label class="dia-pill" title="Martes"><input type="checkbox" value="1">M</label>
+          <label class="dia-pill" title="Miércoles"><input type="checkbox" value="2">X</label>
+          <label class="dia-pill" title="Jueves"><input type="checkbox" value="3">J</label>
+          <label class="dia-pill" title="Viernes"><input type="checkbox" value="4">V</label>
+          <label class="dia-pill" title="Sábado"><input type="checkbox" value="5">S</label>
+          <label class="dia-pill" title="Domingo"><input type="checkbox" value="6">D</label>
+        </div>
+        <span style="font-size:var(--text-xs);color:var(--texto-suave);display:block;margin-top:6px">
+          Sin marcar = lo esperamos todos los días desde el primer día. Si marcas días, solo aparecerá en
+          la lista de asistencia esos días y una falta sin aviso solo se cobra esos días.
+        </span>
+      </div>
+      <div class="form-grupo" id="grupo-dias-acordados" style="display:none">
+        <label class="form-label">Días acordados con el tutor (opcional)</label>
+        <input type="number" id="i-dias-acordados" class="form-input" min="1" placeholder="Ej: 5">
+        <span style="font-size:var(--text-xs);color:var(--texto-suave)">Sirve de control: te avisamos si se pasa de lo acordado.</span>
       </div>
     </div>
 
@@ -309,14 +345,14 @@
       </div>
       <div class="form-grupo">
         <label class="form-label">Nuevo turno *</label>
-        <select id="t-turno" class="form-select">
+        <select id="t-turno" class="form-select" onchange="previsualizarTransferencia()">
           <option value="">Primero elige sala</option>
         </select>
         <span class="form-error" data-error="t-turno"></span>
       </div>
       <div class="form-grupo">
         <label class="form-label">Modalidad de pago</label>
-        <select id="t-modalidad" class="form-select">
+        <select id="t-modalidad" class="form-select" onchange="previsualizarTransferencia()">
           <option value="">Mantener la misma</option>
           <option value="mensual">Mensualidad fija</option>
           <option value="diaria">Pago por día</option>
@@ -324,8 +360,19 @@
       </div>
       <div class="form-grupo" style="grid-column:1/-1">
         <label class="form-label">Fecha de la transferencia *</label>
-        <input type="date" id="t-fecha" class="form-input">
+        <input type="date" id="t-fecha" class="form-input" onchange="previsualizarTransferencia()">
         <span class="form-error" data-error="t-fecha"></span>
+      </div>
+      <div id="t-plan" style="display:none;grid-column:1/-1;border:1.5px solid var(--turquesa);background:var(--turquesa-l);
+        border-radius:var(--radio-md);padding:.7rem .9rem;font-size:var(--text-sm);margin-bottom:var(--gap-md)"></div>
+      <div id="t-cerrar-grupo" style="display:none;grid-column:1/-1;margin-bottom:var(--gap-md)">
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:var(--text-sm);cursor:pointer">
+          <input type="checkbox" id="t-cerrar" onchange="document.getElementById('t-cerrar-motivo-grupo').style.display=this.checked?'':'none'">
+          <span><strong>Cerrar este ciclo con lo pagado</strong> — no se cobrará lo que falta (el niño ya no completa el mes).</span>
+        </label>
+        <div id="t-cerrar-motivo-grupo" style="display:none;margin-top:8px">
+          <input type="text" id="t-cerrar-motivo" class="form-input" placeholder="Motivo (obligatorio): ej. acordado con la directora">
+        </div>
       </div>
       <div class="form-grupo" style="grid-column:1/-1">
         <label class="form-label">Motivo (opcional)</label>
@@ -337,6 +384,91 @@
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-transferir')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarTransferencia()">Confirmar transferencia</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pg-devolver-saldo">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 class="modal-titulo">↩️ Devolver saldo a favor</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <p id="pds-info" style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)"></p>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Monto a devolver (Bs.) *</label>
+        <input type="number" id="pds-monto" class="form-input" step="0.01" min="0">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Método</label>
+        <select id="pds-metodo" class="form-select">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="transferencia">🏦 Transferencia</option>
+          <option value="qr">📱 QR</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Motivo *</label>
+      <textarea id="pds-motivo" class="form-textarea" style="min-height:60px" placeholder="Ej: La familia pidió que se le devuelva lo que quedó a favor"></textarea>
+    </div>
+    <span style="font-size:var(--text-xs);color:var(--texto-suave);display:block;margin-bottom:var(--gap-sm)">
+      Sale de caja como una devolución, con su recibo, y descuenta el saldo del niño.
+    </span>
+    <span class="form-error" id="pds-error"></span>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-pg-devolver-saldo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="pgConfirmarDevolverSaldo()">Devolver</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-baja">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3 class="modal-titulo">Dar de baja</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <div id="baja-nombre" style="font-weight:700;font-size:var(--text-lg);margin-bottom:6px"></div>
+    <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)">
+      Se cierra la inscripción y el niño deja de aparecer en la lista de asistencia. Su historial de cobros y pagos
+      se conserva. Si en el futuro regresa, se crea una <strong>inscripción nueva</strong> y su saldo a favor (si lo hay) pasa a ella.
+    </p>
+    <div class="form-grupo">
+      <label class="form-label">Último día de asistencia *</label>
+      <input type="date" id="baja-fecha" class="form-input">
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Motivo (opcional)</label>
+      <textarea id="baja-motivo" class="form-textarea" style="min-height:60px" placeholder="Ej: La familia se mudó de ciudad"></textarea>
+    </div>
+    <div id="baja-cerrar-grupo" class="form-grupo" style="display:none">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:var(--text-sm);cursor:pointer">
+        <input type="checkbox" id="baja-cerrar" onchange="document.getElementById('baja-cerrar-motivo-grupo').style.display=this.checked?'':'none'">
+        <span><strong>Cerrar el mes en curso con lo pagado</strong> — no se cobrará lo que falte. Los meses futuros sin pagos se anulan solos.</span>
+      </label>
+      <div id="baja-cerrar-motivo-grupo" style="display:none;margin-top:8px">
+        <input type="text" id="baja-cerrar-motivo" class="form-input" placeholder="Motivo (obligatorio)">
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:var(--text-sm);cursor:pointer">
+        <input type="checkbox" id="baja-devolver" onchange="document.getElementById('baja-devolver-grupo').style.display=this.checked?'':'none'">
+        <span><strong>Devolver el saldo a favor</strong> (si tiene) en este mismo paso, con su recibo.</span>
+      </label>
+      <div id="baja-devolver-grupo" style="display:none;margin-top:8px">
+        <select id="baja-devolver-metodo" class="form-select">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="transferencia">🏦 Transferencia</option>
+          <option value="qr">📱 QR</option>
+        </select>
+      </div>
+    </div>
+    <span class="form-error" id="baja-error"></span>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-baja')">Cancelar</button>
+      <button class="btn btn-primary" style="background:var(--coral);border-color:var(--coral-d)" onclick="confirmarBaja()">Dar de baja</button>
     </div>
   </div>
 </div>
@@ -444,6 +576,117 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-pg-abono">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3 class="modal-titulo">Registrar abono</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <p id="pga-info" style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)"></p>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Monto entregado (Bs.) *</label>
+        <input type="number" id="pga-monto" class="form-input" step="0.01" oninput="pgaSugerirDias()">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Días que cubre (opcional)</label>
+        <input type="number" id="pga-dias" class="form-input" min="0" oninput="pgaDiasEditado = true">
+      </div>
+    </div>
+    <span style="font-size:var(--text-xs);color:var(--texto-suave);display:block;margin:-6px 0 var(--gap-md)">
+      Si indicas los días, se suman a los días acordados con el tutor.
+    </span>
+    <div class="form-grupo">
+      <label class="form-label">Método de pago</label>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="metodo-btn pga-metodo seleccionado" data-metodo="efectivo" onclick="pgaSeleccionarMetodo('efectivo',this)">💵 Efectivo</button>
+        <button type="button" class="metodo-btn pga-metodo" data-metodo="transferencia" onclick="pgaSeleccionarMetodo('transferencia',this)">🏦 Transferencia</button>
+        <button type="button" class="metodo-btn pga-metodo" data-metodo="qr" onclick="pgaSeleccionarMetodo('qr',this)">📱 QR</button>
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Observación (opcional)</label>
+      <textarea id="pga-observacion" class="form-textarea" style="min-height:60px" placeholder="Ej: Pagó la semana por adelantado"></textarea>
+    </div>
+    <span class="form-error" id="pga-error"></span>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-pg-abono')">Cancelar</button>
+      <button class="btn btn-primary" onclick="pgConfirmarAbono()">Registrar abono</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pg-dias">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 class="modal-titulo">Días acordados</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)">
+      Es un control: el cobro sigue dependiendo de la asistencia. Cada cambio queda en el historial.
+    </p>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Tipo</label>
+        <select id="pgd-tipo" class="form-select">
+          <option value="inicial">Días iniciales</option>
+          <option value="ampliacion">Ampliación</option>
+          <option value="reduccion">Reducción</option>
+        </select>
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Cantidad de días *</label>
+        <input type="number" id="pgd-cantidad" class="form-input" min="1">
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Nota (opcional)</label>
+      <textarea id="pgd-nota" class="form-textarea" style="min-height:60px" placeholder="Ej: La mamá pidió pasar de 5 a 10 días"></textarea>
+    </div>
+    <span class="form-error" id="pgd-error"></span>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-pg-dias')">Cancelar</button>
+      <button class="btn btn-primary" onclick="pgConfirmarDias()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-cambiar-modalidad">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3 class="modal-titulo">Cambiar modalidad</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <div id="cm-nombre" style="font-weight:700;font-size:var(--text-lg);margin-bottom:6px"></div>
+    <p id="cm-texto" style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)"></p>
+    <div class="form-grupo">
+      <label class="form-label" id="cm-fecha-label"></label>
+      <input type="date" id="cm-fecha" class="form-input">
+    </div>
+    <div class="form-grupo" id="cm-grupo-dias" style="display:none">
+      <label class="form-label">Días de la semana en que asiste (opcional)</label>
+      <div class="dias-pills" id="cm-dias-semana">
+        <label class="dia-pill" title="Lunes"><input type="checkbox" value="0">L</label>
+        <label class="dia-pill" title="Martes"><input type="checkbox" value="1">M</label>
+        <label class="dia-pill" title="Miércoles"><input type="checkbox" value="2">X</label>
+        <label class="dia-pill" title="Jueves"><input type="checkbox" value="3">J</label>
+        <label class="dia-pill" title="Viernes"><input type="checkbox" value="4">V</label>
+        <label class="dia-pill" title="Sábado"><input type="checkbox" value="5">S</label>
+        <label class="dia-pill" title="Domingo"><input type="checkbox" value="6">D</label>
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Motivo (opcional)</label>
+      <textarea id="cm-motivo" class="form-textarea" style="min-height:60px" placeholder="Ej: La familia decidió que venga todo el mes"></textarea>
+    </div>
+    <span class="form-error" id="cm-error"></span>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-cambiar-modalidad')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCambiarModalidad()">Cambiar modalidad</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-recibo">
   <div class="modal" style="max-width:min(95vw,1150px);width:95vw;height:90vh;display:flex;flex-direction:column;padding:0">
     <div class="modal-header" style="padding:var(--gap-md) var(--gap-lg)">
@@ -535,8 +778,11 @@ async function cargar() {
         </td>
         <td><span class="chip ${i.modalidad_pago==='mensual'?'chip-turquesa':'chip-amarillo'}">${i.modalidad_display}</span></td>
         <td>
-          <div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_mensual_final)}</div>
-          ${i.tipo_ajuste!=='ninguno'?'<div style="font-size:var(--text-xs);text-decoration:line-through;color:var(--texto-suave)">'+UI.moneda(i.costo_mensual)+'</div>':''}
+          ${i.modalidad_pago==='diaria'
+            ? `<div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_diario_final)} <span style="font-size:var(--text-xs);color:var(--texto-suave)">/ día</span></div>
+               <div style="font-size:var(--text-xs);color:var(--texto-suave)">${i.dias_semana_display}</div>`
+            : `<div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_mensual_final)}</div>
+               ${i.tipo_ajuste!=='ninguno'?'<div style="font-size:var(--text-xs);text-decoration:line-through;color:var(--texto-suave)">'+UI.moneda(i.costo_mensual)+'</div>':''}`}
         </td>
         <td>${i.tipo_ajuste!=='ninguno'?'<span class="chip chip-violeta">'+ajusteLabel[i.tipo_ajuste]+'</span>':'—'}</td>
         <td>${UI.fecha(i.fecha_inicio)}</td>
@@ -547,9 +793,11 @@ async function cargar() {
             <button class="btn btn-sm" style="background:var(--amarillo-l);color:var(--amarillo-d);border:1.5px solid var(--amarillo)"
               onclick="abrirPagos('${i.id}','${i.nino_nombre}','${i.sala_nombre} · ${i.turno_nombre}','${i.modalidad_pago}')">💳 Pagos</button>
             ${i.activa ? `<button class="btn btn-sm" style="background:var(--turquesa-l);color:var(--turquesa-d);border:1.5px solid var(--turquesa)"
-              onclick="abrirTransferir('${i.id}','${i.nino_nombre}','${i.sucursal_nombre}')">🔁 Transferir</button>` : ''}
+              onclick="abrirTransferir('${i.id}','${i.nino_nombre}','${i.sucursal_nombre}')">🔁 Transferir</button>
+            <button class="btn btn-sm" style="background:var(--violeta-l);color:var(--violeta-d);border:1.5px solid var(--violeta-d)"
+              onclick="abrirCambiarModalidad('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')">${i.modalidad_pago==='diaria'?'📅 Pasar a mensual':'📅 Pasar a por día'}</button>` : ''}
             <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
-              onclick="eliminar('${i.id}','${i.nino_nombre}')">Eliminar</button>
+              onclick="${i.activa ? `abrirBaja('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')` : `eliminar('${i.id}','${i.nino_nombre}')`}">${i.activa ? 'Dar de baja' : 'Eliminar'}</button>
           </div>
         </td>
       </tr>`).join('');
@@ -573,6 +821,8 @@ function abrirNuevo() {
   document.getElementById('i-modalidad').value = 'mensual';
   document.getElementById('i-tipo-ajuste').value = 'ninguno';
   document.getElementById('i-inicio').value = hoy;
+  ponerDias('i-dias-semana', []);
+  document.getElementById('i-dias-acordados').value = '';
   ['i-costo-mensual','i-costo-diario','i-pct-ajuste','i-monto-ajuste'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('aviso-edad').style.display = 'none';
   document.getElementById('preview-costos').style.display = 'none';
@@ -597,6 +847,7 @@ async function editar(id) {
     document.getElementById('i-turno').value          = i.turno;
     document.getElementById('i-modalidad').value      = i.modalidad_pago;
     document.getElementById('i-inicio').value         = i.fecha_inicio;
+    ponerDias('i-dias-semana', i.dias_semana);
     document.getElementById('i-costo-mensual').value  = i.costo_mensual;
     document.getElementById('i-costo-diario').value   = i.costo_diario;
     document.getElementById('i-tipo-ajuste').value    = i.tipo_ajuste;
@@ -666,7 +917,19 @@ function actualizarVistaCostos() {
   document.getElementById('i-costo-mensual').closest('.form-grupo').style.display = esMensual ? '' : 'none';
   document.getElementById('i-costo-diario').closest('.form-grupo').style.display  = esMensual ? 'none' : '';
   document.getElementById('prev-final-diario').closest('.costo-fila').style.display = esMensual ? 'none' : '';
+  // Campos propios de la modalidad por día
+  document.getElementById('grupo-dias-semana').style.display = esMensual ? 'none' : '';
+  document.getElementById('grupo-dias-acordados').style.display = (esMensual || editandoId) ? 'none' : '';
+  document.getElementById('i-inicio-label').textContent = esMensual ? 'Fecha de inicio *' : 'Primer día de asistencia *';
   calcularCostoFinal();
+}
+
+// Casillas de días de la semana (0=lunes ... 6=domingo)
+function leerDias(contId) {
+  return [...document.querySelectorAll('#' + contId + ' input:checked')].map(c => parseInt(c.value, 10));
+}
+function ponerDias(contId, dias) {
+  document.querySelectorAll('#' + contId + ' input').forEach(c => { c.checked = (dias || []).includes(parseInt(c.value, 10)); });
 }
 
 function mostrarCamposAjuste() {
@@ -730,7 +993,10 @@ async function guardarInscripcion() {
     monto_ajuste:     tipo==='descuento_monto'?document.getElementById('i-monto-ajuste').value:0,
     motivo_ajuste:    document.getElementById('i-motivo-ajuste').value,
     activa:           true,
+    dias_semana:      document.getElementById('i-modalidad').value === 'diaria' ? leerDias('i-dias-semana') : [],
   };
+  const acordados = parseInt(document.getElementById('i-dias-acordados').value, 10);
+  if (!editandoId && datos.modalidad_pago === 'diaria' && acordados > 0) datos.dias_contratados = acordados;
   try {
     let creando = !editandoId;
     if (editandoId) await API.patch('/inscripciones/inscripciones/'+editandoId+'/',datos);
@@ -738,7 +1004,9 @@ async function guardarInscripcion() {
     UI.toast(
       creando && datos.modalidad_pago === 'mensual'
         ? '✅ Inscripción creada — ya se generó su primera mensualidad, solo falta registrar el pago'
-        : 'Inscripción guardada correctamente',
+        : creando && datos.modalidad_pago === 'diaria'
+          ? '✅ Inscripción creada — el niño aparecerá en la lista de asistencia desde su primer día'
+          : 'Inscripción guardada correctamente',
       'exito'
     );
     UI.cerrarModal('modal-insc');
@@ -757,6 +1025,11 @@ async function abrirTransferir(id, nombreNino, sucursalActual) {
   document.getElementById('t-modalidad').value = '';
   document.getElementById('t-fecha').value     = hoy;
   document.getElementById('t-motivo').value    = '';
+  document.getElementById('t-plan').style.display = 'none';
+  document.getElementById('t-cerrar-grupo').style.display = 'none';
+  document.getElementById('t-cerrar').checked = false;
+  document.getElementById('t-cerrar-motivo-grupo').style.display = 'none';
+  document.getElementById('t-cerrar-motivo').value = '';
   document.querySelectorAll('#modal-transferir .form-error').forEach(el=>el.textContent='');
   document.querySelectorAll('#modal-transferir .input-error').forEach(el=>el.classList.remove('input-error'));
 
@@ -803,6 +1076,42 @@ async function cargarTurnosTransferir() {
   } catch {}
 }
 
+// Vista previa (sin guardar nada) de qué pasa con el mes en curso y el dinero
+let tPlanSeq = 0;
+async function previsualizarTransferencia() {
+  const box = document.getElementById('t-plan'), grupo = document.getElementById('t-cerrar-grupo');
+  const sala = document.getElementById('t-sala').value, turno = document.getElementById('t-turno').value;
+  box.style.display = 'none'; grupo.style.display = 'none';
+  if (!sala || !turno) return;
+  const mi = ++tPlanSeq;
+  const datos = { sucursal: document.getElementById('t-sucursal').value, sala, turno, simular: true,
+                  fecha_transferencia: document.getElementById('t-fecha').value || hoy };
+  const modalidad = document.getElementById('t-modalidad').value;
+  if (modalidad) datos.modalidad_pago = modalidad;
+  let r;
+  try { r = await API.post('/inscripciones/inscripciones/' + document.getElementById('t-id').value + '/transferir/', datos); }
+  catch (err) {
+    if (mi !== tPlanSeq) return;
+    box.style.display = ''; box.style.background = 'var(--coral-l)'; box.style.borderColor = 'var(--coral)';
+    box.innerHTML = '⚠️ ' + err.message; return;
+  }
+  if (mi !== tPlanSeq) return;
+  box.style.background = 'var(--turquesa-l)'; box.style.borderColor = 'var(--turquesa)';
+  const c = r.ciclo;
+  const lineas = [];
+  if (r.continua_ciclo && c) {
+    lineas.push(`📆 Mes en curso: <strong>${UI.fecha(c.periodo_inicio)} → ${UI.fecha(c.periodo_fin)}</strong>. No se cobra otro mes: <strong>continúa</strong> en la nueva inscripción.`);
+    lineas.push(`Pagado hasta ahora: <strong>${UI.moneda(c.pagado)}</strong> · Precio del mes: ${UI.moneda(c.monto_actual)} → <strong>${UI.moneda(c.monto_nuevo)}</strong>`);
+    if (c.motivo === 'cerrado_con_lo_pagado') lineas.push('✅ Este mes ya estaba cerrado con lo pagado: no cambia.');
+    else if (parseFloat(c.a_favor) > 0) lineas.push(`💳 El turno nuevo cuesta menos: <strong>${UI.moneda(c.a_favor)}</strong> pasan a la cuenta del niño y descuentan su próxima mensualidad.`);
+    else if (c.motivo === 'precio_distinto' && parseFloat(c.por_cobrar) > 0) lineas.push(`💰 El turno nuevo cuesta más: <strong>${UI.moneda(c.por_cobrar)}</strong> quedarán por cobrar este mes.`);
+    else if (c.motivo === 'mismo_precio') lineas.push(parseFloat(c.por_cobrar) > 0 ? `Mismo precio. Aún falta pagar ${UI.moneda(c.por_cobrar)} de este mes.` : 'Mismo precio: no hay nada que ajustar.');
+    if (parseFloat(c.por_cobrar) > 0 && c.motivo !== 'cerrado_con_lo_pagado') grupo.style.display = '';
+  } else if (r.advertencias && r.advertencias.length) { /* solo avisos */ }
+  (r.advertencias || []).forEach(a => lineas.push('⚠️ ' + a));
+  if (lineas.length) { box.innerHTML = lineas.map(l => `<div style="margin:2px 0">${l}</div>`).join(''); box.style.display = ''; }
+}
+
 async function guardarTransferencia() {
   const errores = Validar.formulario({
     't-sucursal': [()=>Validar.requerido(document.getElementById('t-sucursal').value,'Sucursal')],
@@ -832,16 +1141,63 @@ async function guardarTransferencia() {
   };
   const modalidad = document.getElementById('t-modalidad').value;
   if (modalidad) datos.modalidad_pago = modalidad;
+  if (document.getElementById('t-cerrar').checked) {
+    const motivo = document.getElementById('t-cerrar-motivo').value.trim();
+    if (!motivo) { UI.toast('Indica el motivo para cerrar el mes con lo pagado.', 'error'); return; }
+    datos.cerrar_con_lo_pagado = true; datos.motivo_cierre = motivo;
+  }
 
   try {
-    await API.post('/inscripciones/inscripciones/'+id+'/transferir/', datos);
-    UI.toast(
-      '✅ Transferencia realizada. Si la modalidad es mensual, ya se generó la mensualidad del nuevo ciclo.',
-      'exito'
-    );
+    const resp = await API.post('/inscripciones/inscripciones/'+id+'/transferir/', datos);
+    const continua = resp.transferencia && resp.transferencia.continua_ciclo;
+    UI.toast(continua
+      ? '✅ Transferencia realizada. El mes en curso continúa: no se cobró un mes nuevo.'
+      : '✅ Transferencia realizada. Si la modalidad es mensual, ya se generó la mensualidad del nuevo ciclo.',
+      'exito');
+    (resp.advertencias || []).forEach(a => UI.toast('⚠️ ' + a, 'error'));
     UI.cerrarModal('modal-transferir');
     cargar(); cargarStats();
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
+}
+
+// ── Baja: el niño ya no viene. Si vuelve, se crea una inscripción nueva ──
+let bajaId = null, bajaModalidad = null;
+
+function abrirBaja(id, nombre, modalidad) {
+  bajaId = id; bajaModalidad = modalidad;
+  document.getElementById('baja-nombre').textContent = nombre;
+  document.getElementById('baja-fecha').value = hoy;
+  document.getElementById('baja-motivo').value = '';
+  document.getElementById('baja-cerrar').checked = false;
+  document.getElementById('baja-cerrar-motivo').value = '';
+  document.getElementById('baja-cerrar-grupo').style.display = modalidad === 'mensual' ? '' : 'none';
+  document.getElementById('baja-cerrar-motivo-grupo').style.display = 'none';
+  document.getElementById('baja-devolver').checked = false;
+  document.getElementById('baja-devolver-grupo').style.display = 'none';
+  document.getElementById('baja-error').textContent = '';
+  UI.abrirModal('modal-baja');
+}
+
+async function confirmarBaja() {
+  const errorEl = document.getElementById('baja-error');
+  const cerrar = document.getElementById('baja-cerrar').checked;
+  const motivoCierre = document.getElementById('baja-cerrar-motivo').value.trim();
+  if (!document.getElementById('baja-fecha').value) { errorEl.textContent = 'Indica la fecha de la baja.'; return; }
+  if (cerrar && !motivoCierre) { errorEl.textContent = 'Indica el motivo para cerrar con lo pagado.'; return; }
+  errorEl.textContent = '';
+  const datos = { fecha_fin: document.getElementById('baja-fecha').value, motivo: document.getElementById('baja-motivo').value };
+  if (cerrar) { datos.cerrar_con_lo_pagado = true; datos.motivo_cierre = motivoCierre; }
+  if (document.getElementById('baja-devolver').checked) {
+    datos.devolver_saldo = true; datos.metodo_pago = document.getElementById('baja-devolver-metodo').value;
+  }
+  try {
+    const r = await API.post('/inscripciones/inscripciones/' + bajaId + '/cerrar/', datos);
+    UI.cerrarModal('modal-baja');
+    UI.toast('✅ Inscripción cerrada. Si el niño vuelve, crea una inscripción nueva.', 'exito');
+    (r.advertencias || []).forEach(a => UI.toast('⚠️ ' + a, 'error'));
+    cargar(); cargarStats();
+    if (r.devolucion && r.devolucion.id) verRecibo('devolucion', r.devolucion.id);
+  } catch (err) { errorEl.textContent = err.message; }
 }
 
 async function eliminar(id, nombre) {
@@ -878,8 +1234,8 @@ async function pgCargar() {
     let url = `/inscripciones/inscripciones/${pgInscripcionId}/calendario-pagos/`;
     if (pgModalidad === 'diaria') url += `?anio=${pgAnio}&mes=${pgMes}`;
     const data = await API.get(url);
-    if (data.modalidad === 'mensual') pgPintarMensual(data.ciclos);
-    else pgPintarDiario(data.calendario);
+    if (data.modalidad === 'mensual') pgPintarMensual(data.ciclos, data.saldo_a_favor);
+    else pgPintarDiario(data.calendario, data.resumen);
   } catch (err) {
     document.getElementById('pg-contenido').innerHTML =
       `<div class="alerta alerta-peligro">Error: ${err.message}</div>`;
@@ -896,22 +1252,27 @@ const PG_ESTADO_CHIP = {
 // Resumen de totales (pagado / condonado / devuelto) de los cobros que se
 // están mostrando en el modal de Pagos. Se recalcula cada vez que se pinta
 // el calendario (mensual o diario), así queda al día tras cada acción.
-function pgPintarResumen(cobros) {
+function pgPintarResumen(cobros, saldoAFavor) {
   const el = document.getElementById('pg-resumen');
-  if (!cobros.length) { el.innerHTML = ''; return; }
+  if (!cobros.length && !(parseFloat(saldoAFavor) > 0)) { el.innerHTML = ''; return; }
   const totalPagado    = cobros.reduce((s,co) => s + parseFloat(co.monto_pagado||0), 0);
   const totalCondonado = cobros.reduce((s,co) => s + parseFloat(co.monto_condonado||0), 0);
+  // Las devoluciones "a cuenta" no salieron de caja: pasaron al saldo a favor del niño.
   const totalDevuelto  = cobros.reduce((s,co) =>
-    s + (co.devoluciones||[]).reduce((s2,d) => s2 + parseFloat(d.monto||0), 0), 0);
+    s + (co.devoluciones||[]).filter(d => !d.a_cuenta).reduce((s2,d) => s2 + parseFloat(d.monto||0), 0), 0);
   el.innerHTML = [
     `💵 Pagado en total: <strong style="color:var(--texto)">${UI.moneda(totalPagado)}</strong>`,
     totalCondonado > 0 ? `🤝 Condonado: <strong style="color:var(--coral-d)">${UI.moneda(totalCondonado)}</strong>` : null,
     totalDevuelto  > 0 ? `↩️ Devuelto: <strong style="color:var(--coral-d)">${UI.moneda(totalDevuelto)}</strong>`   : null,
+    parseFloat(saldoAFavor) > 0 ? `💳 Saldo a favor: <strong style="color:var(--verde-d)">${UI.moneda(saldoAFavor)}</strong> <small>(cubrirá la próxima mensualidad)</small> <button class="btn btn-outline btn-sm" style="margin-left:6px" onclick="pgAbrirDevolverSaldo()">↩️ Devolver</button>` : null,
   ].filter(Boolean).map(s => `<span>${s}</span>`).join('');
 }
 
-function pgPintarMensual(ciclos) {
-  pgPintarResumen(ciclos.filter(c => c.cobro).map(c => c.cobro));
+let pgSaldoActual = 0;
+
+function pgPintarMensual(ciclos, saldoAFavor) {
+  pgSaldoActual = parseFloat(saldoAFavor) || 0;
+  pgPintarResumen(ciclos.filter(c => c.cobro).map(c => c.cobro), saldoAFavor);
 
   let maxPeriodoFin = null;
   ciclos.forEach(c => {
@@ -959,9 +1320,13 @@ function pgPintarMensual(ciclos) {
           Historial de pagos (${co.pagos.length})
         </summary>
         <div style="font-size:var(--text-xs);margin-top:4px;display:flex;flex-direction:column;gap:2px">
-          ${co.pagos.map(p => `<div>${UI.fecha(p.fecha_pago)} — ${UI.moneda(p.monto)} (${p.metodo_pago})${p.registrado_por ? ' · '+p.registrado_por : ''}
+          ${co.pagos.map(p => p.abono_origen
+            ? `<div>${UI.fecha(p.fecha_pago)} — ${UI.moneda(p.monto)} <em>aplicado de su saldo a favor</em></div>`
+            : `<div>${UI.fecha(p.fecha_pago)} — ${UI.moneda(p.monto)} (${p.metodo_pago})${p.registrado_por ? ' · '+p.registrado_por : ''}
             <a href="#" onclick='verRecibo("pago", "${p.id}"); return false' style="color:var(--turquesa-d)">🧾 Recibo</a></div>`).join('')}
-          ${co.devoluciones && co.devoluciones.length ? co.devoluciones.map(d => `<div style="color:var(--coral-d)">↩️ ${UI.fecha(d.fecha)} — ${UI.moneda(d.monto)} devuelto (${d.metodo_pago}) — ${d.motivo}
+          ${co.devoluciones && co.devoluciones.length ? co.devoluciones.map(d => d.a_cuenta
+            ? `<div style="color:var(--turquesa-d)">💳 ${UI.fecha(d.fecha)} — ${UI.moneda(d.monto)} pasó a su cuenta (saldo a favor) — ${d.motivo}</div>`
+            : `<div style="color:var(--coral-d)">↩️ ${UI.fecha(d.fecha)} — ${UI.moneda(d.monto)} devuelto (${d.metodo_pago}) — ${d.motivo}
             <a href="#" onclick='verRecibo("devolucion", "${d.id}"); return false' style="color:var(--turquesa-d)">🧾 Recibo</a></div>`).join('') : ''}
         </div>
       </details>` : ''}`;
@@ -1015,7 +1380,11 @@ function pgPintarMensual(ciclos) {
     </div>`;
 }
 
-function pgPintarDiario(cal) {
+let pgResumenDiario = null;
+
+function pgPintarDiario(cal, r) {
+  pgResumenDiario = r;
+  pgSaldoActual = r ? parseFloat(r.saldo_a_favor) || 0 : 0;
   pgPintarResumen(cal.dias.filter(d => d.cobro).map(d => d.cobro));
 
   const dow = ['L','M','X','J','V','S','D'];
@@ -1024,19 +1393,29 @@ function pgPintarDiario(cal) {
   for (let i = 0; i < primerDow; i++) celdas += '<div></div>';
   cal.dias.forEach(d => {
     const esFinde = d.dia_semana >= 5;
-    if (!d.cobro) {
-      celdas += `<div class="pg-dia ${esFinde ? 'pg-finde' : 'pg-sin'}">${esFinde ? '' : d.dia}</div>`;
-      return;
-    }
-    if (d.cobro.estado === 'pagado') {
-      celdas += `<div class="pg-dia pg-pagado" title="${UI.moneda(d.cobro.monto_final)} · pagado">${d.dia}</div>`;
-    } else if (d.bloqueado_por) {
-      celdas += `<div class="pg-dia pg-bloqueado" title="Bloqueado: primero cierra el ${UI.fecha(d.bloqueado_por)}">${d.dia}</div>`;
+    const co = d.cobro && d.cobro.estado !== 'anulado' ? d.cobro : null;
+    if (co) {
+      const falta = d.asistencia === 'ausente' ? ' · falta sin aviso' : '';
+      if (co.estado === 'pagado') {
+        celdas += `<div class="pg-dia pg-pagado" title="${UI.moneda(co.monto_final)} · pagado${falta}">${d.dia}</div>`;
+      } else if (d.bloqueado_por) {
+        celdas += `<div class="pg-dia pg-bloqueado" title="Bloqueado: primero cierra el ${UI.fecha(d.bloqueado_por)}">${d.dia}</div>`;
+      } else {
+        celdas += `<div class="pg-dia pg-pendiente" onclick='pgAbrirRegistrar(${JSON.stringify(co)})' title="${UI.moneda(co.monto_final)}${falta}">${d.dia}</div>`;
+      }
+    } else if (d.asistencia === 'ausente_justificado' || (d.cobro && d.cobro.estado === 'anulado')) {
+      celdas += `<div class="pg-dia pg-justificado" title="Falta avisada: no se cobra">${d.dia}</div>`;
+    } else if (d.esperado && d.fecha <= hoy) {
+      celdas += `<div class="pg-dia pg-esperado" title="Le tocaba asistir y no hay asistencia marcada">${d.dia}</div>`;
+    } else if (d.esperado && !esFinde) {
+      celdas += `<div class="pg-dia pg-futuro" title="Le toca asistir">${d.dia}</div>`;
     } else {
-      celdas += `<div class="pg-dia pg-pendiente" onclick='pgAbrirRegistrar(${JSON.stringify(d.cobro)})' title="${UI.moneda(d.cobro.monto_final)}">${d.dia}</div>`;
+      celdas += `<div class="pg-dia ${esFinde ? 'pg-finde' : 'pg-sin'}">${esFinde ? '' : d.dia}</div>`;
     }
   });
+
   document.getElementById('pg-contenido').innerHTML = `
+    ${pgHtmlCuentaDiaria(r)}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <button class="btn btn-outline btn-sm" onclick="pgCambiarMes(-1)">‹</button>
       <span style="font-weight:700">${cal.etiqueta}</span>
@@ -1044,8 +1423,189 @@ function pgPintarDiario(cal) {
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">${celdas}</div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:var(--text-xs);color:var(--texto-suave);margin-top:12px">
-      <span>🟩 Pagado</span><span>🟨 Pendiente</span><span>🔒 Bloqueado (cierra el anterior)</span><span>⬜ Sin asistencia</span>
+      <span>🟩 Pagado</span><span>🟨 Cobrado, falta pagar</span><span>🟪 Falta avisada (no se cobra)</span>
+      <span>🔒 Cierra primero el anterior</span><span>▫️ Le tocaba, sin asistencia marcada</span>
+    </div>
+    ${pgHtmlHistorialDiario(r)}`;
+}
+
+function pgHtmlCuentaDiaria(r) {
+  if (!r) return '';
+  const dc = r.dias_contratados;
+  const niv = { alto: 'alerta-peligro', medio: 'alerta-warn' };
+  const alertas = (r.alertas || []).map(a => `<div class="alerta ${niv[a.nivel] || 'alerta-info'}" style="margin:8px 0 0">${a.mensaje}</div>`).join('');
+  const cubre = r.dias_que_cubre_el_saldo != null && parseFloat(r.saldo_a_favor) > 0
+    ? `<small>cubre ${r.dias_que_cubre_el_saldo} día${r.dias_que_cubre_el_saldo === 1 ? '' : 's'}</small>` : '';
+  const acordados = dc.total > 0
+    ? `<strong>${dc.cobrados} de ${dc.total}</strong><small>${dc.restantes >= 0 ? 'restan ' + dc.restantes : 'se pasó por ' + (-dc.restantes)}</small>`
+    : `<strong>${dc.cobrados}</strong><small>cobrados (sin días acordados)</small>`;
+  return `
+    <div class="pg-cuenta">
+      <div class="pg-cuenta-cifras">
+        <div class="pg-cifra"><small>Saldo a favor</small><strong style="color:var(--verde-d)">${UI.moneda(r.saldo_a_favor)}</strong>${cubre}</div>
+        <div class="pg-cifra"><small>Debe</small><strong style="color:${parseFloat(r.deuda) > 0 ? 'var(--coral-d)' : 'inherit'}">${UI.moneda(r.deuda)}</strong></div>
+        <div class="pg-cifra"><small>Días cobrados / acordados</small>${acordados}</div>
+        <div class="pg-cifra"><small>Asistencia</small><strong>${r.asistencia.presentes}</strong>
+          <small>${r.asistencia.ausentes_cobrados} falta${r.asistencia.ausentes_cobrados === 1 ? '' : 's'} sin aviso · ${r.asistencia.justificados} avisada${r.asistencia.justificados === 1 ? '' : 's'}</small></div>
+      </div>
+      ${alertas}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn btn-primary btn-sm" onclick="pgAbrirAbono()">💵 Registrar abono</button>
+        <button class="btn btn-outline btn-sm" onclick="pgAbrirDias()">🗓️ Ajustar días acordados</button>
+        ${parseFloat(r.saldo_a_favor) > 0 ? '<button class="btn btn-outline btn-sm" onclick="pgAbrirDevolverSaldo()">↩️ Devolver saldo</button>' : ''}
+      </div>
     </div>`;
+}
+
+function pgHtmlHistorialDiario(r) {
+  if (!r) return '';
+  const abonos = r.abonos.length ? r.abonos.map(a => `
+      <div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--gris-100);font-size:var(--text-sm)">
+        <span>${UI.fecha(a.fecha_pago)} · ${a.metodo_pago}${a.observacion ? ' · ' + a.observacion : ''}</span>
+        <span><strong>${UI.moneda(a.monto)}</strong> <span style="color:var(--texto-suave)">(usado ${UI.moneda(a.aplicado)})</span>
+          ${a.numero_recibo ? `· <a href="#" onclick='verRecibo("abono","${a.id}"); return false' style="color:var(--turquesa-d);font-weight:700">🧾 Recibo</a>` : ''}</span>
+      </div>`).join('') : '<p style="font-size:var(--text-sm);color:var(--texto-suave)">Aún no hay abonos.</p>';
+  const hist = r.dias_contratados.historial.length ? r.dias_contratados.historial.map(h => `
+      <div style="padding:6px 0;border-bottom:1px solid var(--gris-100);font-size:var(--text-sm)">
+        ${UI.fecha(h.fecha)} · <strong>${h.tipo === 'reduccion' ? '−' : '+'}${h.cantidad} días</strong> (${h.tipo_display})${h.nota ? ' · ' + h.nota : ''}
+      </div>`).join('') : '<p style="font-size:var(--text-sm);color:var(--texto-suave)">Aún no se acordaron días.</p>';
+  return `
+    <details style="margin-top:var(--gap-md)"><summary style="cursor:pointer;font-weight:700;font-size:var(--text-sm)">Abonos (${r.abonos.length})</summary>${abonos}</details>
+    <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;font-size:var(--text-sm)">Historial de días acordados</summary>${hist}</details>`;
+}
+
+// ── Abono (pago adelantado o posterior) ──
+let pgaMetodo = 'efectivo', pgaDiasEditado = false;
+
+function pgAbrirAbono() {
+  pgaMetodo = 'efectivo'; pgaDiasEditado = false;
+  document.querySelectorAll('.pga-metodo').forEach(b => b.classList.toggle('seleccionado', b.dataset.metodo === 'efectivo'));
+  ['pga-monto','pga-dias','pga-observacion'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pga-error').textContent = '';
+  const r = pgResumenDiario;
+  document.getElementById('pga-info').textContent = r
+    ? `Costo por día: ${UI.moneda(r.costo_diario)}. ${parseFloat(r.deuda) > 0 ? 'Debe ' + UI.moneda(r.deuda) + ': el abono cubre primero los días más antiguos.' : 'Si aún no hay días cobrados, queda como saldo a favor y se descuenta al marcar asistencia.'}`
+    : '';
+  UI.abrirModal('modal-pg-abono');
+}
+
+function pgaSugerirDias() {
+  const r = pgResumenDiario, monto = parseFloat(document.getElementById('pga-monto').value) || 0;
+  if (!r || pgaDiasEditado) return;
+  const costo = parseFloat(r.costo_diario) || 0;
+  document.getElementById('pga-dias').value = costo > 0 && monto > 0 ? Math.floor(monto / costo) || '' : '';
+}
+
+function pgaSeleccionarMetodo(m, btn) {
+  pgaMetodo = m;
+  document.querySelectorAll('.pga-metodo').forEach(b => b.classList.remove('seleccionado'));
+  btn.classList.add('seleccionado');
+}
+
+async function pgConfirmarAbono() {
+  const monto = document.getElementById('pga-monto').value;
+  const errorEl = document.getElementById('pga-error');
+  if (!monto || parseFloat(monto) <= 0) { errorEl.textContent = 'Indica un monto válido.'; return; }
+  errorEl.textContent = '';
+  try {
+    const resp = await API.post(`/inscripciones/inscripciones/${pgInscripcionId}/registrar-abono/`, {
+      monto, metodo_pago: pgaMetodo,
+      dias: document.getElementById('pga-dias').value || 0,
+      observacion: document.getElementById('pga-observacion').value,
+    });
+    UI.cerrarModal('modal-pg-abono');
+    UI.toast('✅ Abono registrado', 'exito');
+    pgCargar();
+    if (resp.abono && resp.abono.id) verRecibo('abono', resp.abono.id);
+  } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+}
+
+// ── Devolver el saldo a favor (misma devolución de siempre, colgada de la cuenta del niño) ──
+function pgAbrirDevolverSaldo() {
+  document.getElementById('pds-monto').value = pgSaldoActual.toFixed(2);
+  document.getElementById('pds-metodo').value = 'efectivo';
+  document.getElementById('pds-motivo').value = '';
+  document.getElementById('pds-error').textContent = '';
+  document.getElementById('pds-info').textContent = `Saldo a favor disponible: ${UI.moneda(pgSaldoActual)}. Puedes devolver todo o una parte.`;
+  UI.abrirModal('modal-pg-devolver-saldo');
+}
+
+async function pgConfirmarDevolverSaldo() {
+  const errorEl = document.getElementById('pds-error');
+  const monto = parseFloat(document.getElementById('pds-monto').value);
+  const motivo = document.getElementById('pds-motivo').value.trim();
+  if (!monto || monto <= 0) { errorEl.textContent = 'Indica un monto válido.'; return; }
+  if (monto > pgSaldoActual + 0.001) { errorEl.textContent = `Solo hay ${UI.moneda(pgSaldoActual)} a favor.`; return; }
+  if (!motivo) { errorEl.textContent = 'Indica el motivo de la devolución.'; return; }
+  errorEl.textContent = '';
+  try {
+    const r = await API.post(`/inscripciones/inscripciones/${pgInscripcionId}/devolver-saldo/`, {
+      monto: monto.toFixed(2), metodo_pago: document.getElementById('pds-metodo').value, motivo,
+    });
+    UI.cerrarModal('modal-pg-devolver-saldo');
+    UI.toast('✅ Saldo devuelto', 'exito');
+    pgCargar();
+    if (r.devolucion && r.devolucion.id) verRecibo('devolucion', r.devolucion.id);
+  } catch (err) { errorEl.textContent = err.message; }
+}
+
+// ── Ajuste de días acordados ──
+function pgAbrirDias() {
+  document.getElementById('pgd-tipo').value = (pgResumenDiario && pgResumenDiario.dias_contratados.historial.length) ? 'ampliacion' : 'inicial';
+  ['pgd-cantidad','pgd-nota'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pgd-error').textContent = '';
+  UI.abrirModal('modal-pg-dias');
+}
+
+async function pgConfirmarDias() {
+  const cantidad = parseInt(document.getElementById('pgd-cantidad').value, 10);
+  const errorEl = document.getElementById('pgd-error');
+  if (!cantidad || cantidad <= 0) { errorEl.textContent = 'Indica cuántos días.'; return; }
+  errorEl.textContent = '';
+  try {
+    await API.post(`/inscripciones/inscripciones/${pgInscripcionId}/contratar-dias/`, {
+      tipo: document.getElementById('pgd-tipo').value, cantidad,
+      nota: document.getElementById('pgd-nota').value,
+    });
+    UI.cerrarModal('modal-pg-dias');
+    UI.toast('✅ Días acordados actualizados', 'exito');
+    pgCargar();
+  } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+}
+
+// ── Cambio de modalidad (por día ⇄ mensual) ──
+let cmId = null, cmDestino = null;
+
+function abrirCambiarModalidad(id, nombre, modalidadActual) {
+  cmId = id;
+  cmDestino = modalidadActual === 'diaria' ? 'mensual' : 'diaria';
+  document.getElementById('cm-nombre').textContent = nombre;
+  document.getElementById('cm-texto').innerHTML = cmDestino === 'mensual'
+    ? 'Se cierra la inscripción por día (sus días, pagos y recibos quedan intactos) y se crea una <strong>mensualidad</strong> desde la fecha elegida. Tu <strong>saldo a favor</strong> se aplica a la primera mensualidad; los descuentos y becas se mantienen.'
+    : 'Se cierra la mensualidad (sus cobros y pagos quedan intactos) y se crea una inscripción <strong>por día</strong> desde la fecha elegida.';
+  document.getElementById('cm-grupo-dias').style.display = cmDestino === 'diaria' ? '' : 'none';
+  document.getElementById('cm-fecha-label').textContent = cmDestino === 'mensual' ? 'La mensualidad empieza el *' : 'Primer día por día *';
+  document.getElementById('cm-fecha').value = hoy;
+  document.getElementById('cm-motivo').value = '';
+  ponerDias('cm-dias-semana', []);
+  document.getElementById('cm-error').textContent = '';
+  UI.abrirModal('modal-cambiar-modalidad');
+}
+
+async function confirmarCambiarModalidad() {
+  const errorEl = document.getElementById('cm-error');
+  const fecha = document.getElementById('cm-fecha').value;
+  if (!fecha) { errorEl.textContent = 'Indica la fecha de inicio.'; return; }
+  errorEl.textContent = '';
+  const datos = { modalidad: cmDestino, fecha_inicio: fecha, motivo: document.getElementById('cm-motivo').value };
+  if (cmDestino === 'diaria') datos.dias_semana = leerDias('cm-dias-semana');
+  try {
+    const resp = await API.post(`/inscripciones/inscripciones/${cmId}/cambiar-modalidad/`, datos);
+    UI.cerrarModal('modal-cambiar-modalidad');
+    UI.toast('✅ Modalidad cambiada correctamente', 'exito');
+    (resp.advertencias || []).forEach(a => UI.toast('⚠️ ' + a, 'error'));
+    cargar(); cargarStats();
+  } catch (err) { errorEl.textContent = err.message; }
 }
 
 function pgCambiarMes(delta) {
@@ -1145,9 +1705,8 @@ async function pgConfirmarCondonar() {
 let reciboBlobUrlActual = null;
 
 async function verRecibo(tipo, id) {
-  const url = tipo === 'pago'
-    ? `/inscripciones/recibos/pago/${id}/`
-    : `/inscripciones/recibos/devolucion/${id}/`;
+  // tipo: 'pago' | 'devolucion' | 'abono' (abono = dinero recibido en la modalidad por día)
+  const url = `/inscripciones/recibos/${tipo}/${id}/`;
   try {
     const resp = await fetch(API_BASE + url, {
       headers: { Authorization: `Bearer ${Auth.getToken()}` },

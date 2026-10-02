@@ -13,8 +13,8 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
 
 from accounts.permissions import PermisoFinanzas
-from .models import Pago, Devolucion
-from .pdf_generator import generar_recibo_pdf, generar_devolucion_pdf
+from .models import Pago, Devolucion, AbonoDiario
+from .pdf_generator import generar_recibo_pdf, generar_devolucion_pdf, generar_recibo_abono_pdf
 
 
 def _verificar_acceso_tutor(request, nino):
@@ -49,6 +49,24 @@ class ReciboPagoView(APIView):
         return response
 
 
+class ReciboAbonoView(APIView):
+    """GET /api/inscripciones/recibos/abono/<uuid>/ — PDF del recibo de un abono (modalidad por día)."""
+    permission_classes = [PermisoFinanzas]
+
+    def get(self, request, abono_id):
+        abono = get_object_or_404(
+            AbonoDiario.objects.select_related(
+                'inscripcion__nino', 'inscripcion__sucursal', 'registrado_por'
+            ).prefetch_related('inscripcion__nino__tutores__tutor'),
+            pk=abono_id,
+        )
+        _verificar_acceso_tutor(request, abono.inscripcion.nino)
+        pdf_bytes = generar_recibo_abono_pdf(abono)
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="recibo_abono_{abono.numero_recibo}.pdf"'
+        return response
+
+
 class ReciboDevolucionView(APIView):
     """GET /api/inscripciones/recibos/devolucion/<uuid>/ — PDF del recibo de una Devolucion."""
     permission_classes = [PermisoFinanzas]
@@ -56,11 +74,13 @@ class ReciboDevolucionView(APIView):
     def get(self, request, devolucion_id):
         devolucion = get_object_or_404(
             Devolucion.objects.select_related(
-                'cobro__inscripcion__nino', 'cobro__inscripcion__sucursal', 'registrado_por'
-            ).prefetch_related('cobro__inscripcion__nino__tutores__tutor'),
+                'cobro__inscripcion__nino', 'cobro__inscripcion__sucursal',
+                'inscripcion__nino', 'inscripcion__sucursal', 'registrado_por',
+            ).prefetch_related('cobro__inscripcion__nino__tutores__tutor', 'inscripcion__nino__tutores__tutor'),
             pk=devolucion_id,
         )
-        _verificar_acceso_tutor(request, devolucion.cobro.inscripcion.nino)
+        insc = devolucion.cobro.inscripcion if devolucion.cobro_id else devolucion.inscripcion
+        _verificar_acceso_tutor(request, insc.nino)
         pdf_bytes = generar_devolucion_pdf(devolucion)
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="devolucion_{devolucion.numero_recibo}.pdf"'
