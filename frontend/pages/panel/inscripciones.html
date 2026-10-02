@@ -48,6 +48,7 @@
       font-weight:700;display:flex;gap:10px;align-items:flex-start; }
     .pg-estado.al_dia  { background:#DCFCE7;border:2px solid #16A34A;color:#14532D; }
     .pg-estado.deuda   { background:#FEE2E2;border:2px solid #DC2626;color:#7F1D1D; }
+    .pg-estado.por_iniciar { background:#FEF3C7;border:2px solid #F59E0B;color:#78350F; }
     .pg-estado.sin_dias,.pg-estado.sin_cobro { background:var(--gris-100);border:2px solid var(--gris-300);color:var(--gris-700); }
     .pg-estado b { font-family:var(--font-display);font-size:var(--text-lg);display:block; }
     .pg-calculo { width:100%;border-collapse:collapse;font-size:var(--text-sm);margin:4px 0 2px; }
@@ -58,6 +59,23 @@
     .pg-barra { height:12px;border-radius:99px;background:var(--gris-200);overflow:hidden;margin:10px 0 4px; }
     .pg-barra > div { height:100%;background:#16A34A;border-radius:99px;transition:width .3s; }
     .pg-barra.rojo > div { background:#DC2626; }
+    .hc-tot { display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0; }
+    .hc-tot > div { background:var(--gris-100);border-radius:10px;padding:.5rem .7rem;font-size:var(--text-xs);color:var(--texto-suave); }
+    .hc-tot strong { display:block;font-size:var(--text-md,1rem);color:var(--texto);font-family:var(--font-display); }
+    .hc-insc { border:1.5px solid var(--gris-200);border-radius:10px;padding:.5rem .7rem;margin-bottom:6px;font-size:var(--text-sm); }
+    .hc-insc.actual { border-color:#16A34A;background:#F0FDF4; }
+    .hc-insc small { display:block;color:var(--texto-suave); }
+    .hc-filtros { display:flex;gap:6px;flex-wrap:wrap;margin:10px 0; }
+    .hc-filtros button { border:1.5px solid var(--gris-300);background:#fff;border-radius:99px;padding:.2rem .65rem;font-size:var(--text-xs);font-weight:700;cursor:pointer;font-family:inherit; }
+    .hc-filtros button.on { background:#0F172A;color:#fff;border-color:#0F172A; }
+    .hc-mov { display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--gris-100);font-size:var(--text-sm);border-left:4px solid var(--gris-300);padding-left:8px; }
+    .hc-mov.entra { border-left-color:#16A34A; } .hc-mov.sale { border-left-color:#DC2626; }
+    .hc-mov.cobro { border-left-color:#F59E0B; } .hc-mov.info { border-left-color:#94A3B8; }
+    .hc-mov .f { min-width:74px;color:var(--texto-suave);font-size:var(--text-xs); }
+    .hc-mov .c { flex:1; } .hc-mov .c small { display:block;color:var(--texto-suave); }
+    .hc-mov .m { text-align:right;font-weight:800;white-space:nowrap; }
+    .hc-tag { display:inline-block;border-radius:99px;padding:0 .45rem;font-size:.68rem;font-weight:800;margin-left:4px; }
+    .hc-tag.diaria { background:#FEF3C7;color:#92400E; } .hc-tag.mensual { background:#CCFBF1;color:#115E59; }
     .pg-barra.sobre { display:flex;overflow:visible;position:relative; }
     .pg-barra.sobre > div { border-radius:0; }
     .pg-barra.sobre > .ok { background:#16A34A;border-radius:99px 0 0 99px; }
@@ -72,6 +90,7 @@
       font-weight:800;border:none;cursor:pointer;font-family:inherit; }
     .est-pago.al_dia { background:#DCFCE7;color:#14532D;border:1.5px solid #16A34A; }
     .est-pago.deuda  { background:#DC2626;color:#fff; }
+    .est-pago.por_iniciar { background:#FEF3C7;color:#78350F;border:1.5px solid #F59E0B; }
     .est-pago.sin_dias,.est-pago.sin_cobro { background:var(--gris-100);color:var(--gris-600);border:1.5px solid var(--gris-300); }
     .est-favor { display:block;margin-top:6px;border-radius:10px;padding:.3rem .55rem;font-size:var(--text-xs);font-weight:800;
       background:#DBEAFE;color:#1E3A8A;border:1.5px solid #2563EB;line-height:1.35; }
@@ -168,6 +187,7 @@
             <option value="">Todos</option>
             <option value="deuda">⚠️ Con deuda</option>
             <option value="al_dia">✅ Al día</option>
+            <option value="por_iniciar">🕒 Mensualidad por iniciar (sin pagar)</option>
             <option value="a_favor">💙 Con días / saldo a favor</option>
             <option value="sin_registro">➖ Sin días / sin cobro</option>
           </select>
@@ -513,6 +533,7 @@
       <div id="pg-nombre" style="font-weight:700;font-size:var(--text-lg)"></div>
       <div id="pg-sala" style="font-size:var(--text-sm);color:var(--texto-suave)"></div>
     </div>
+    <button class="btn btn-outline btn-sm" style="margin-bottom:8px" onclick="abrirHistorial(pgInscripcionId)">📚 Historial completo (incluye cambios de modalidad)</button>
     <div id="pg-resumen" style="display:flex;gap:14px;flex-wrap:wrap;font-size:var(--text-xs);color:var(--texto-suave);margin-bottom:var(--gap-md)"></div>
     <div id="pg-contenido"><div class="loader"><div class="spinner"></div></div></div>
   </div>
@@ -704,6 +725,16 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-historial">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <h3 class="modal-titulo">📚 Historial completo</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <div id="hc-contenido"><div class="loader"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-cambiar-modalidad">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
@@ -821,7 +852,7 @@ async function cargar() {
     document.getElementById('alerta-deudas').innerHTML = conDeuda.length
       ? `<div class="alerta alerta-peligro" style="font-weight:700">⚠️ ${conDeuda.length} inscripción(es) con deuda pendiente — recuerda que el jardín cobra por adelantado:
           <ul style="margin:6px 0 0 18px;font-weight:600">${conDeuda.map(i =>
-            `<li>${i.nino_nombre}: debe ${UI.moneda(i.estado_pago.falta_pagar)}</li>`).join('')}</ul></div>`
+            `<li>${i.nino_nombre}: debe ${UI.moneda(i.estado_pago.deuda_total != null ? i.estado_pago.deuda_total : i.estado_pago.falta_pagar)}${parseFloat(i.estado_pago.deuda_anterior) > 0 ? ' <small>(incluye Bs. ' + parseFloat(i.estado_pago.deuda_anterior).toFixed(2) + ' de una inscripción anterior)</small>' : ''}</li>`).join('')}</ul></div>`
       : '';
     tbody.innerHTML = lista.map(i => `
       <tr class="${i.estado_pago && i.estado_pago.nivel === 'deuda' ? 'fila-deuda' : ''}">
@@ -848,6 +879,7 @@ async function cargar() {
             <button class="btn btn-outline btn-sm" onclick="editar('${i.id}')">Editar</button>
             <button class="btn btn-sm" style="background:var(--amarillo-l);color:var(--amarillo-d);border:1.5px solid var(--amarillo)"
               onclick="abrirPagos('${i.id}','${i.nino_nombre}','${i.sala_nombre} · ${i.turno_nombre}','${i.modalidad_pago}')">💳 Pagos</button>
+            <button class="btn btn-outline btn-sm" title="Todo el historial de cobros y pagos del niño, aunque cambie de modalidad" onclick="abrirHistorial('${i.id}')">📚 Historial</button>
             ${i.activa ? `<button class="btn btn-sm" style="background:var(--turquesa-l);color:var(--turquesa-d);border:1.5px solid var(--turquesa)"
               onclick="abrirTransferir('${i.id}','${i.nino_nombre}','${i.sucursal_nombre}')">🔁 Transferir</button>
             <button class="btn btn-sm" style="background:var(--violeta-l);color:var(--violeta-d);border:1.5px solid var(--violeta-d)"
@@ -878,8 +910,8 @@ function htmlEstadoPago(i) {
   const e = i.estado_pago;
   if (!e) return i.activa ? '<span style="color:var(--texto-suave)">—</span>' : '<span class="est-pago sin_dias" style="cursor:default">🚪 Dada de baja</span>';
   const abrir = `abrirPagos('${i.id}','${i.nino_nombre}','${i.sala_nombre} · ${i.turno_nombre}','${i.modalidad_pago}')`;
-  const icono = { al_dia: '✅', deuda: '⚠️', sin_dias: '➖', sin_cobro: '➖' }[e.nivel] || '';
-  const etiqueta = e.nivel === 'deuda' ? `Debe ${UI.moneda(e.falta_pagar)}` : e.titulo;
+  const icono = { al_dia: '✅', deuda: '⚠️', por_iniciar: '🕒', sin_dias: '➖', sin_cobro: '➖' }[e.nivel] || '';
+  const etiqueta = e.nivel === 'deuda' ? `Debe ${UI.moneda(e.deuda_total != null ? e.deuda_total : e.falta_pagar)}` : e.titulo;
   let detalle = '';
   if (i.modalidad_pago === 'diaria') {
     if (e.dias_a_pagar > 0) {
@@ -887,6 +919,8 @@ function htmlEstadoPago(i) {
               + `Pagó ${UI.moneda(e.pagado_total)}`
               + (e.nivel === 'deuda' ? ` · faltan ${e.dias_sin_pagar} día${e.dias_sin_pagar === 1 ? '' : 's'}` : '');
     } else detalle = 'Sin días acordados';
+  } else if (e.nivel === 'por_iniciar' || e.inicio_proximo) {
+    detalle = `Mensualidad ${e.periodo_actual} · empieza el ${UI.fecha(e.inicio_proximo)}<br>Pagó ${UI.moneda(e.pagado_total)} de ${UI.moneda(e.monto_acordado)}`;
   } else if (e.nivel !== 'sin_cobro') {
     detalle = `${e.periodo_actual ? 'Mensualidad ' + e.periodo_actual + '<br>' : ''}Pagó ${UI.moneda(e.pagado_total)} de ${UI.moneda(e.monto_acordado)}`;
   } else detalle = 'Aún no se generó el cobro';
@@ -896,6 +930,10 @@ function htmlEstadoPago(i) {
           + `<br><span style="font-weight:600">${e.dias_a_favor_permiso > 0 ? 'Por permiso (no se cobró): reprogramar o devolver' : 'Pagado de más: reprogramar o devolver'}</span></span>`;
   } else if (i.modalidad_pago !== 'diaria' && parseFloat(e.saldo_a_favor) > 0) {
     favor = `<span class="est-favor">💙 Saldo a favor ${UI.moneda(e.saldo_a_favor)}<br><span style="font-weight:600">Cubrirá la próxima mensualidad</span></span>`;
+  }
+  if (parseFloat(e.deuda_anterior) > 0) {
+    detalle += `<br><b style="color:#B91C1C">+ Bs. ${parseFloat(e.deuda_anterior).toFixed(2)} de inscripción anterior</b> `
+             + `<a href="#" onclick="abrirHistorial('${i.id}'); return false" style="font-weight:700;color:var(--turquesa-d)">ver / cobrar</a>`;
   }
   return `<button class="est-pago ${e.nivel}" title="${e.mensaje.replace(/"/g, '&quot;')}" onclick="${abrir}">${icono} ${etiqueta}</button>
           <div class="est-pago-det ${e.nivel === 'deuda' ? 'rojo' : ''}">${detalle}</div>${favor}`;
@@ -1508,12 +1546,23 @@ function pgPintarResumen(cobros, saldoAFavor, resumenDiario) {
   ].filter(Boolean).map(s => `<span>${s}</span>`).join('');
 }
 
+// Deuda que quedó en una inscripción anterior (p. ej. días cobrados sin pagar al pasar a mensual).
+function pgAvisoDeudaAnterior(c) {
+  if (!c || !(parseFloat(c.deuda_anterior) > 0)) return '';
+  const det = (c.deuda_anterior_detalle || []).map(d => `${d.etiqueta}: ${UI.moneda(d.monto)}`).join(' · ');
+  return `<div class="alerta alerta-peligro" style="margin:0 0 12px">
+    <b>⚠️ Debe ${UI.moneda(c.deuda_anterior)} de una inscripción anterior</b><br>
+    <small>${det}</small><br>
+    <button class="btn btn-sm btn-primary" style="margin-top:6px" onclick="abrirHistorial(pgInscripcionId)">📚 Ver y cobrar en el historial</button>
+  </div>`;
+}
+
 let pgSaldoActual = 0;
 
 function pgPintarMensual(ciclos, saldoAFavor, cuenta) {
   pgSaldoActual = parseFloat(saldoAFavor) || 0;
   pgPintarResumen(ciclos.filter(c => c.cobro).map(c => c.cobro), saldoAFavor);
-  const banner = cuenta ? `<div class="pg-estado ${cuenta.nivel}"><span style="font-size:1.4rem">${cuenta.nivel === 'deuda' ? '⚠️' : cuenta.nivel === 'al_dia' ? '✅' : '➖'}</span><div><b>${cuenta.titulo}</b>${cuenta.mensaje}</div></div>` : '';
+  const banner = cuenta ? `<div class="pg-estado ${cuenta.nivel}"><span style="font-size:1.4rem">${cuenta.nivel === 'deuda' ? '⚠️' : cuenta.nivel === 'al_dia' ? '✅' : cuenta.nivel === 'por_iniciar' ? '🕒' : '➖'}</span><div><b>${cuenta.titulo}</b>${cuenta.mensaje}</div></div>` + pgAvisoDeudaAnterior(cuenta) : '';
 
   let maxPeriodoFin = null;
   ciclos.forEach(c => {
@@ -1709,8 +1758,8 @@ function pgHtmlCuentaDiaria(r) {
 
   // ── 1) Estado general: ¿está al día o debe? ──
   const icono = { al_dia: '✅', deuda: '⚠️', sin_dias: '➖' }[c.nivel] || '';
-  const estado = `<div class="pg-estado ${c.nivel}"><span style="font-size:1.6rem;line-height:1">${icono}</span>
-      <div><b>${c.titulo}${c.nivel === 'deuda' ? ' · Bs. ' + parseFloat(c.falta_pagar).toFixed(2) : ''}</b>${c.mensaje}</div></div>`;
+  const estado = pgAvisoDeudaAnterior(c) + `<div class="pg-estado ${c.nivel}"><span style="font-size:1.6rem;line-height:1">${icono}</span>
+      <div><b>${c.titulo}${c.nivel === 'deuda' ? ' · Bs. ' + parseFloat(c.deuda_total != null ? c.deuda_total : c.falta_pagar).toFixed(2) : ''}</b>${c.mensaje}</div></div>`;
 
   // ── 2) Cuenta paso a paso (monto, pagado, falta) ──
   const costo = UI.moneda(c.costo_diario);
@@ -2050,6 +2099,76 @@ async function pgConfirmarCondonar() {
 }
 
 let reciboBlobUrlActual = null;
+
+let hcData = null, hcFiltro = 'todo';
+
+async function abrirHistorial(id) {
+  hcFiltro = 'todo';
+  document.getElementById('hc-contenido').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  UI.abrirModal('modal-historial');
+  try {
+    hcData = await API.get(`/inscripciones/inscripciones/${id}/historial-cuenta/`);
+    hcPintar();
+  } catch (err) {
+    document.getElementById('hc-contenido').innerHTML = `<div class="alerta alerta-peligro">${err.message}</div>`;
+  }
+}
+
+function hcCobrar(id, modalidad, etiqueta) {
+  UI.cerrarModal('modal-historial');
+  abrirPagos(id, hcData.nino, etiqueta + ' (inscripción anterior)', modalidad);
+}
+
+function hcFiltrar(f) { hcFiltro = f; hcPintar(); }
+
+function hcPintar() {
+  const h = hcData; if (!h) return;
+  const t = h.totales;
+  const tag = m => `<span class="hc-tag ${m}">${m === 'diaria' ? 'Por día' : 'Mensual'}</span>`;
+  const tot = `<div class="hc-tot">
+    <div>Total cobrado<strong>${UI.moneda(t.cobrado)}</strong></div>
+    <div>Dinero recibido<strong style="color:#15803D">${UI.moneda(t.recibido)}</strong></div>
+    <div>Devuelto<strong style="color:#B91C1C">${UI.moneda(t.devuelto)}</strong></div>
+    <div>Condonado<strong>${UI.moneda(t.condonado)}</strong></div>
+    <div>Pendiente de pago<strong style="color:${parseFloat(t.pendiente) > 0 ? '#B91C1C' : '#15803D'}">${UI.moneda(t.pendiente)}</strong></div>
+    <div>Saldo a favor<strong style="color:#1D4ED8">${UI.moneda(t.saldo_a_favor)}</strong></div>
+  </div>`;
+  const inscs = h.inscripciones.map(i => `<div class="hc-insc ${i.es_actual ? 'actual' : ''}">
+      <b>${i.etiqueta}</b> ${tag(i.modalidad)} ${i.activa ? '<span class="chip chip-verde">Activa</span>' : '<span class="chip chip-coral">Cerrada</span>'}
+      <small>${UI.fecha(i.fecha_inicio)}${i.fecha_fin ? ' → ' + UI.fecha(i.fecha_fin) : ' → en curso'} · ${i.sucursal}</small>
+      <small>Cobrado ${UI.moneda(i.cobrado)} · Recibió ${UI.moneda(i.recibido)} · Devuelto ${UI.moneda(i.devuelto)}${parseFloat(i.pendiente) > 0 ? ' · <b style="color:#B91C1C">Pendiente ' + UI.moneda(i.pendiente) + '</b>' : ''}</small>
+      ${parseFloat(i.pendiente) > 0 && !i.es_actual ? `<button class="btn btn-sm btn-primary" style="margin-top:6px" onclick="hcCobrar('${i.id}','${i.modalidad}','${i.etiqueta.replace(/'/g, '')}')">💳 Cobrar lo pendiente de esta inscripción</button>` : ''}
+    </div>`).join('');
+  const grupos = {
+    todo: null,
+    dinero: ['pago', 'abono', 'devolucion', 'traspaso'],
+    cobros: ['cobro', 'aplicacion', 'condonacion'],
+    cambios: ['inscripcion', 'dias'],
+  };
+  const filtros = [['todo', 'Todo'], ['dinero', '💵 Dinero (pagos y devoluciones)'], ['cobros', '🧾 Cobros'], ['cambios', '🔁 Cambios y días']]
+    .map(([k, n]) => `<button class="${hcFiltro === k ? 'on' : ''}" onclick="hcFiltrar('${k}')">${n}</button>`).join('');
+  const movs = h.movimientos.filter(m => !grupos[hcFiltro] || grupos[hcFiltro].includes(m.tipo));
+  const icono = { pago: '💵', abono: '💵', devolucion: '↩️', traspaso: '🔄', cobro: '🧾', aplicacion: '🔗', condonacion: '🤝', inscripcion: '🔁', dias: '🗓️' };
+  const filas = movs.length ? movs.map(m => {
+    const signo = m.efecto === 'entra' ? '+' : m.efecto === 'sale' ? '−' : '';
+    const color = m.efecto === 'entra' ? '#15803D' : m.efecto === 'sale' ? '#B91C1C' : 'inherit';
+    return `<div class="hc-mov ${m.efecto}">
+      <div class="f">${UI.fecha(m.fecha)}</div>
+      <div class="c"><b>${icono[m.tipo] || ''} ${m.titulo}</b> ${tag(m.modalidad)}
+        ${m.estado ? `<span class="chip chip-gris">${m.estado}</span>` : ''}
+        ${m.detalle ? `<small>${m.detalle}</small>` : ''}
+        ${m.recibo ? `<small><a href="#" onclick="verRecibo('${m.recibo.tipo}','${m.recibo.id}'); return false" style="color:var(--turquesa-d);font-weight:700">🧾 Recibo N.º ${m.recibo.numero}</a></small>` : ''}</div>
+      <div class="m" style="color:${color}">${m.monto != null ? signo + UI.moneda(m.monto) : ''}</div>
+    </div>`;
+  }).join('') : '<p style="color:var(--texto-suave);font-size:var(--text-sm)">No hay movimientos en esta categoría.</p>';
+  document.getElementById('hc-contenido').innerHTML = `
+    <div style="font-weight:800;font-size:var(--text-lg)">${h.nino}</div>
+    <div class="pg-nota">Aquí está todo lo económico del niño, aunque haya cambiado de modalidad, sala o turno. Verde = dinero recibido, rojo = dinero devuelto, ámbar = cobro generado.</div>
+    ${tot}
+    <details open><summary style="cursor:pointer;font-weight:700;font-size:var(--text-sm);margin-bottom:6px">Inscripciones (${h.inscripciones.length})</summary>${inscs}</details>
+    <div class="hc-filtros">${filtros}</div>
+    ${filas}`;
+}
 
 async function verRecibo(tipo, id) {
   // tipo: 'pago' | 'devolucion' | 'abono' (abono = dinero recibido en la modalidad por día)

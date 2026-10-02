@@ -31,7 +31,8 @@ from .services import (
     actualizar_dias_programados, DiasProgramadosError,
     ciclo_vigente, calcular_ajuste_precio, continuar_ciclos_en_inscripcion_nueva,
     mover_saldo_disponible, trasladar_saldo_del_nino, deuda_abierta, saldo_a_favor,
-    devolver_saldo, SaldoInsuficiente, estado_pago_mensual,
+    devolver_saldo, SaldoInsuficiente, estado_pago_mensual, historial_cuenta,
+    ultimo_dia_consumido,
     ESTADOS_ABIERTOS,
 )
 
@@ -58,6 +59,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         'al_dia':       ('al_dia',),
         'deuda':        ('deuda',),
         'sin_registro': ('sin_dias', 'sin_cobro'),   # aún sin días acordados / sin cobro generado
+        'por_iniciar':  ('por_iniciar',),            # mensualidad generada que aún no empieza y no está pagada
         'a_favor':      None,                        # con días pagados sin usar o saldo a favor
     }
 
@@ -69,7 +71,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         if not valor:
             return queryset
         if valor not in self.FILTROS_ESTADO_PAGO:
-            raise ValidationError({'estado_pago': 'Valor no válido (al_dia, deuda, sin_registro o a_favor).'})
+            raise ValidationError({'estado_pago': 'Valor no válido (al_dia, deuda, por_iniciar, sin_registro o a_favor).'})
         niveles = self.FILTROS_ESTADO_PAGO[valor]
         from .services import estado_pago
         ids = []
@@ -536,6 +538,18 @@ class InscripcionViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         return None
 
+    @action(detail=True, methods=['get'], url_path='historial-cuenta')
+    def historial_cuenta_action(self, request, pk=None):
+        """
+        Historial económico completo del niño: cobros, pagos, abonos, devoluciones,
+        condonaciones y cambios de modalidad de TODAS sus inscripciones (activas y
+        cerradas), para que al pasar de por día a mensual (o al revés) no se pierda.
+        """
+        inscripcion = self.get_object()
+        visibles = filtrar_por_alcance(Inscripcion.objects.filter(nino=inscripcion.nino),
+                                       request.user, 'nino')
+        return Response(historial_cuenta(inscripcion, visibles))
+
     @action(detail=True, methods=['get'], url_path='resumen-diario')
     def resumen_diario_action(self, request, pk=None):
         """Saldo a favor, deuda, días acordados vs cobrados, abonos y alertas."""
@@ -713,6 +727,16 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             if fecha_inicio < actual.fecha_inicio:
                 return Response({'error': 'La nueva modalidad no puede empezar antes que la inscripción actual.'},
                                 status=status.HTTP_400_BAD_REQUEST)
+        # Choque de fechas: la nueva modalidad no puede empezar ENCIMA de días que ya
+        # se cobraron por día (se cobrarían dos veces: por día y dentro de la mensualidad).
+        if actual.modalidad_pago == Inscripcion.MODALIDAD_DIARIA:
+            ultimo = ultimo_dia_consumido(actual)
+            if ultimo and fecha_inicio < ultimo:
+                return Response({'error': (
+                    f'La nueva modalidad empezaría el {fecha_inicio:%d/%m/%Y}, pero ya hay asistencia o cobro por día '
+                    f'hasta el {ultimo:%d/%m/%Y}: esos días se cobrarían dos veces. '
+                    f'Elige como inicio el {ultimo + relativedelta(days=1):%d/%m/%Y} o una fecha posterior.')},
+                    status=status.HTTP_400_BAD_REQUEST)
         nota = f'Cambio de modalidad ({actual.get_modalidad_pago_display()} → ' \
                f'{dict(Inscripcion.MODALIDADES)[destino]}) el {fecha_inicio:%d/%m/%Y}.'
         if data.get('motivo'):

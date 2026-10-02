@@ -516,7 +516,7 @@ def estado_pago_diario(inscripcion):
             mensaje += (f' {len(permisos_libres)} día{"" if len(permisos_libres) == 1 else "s"} '
                         'con permiso no se cobra.')
 
-    return {
+    cuenta = {
         'nivel': nivel, 'titulo': titulo, 'mensaje': mensaje,
         'costo_diario': costo,
         'dias_acordados': acordados, 'dias_cobrados': cobrados, 'dias_a_pagar': dias_a_pagar,
@@ -537,6 +537,59 @@ def estado_pago_diario(inscripcion):
         'dias_a_favor_permiso': dias_a_favor_permiso,
         'monto_a_favor': monto_a_favor,
     }
+    return _sumar_deuda_anterior(inscripcion, cuenta)
+
+
+def ultimo_dia_consumido(inscripcion):
+    """
+    Última fecha en que una inscripción por día ya tuvo asistencia (presente o
+    falta sin aviso) o un cobro diario vigente. Sirve para no dejar que una
+    mensualidad nueva empiece encima de días que ya se cobraron por día.
+    """
+    from asistencia.models import Asistencia
+    fechas = [c.fecha_vencimiento for c in Cobro.objects.filter(
+        inscripcion=inscripcion, tipo=Cobro.TIPO_DIARIO).exclude(estado=Cobro.ESTADO_ANULADO)
+        if c.fecha_vencimiento]
+    fechas += list(Asistencia.objects.filter(
+        inscripcion=inscripcion,
+        estado__in=[Asistencia.ESTADO_PRESENTE, Asistencia.ESTADO_AUSENTE],
+    ).values_list('fecha', flat=True))
+    return max(fechas) if fechas else None
+
+
+def deuda_inscripciones_anteriores(inscripcion):
+    """
+    Deuda que el niño dejó en inscripciones CERRADAS (p. ej. días cobrados sin
+    pagar al pasar de por día a mensual). Al cerrarse la inscripción esa deuda
+    sale de la lista, así que se suma aquí para que el personal no la pierda de vista.
+    Devuelve (monto, [detalle por inscripción]).
+    """
+    total, detalle = CERO, []
+    for vieja in Inscripcion.objects.filter(nino=inscripcion.nino, activa=False).exclude(pk=inscripcion.pk):
+        monto = deuda_abierta(vieja)
+        if monto > 0:
+            total += monto
+            detalle.append({'inscripcion_id': str(vieja.id), 'monto': monto,
+                            'etiqueta': f'{vieja.get_modalidad_pago_display()} · {vieja.sala.nombre} {vieja.turno.nombre}',
+                            'modalidad': vieja.modalidad_pago})
+    return total, detalle
+
+
+def _sumar_deuda_anterior(inscripcion, cuenta):
+    """Agrega a la cuenta la deuda de inscripciones cerradas y la marca como deuda."""
+    anterior, detalle = deuda_inscripciones_anteriores(inscripcion)
+    cuenta['deuda_anterior'] = anterior
+    cuenta['deuda_anterior_detalle'] = detalle
+    cuenta['deuda_total'] = cuenta.get('falta_pagar', CERO) + anterior
+    if anterior > 0:
+        origen = ', '.join(d['etiqueta'] for d in detalle)
+        aviso = f'Además debe Bs. {anterior} de una inscripción anterior ({origen}).'
+        if cuenta['nivel'] == 'deuda':
+            cuenta['mensaje'] = f'{cuenta["mensaje"]} {aviso}'
+        else:
+            cuenta['nivel'], cuenta['titulo'] = 'deuda', 'Deuda pendiente'
+            cuenta['mensaje'] = f'{aviso} Se cobra desde "📚 Historial".'
+    return cuenta
 
 
 def estado_pago_mensual(inscripcion):
@@ -557,7 +610,29 @@ def estado_pago_mensual(inscripcion):
     actual = next((c for c in reversed(vigentes) if c.periodo_inicio <= hoy), None)
     etiqueta = (f'{MESES_ES[actual.periodo_inicio.month]} {actual.periodo_inicio.year}' if actual else '')
 
-    if not vigentes:
+    # Mensualidad ya generada pero cuyo ciclo todavía no empieza (p. ej. al pasar de
+    # por día a mensual con una fecha de inicio futura). Se paga por adelantado:
+    # aún no es deuda, pero el personal debe cobrarla antes de que empiece.
+    proximo = next((c for c in cobros if c.periodo_inicio and c.periodo_inicio > hoy), None)
+    extra = {}
+    if not vigentes and proximo:
+        etiqueta = f'{MESES_ES[proximo.periodo_inicio.month]} {proximo.periodo_inicio.year}'
+        extra = {'inicio_proximo': proximo.periodo_inicio.isoformat(),
+                 'monto_proximo': proximo.monto_final, 'pagado_proximo': proximo.monto_pagado}
+        monto_total, pagado_total = proximo.monto_final, proximo.monto_pagado
+        pendiente = proximo.saldo_pendiente if proximo.estado in ESTADOS_ABIERTOS else CERO
+        extra['por_pagar_proximo'] = pendiente
+        inicio = f'{proximo.periodo_inicio:%d/%m/%Y}'
+        if pendiente > 0:
+            nivel, titulo = 'por_iniciar', 'Mensualidad por iniciar'
+            mensaje = (f'La mensualidad de {etiqueta} (Bs. {proximo.monto_final}) empieza el {inicio} '
+                       f'y aún falta pagar Bs. {pendiente}. El jardín cobra por adelantado: '
+                       'cóbrala antes de esa fecha.')
+        else:
+            nivel, titulo = 'al_dia', 'Al día'
+            mensaje = (f'La mensualidad de {etiqueta} (Bs. {proximo.monto_final}) ya está pagada '
+                       f'por adelantado y empieza el {inicio}.')
+    elif not vigentes:
         nivel, titulo = 'sin_cobro', 'Sin mensualidad generada'
         mensaje = 'Aún no se generó la mensualidad de este ciclo.'
     elif falta > 0:
@@ -568,11 +643,13 @@ def estado_pago_mensual(inscripcion):
         nivel, titulo = 'al_dia', 'Al día'
         mensaje = f'La mensualidad de {etiqueta} (Bs. {actual.monto_final}) está pagada.'
 
-    return {
+    cuenta = {
         'nivel': nivel, 'titulo': titulo, 'mensaje': mensaje,
         'monto_acordado': monto_total, 'pagado_total': pagado_total, 'falta_pagar': falta,
         'saldo_a_favor': saldo_a_favor(inscripcion), 'periodo_actual': etiqueta,
+        **extra,
     }
+    return _sumar_deuda_anterior(inscripcion, cuenta)
 
 
 def estado_pago(inscripcion):
@@ -1065,4 +1142,155 @@ def resumen_financiero(anio, mes, sucursal=None):
             'neto':                total_pagos - total_devs,
             'condonado':           condonado,
         },
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Historial completo de la cuenta del niño (todas sus inscripciones)
+# ══════════════════════════════════════════════════════════════════════
+def historial_cuenta(inscripcion, inscripciones=None):
+    """
+    Línea de tiempo con TODO lo económico del niño, aunque haya cambiado de
+    modalidad (por día ↔ mensual), de sala o de turno: al cambiar se crea una
+    inscripción nueva y la anterior se cierra, pero sus cobros, pagos, abonos,
+    devoluciones y días acordados siguen existiendo. Aquí se juntan.
+
+    `inscripciones` (opcional) limita a las que el usuario puede ver; por
+    defecto, todas las del mismo niño.
+    Cada movimiento trae `efecto`: 'entra' (dinero recibido), 'sale' (dinero
+    devuelto), 'cobro' (se generó una deuda) o 'info' (no mueve dinero real).
+    """
+    if inscripciones is None:
+        inscripciones = Inscripcion.objects.filter(nino=inscripcion.nino)
+    inscs = list(inscripciones.select_related('sala', 'turno', 'sucursal', 'inscripcion_origen')
+                 .order_by('fecha_inicio', 'created_at'))
+    por_id = {i.id: i for i in inscs}
+    ids = list(por_id)
+
+    def etiqueta(i):
+        return f'{i.get_modalidad_pago_display()} · {i.sala.nombre} {i.turno.nombre}'
+
+    def _d(x):
+        return x.isoformat() if hasattr(x, 'isoformat') else x
+
+    movs = []
+
+    def add(insc_id, fecha, creado, tipo, titulo, detalle='', monto=None, efecto='info',
+            recibo=None, estado=None):
+        movs.append({
+            'fecha': _d(fecha), 'orden': _d(creado), 'inscripcion_id': str(insc_id),
+            'modalidad': por_id[insc_id].modalidad_pago, 'tipo': tipo, 'titulo': titulo,
+            'detalle': detalle, 'monto': monto, 'efecto': efecto,
+            'recibo': recibo, 'estado': estado,
+        })
+
+    # ── Inscripciones: inicio, cambio de modalidad / transferencia y cierre ──
+    for i in inscs:
+        if i.inscripcion_origen_id and i.inscripcion_origen_id in por_id:
+            o = por_id[i.inscripcion_origen_id]
+            add(i.id, i.fecha_inicio, i.created_at, 'inscripcion',
+                f'Cambio: {etiqueta(o)} → {etiqueta(i)}',
+                'La inscripción anterior se cerró; su historial sigue en esta línea de tiempo.')
+        else:
+            add(i.id, i.fecha_inicio, i.created_at, 'inscripcion', f'Inscripción: {etiqueta(i)}')
+        if i.fecha_fin and not i.activa:
+            siguiente = next((x for x in inscs if x.inscripcion_origen_id == i.id), None)
+            if not siguiente:
+                add(i.id, i.fecha_fin, i.updated_at, 'inscripcion', f'Baja: {etiqueta(i)}')
+
+    # ── Cobros (deuda generada), condonaciones ──
+    cobros = list(Cobro.objects.filter(inscripcion__in=ids).prefetch_related('pagos', 'devoluciones'))
+    for c in cobros:
+        if c.tipo == Cobro.TIPO_DIARIO:
+            cuando = c.fecha_vencimiento.strftime('%d/%m/%Y') if c.fecha_vencimiento else c.periodo
+            titulo = f'Cobro del día {cuando}'
+        elif c.tipo == Cobro.TIPO_MENSUALIDAD and c.periodo_inicio:
+            titulo = (f'Mensualidad {MESES_ES[c.periodo_inicio.month]} {c.periodo_inicio.year} '
+                      f'({c.periodo_inicio:%d/%m} → {c.periodo_fin:%d/%m/%Y})')
+        else:
+            titulo = f'Cobro: {c.periodo or c.get_tipo_display()}'
+        add(c.inscripcion_id, c.fecha_emision, c.created_at, 'cobro', titulo,
+            c.observacion or '', monto=c.monto_final,
+            efecto='info' if c.estado == Cobro.ESTADO_ANULADO else 'cobro',
+            estado=c.get_estado_display())
+        if c.monto_condonado and c.monto_condonado > 0:
+            add(c.inscripcion_id, c.updated_at.date(), c.updated_at, 'condonacion',
+                f'Cerrado con lo pagado: se perdonaron Bs. {c.monto_condonado}',
+                c.motivo_condonacion or titulo, monto=c.monto_condonado)
+
+    # ── Pagos: dinero real recibido, o saldo aplicado a un cobro ──
+    cobro_por_id = {c.id: c for c in cobros}
+    for p in Pago.objects.filter(cobro__inscripcion__in=ids):
+        c = cobro_por_id.get(p.cobro_id)
+        if p.abono_origen_id:
+            add(c.inscripcion_id, p.fecha_pago, p.created_at, 'aplicacion',
+                'Saldo a favor aplicado a un cobro',
+                (c.fecha_vencimiento.strftime('Día %d/%m/%Y') if c.tipo == Cobro.TIPO_DIARIO and c.fecha_vencimiento
+                 else (c.periodo or '')), monto=p.monto)
+        else:
+            add(c.inscripcion_id, p.fecha_pago, p.created_at, 'pago',
+                'Pago recibido', f'{p.get_metodo_pago_display()}' + (f' · {p.observacion}' if p.observacion else ''),
+                monto=p.monto, efecto='entra',
+                recibo={'tipo': 'pago', 'id': str(p.id), 'numero': p.numero_recibo} if p.numero_recibo else None)
+
+    # ── Abonos (por día) y traspasos ──
+    for a in AbonoDiario.objects.filter(inscripcion__in=ids):
+        if a.es_traspaso:
+            add(a.inscripcion_id, a.fecha_pago, a.created_at, 'traspaso',
+                'Saldo traspasado a esta cuenta', a.observacion or 'Viene de una inscripción anterior', monto=a.monto)
+        else:
+            add(a.inscripcion_id, a.fecha_pago, a.created_at, 'abono', 'Abono recibido',
+                f'{a.get_metodo_pago_display()}' + (f' · {a.observacion}' if a.observacion else ''),
+                monto=a.monto, efecto='entra',
+                recibo={'tipo': 'abono', 'id': str(a.id), 'numero': a.numero_recibo} if a.numero_recibo else None)
+
+    # ── Devoluciones (de un pago o del saldo a favor) ──
+    for d in Devolucion.objects.filter(Q(cobro__inscripcion__in=ids) | Q(inscripcion__in=ids)).select_related('cobro'):
+        insc_id = d.cobro.inscripcion_id if d.cobro_id else d.inscripcion_id
+        if d.a_cuenta:
+            add(insc_id, d.fecha, d.created_at, 'traspaso', 'Dinero pasado a la cuenta del niño',
+                d.motivo, monto=d.monto)
+        else:
+            add(insc_id, d.fecha, d.created_at, 'devolucion',
+                'Devolución de dinero' + ('' if d.cobro_id else ' (saldo a favor)'),
+                f'{d.get_metodo_pago_display()} · {d.motivo}', monto=d.monto, efecto='sale',
+                recibo={'tipo': 'devolucion', 'id': str(d.id), 'numero': d.numero_recibo} if d.numero_recibo else None)
+
+    # ── Días acordados (por día) ──
+    for dc in DiasContratados.objects.filter(inscripcion__in=ids):
+        signo = '−' if dc.tipo == DiasContratados.TIPO_REDUCCION else '+'
+        add(dc.inscripcion_id, dc.fecha, dc.created_at, 'dias',
+            f'Días acordados: {signo}{dc.cantidad} ({dc.get_tipo_display()})', dc.nota or '')
+
+    movs.sort(key=lambda m: (m['fecha'], m['orden']), reverse=True)
+
+    # ── Totales por inscripción y generales ──
+    resumen, tot = [], {'cobrado': CERO, 'recibido': CERO, 'devuelto': CERO, 'condonado': CERO,
+                        'pendiente': CERO, 'saldo_a_favor': CERO}
+    for i in inscs:
+        cs = [c for c in cobros if c.inscripcion_id == i.id and c.estado != Cobro.ESTADO_ANULADO]
+        cobrado = sum((c.monto_final for c in cs), CERO)
+        condonado = sum((c.monto_condonado or CERO for c in cs), CERO)
+        recibido = (sum((p.monto for c in cs for p in c.pagos.all() if not p.abono_origen_id), CERO)
+                    + (AbonoDiario.objects.filter(inscripcion=i, es_traspaso=False).aggregate(t=Sum('monto'))['t'] or CERO))
+        devuelto = ((Devolucion.objects.filter(cobro__inscripcion=i, a_cuenta=False).aggregate(t=Sum('monto'))['t'] or CERO)
+                    + (Devolucion.objects.filter(inscripcion=i, a_cuenta=False).aggregate(t=Sum('monto'))['t'] or CERO))
+        pendiente = deuda_abierta(i)
+        saldo = saldo_a_favor(i)
+        resumen.append({
+            'id': str(i.id), 'etiqueta': etiqueta(i), 'modalidad': i.modalidad_pago,
+            'sucursal': i.sucursal.nombre, 'activa': i.activa, 'es_actual': i.id == inscripcion.id,
+            'fecha_inicio': i.fecha_inicio.isoformat(),
+            'fecha_fin': i.fecha_fin.isoformat() if i.fecha_fin else None,
+            'cobrado': cobrado, 'recibido': recibido, 'devuelto': devuelto,
+            'condonado': condonado, 'pendiente': pendiente, 'saldo_a_favor': saldo,
+        })
+        for k, v in (('cobrado', cobrado), ('recibido', recibido), ('devuelto', devuelto),
+                     ('condonado', condonado), ('pendiente', pendiente), ('saldo_a_favor', saldo)):
+            tot[k] += v
+    return {
+        'nino': inscripcion.nino.nombre_completo,
+        'inscripciones': sorted(resumen, key=lambda r: r['fecha_inicio'], reverse=True),
+        'totales': tot,
+        'movimientos': movs,
     }

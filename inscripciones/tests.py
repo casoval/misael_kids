@@ -22,7 +22,7 @@ from ninos.models import Nino
 from .models import Inscripcion, Cobro, Pago, AbonoDiario, DiasContratados
 from .models import Devolucion
 from django.db import IntegrityError, transaction
-from .services import saldo_a_favor, resumen_financiero, resumen_diario, generar_ciclo_mensual
+from .services import saldo_a_favor, resumen_financiero, resumen_diario, generar_ciclo_mensual, estado_pago
 
 URL_INSC = '/api/inscripciones/inscripciones/'
 URL_ASIST = '/api/asistencia/asistencia/'
@@ -1607,3 +1607,165 @@ class DiasAFavorTests(PorDiaBase):
         self.assertEqual(c['nivel'], 'deuda')
         self.assertEqual(c['falta_pagar'], dec('40.00'))
         self.assertNotIn(self.d(8).isoformat(), c['dias_cubiertos'])
+
+
+class MensualidadPorIniciarTests(PorDiaBase):
+    """Pasar de por día a mensual con inicio futuro: no debe decir 'sin mensualidad generada'."""
+
+    def _pasar(self, insc, dias_adelante):
+        inicio = (self.hoy + timedelta(days=dias_adelante)).isoformat()
+        r = self.client.post(f'{URL_INSC}{insc.id}/cambiar-modalidad/',
+                             {'modalidad': 'mensual', 'fecha_inicio': inicio}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        return Inscripcion.objects.get(nino=insc.nino, activa=True)
+
+    def test_inicio_futuro_sin_pagar_es_por_iniciar_y_no_deuda(self):
+        nueva = self._pasar(self._inscribir(self._otro_nino('Franquito', 'Castro')), 10)
+        e = estado_pago(nueva)
+        self.assertEqual(e['nivel'], 'por_iniciar')
+        self.assertEqual(e['falta_pagar'], dec('0'))
+        self.assertGreater(e['por_pagar_proximo'], 0)
+        self.assertEqual(e['pagado_total'], dec('0'))
+        self.assertGreater(e['monto_acordado'], 0)
+        self.assertIn('empieza el', e['mensaje'])
+
+    def test_se_puede_filtrar_por_iniciar_y_no_sale_en_deuda(self):
+        nueva = self._pasar(self._inscribir(self._otro_nino('Franquito', 'Castro')), 10)
+        r = self.client.get(URL_INSC + '?page_size=100&estado_pago=por_iniciar')
+        self.assertEqual({f['id'] for f in r.data['results']}, {str(nueva.id)})
+        r = self.client.get(URL_INSC + '?page_size=100&estado_pago=deuda')
+        self.assertNotIn(str(nueva.id), {f['id'] for f in r.data['results']})
+
+    def test_inicio_hoy_sin_pagar_si_es_deuda(self):
+        nueva = self._pasar(self._inscribir(self._otro_nino('Franquito', 'Castro')), 0)
+        self.assertEqual(estado_pago(nueva)['nivel'], 'deuda')
+
+
+class HistorialCuentaTests(PorDiaBase):
+    """El historial del niño debe verse completo aunque cambie de modalidad."""
+
+    def setUp(self):
+        super().setUp()
+        self.insc = self._inscribir(
+            self._otro_nino('Franquito', 'Castro'),
+            dias_programados=[(self.hoy + timedelta(days=i)).isoformat() for i in range(1, 4)])
+        self.abonar(self.insc, 120)
+        self.marcar(self.insc, self.hoy + timedelta(days=1), 'presente')
+
+    def _historial(self, insc):
+        r = self.client.get(f'{URL_INSC}{insc.id}/historial-cuenta/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        return r.data
+
+    def test_historial_incluye_abonos_cobros_y_dias(self):
+        h = self._historial(self.insc)
+        tipos = {m['tipo'] for m in h['movimientos']}
+        self.assertTrue({'inscripcion', 'abono', 'cobro', 'aplicacion'} <= tipos, tipos)
+        self.assertEqual(h['totales']['recibido'], dec('120.00'))
+        self.assertEqual(h['nino'], 'Franquito Castro')
+
+    def test_al_pasar_a_mensual_el_historial_de_dia_no_desaparece(self):
+        r = self.client.post(f'{URL_INSC}{self.insc.id}/cambiar-modalidad/', {
+            'modalidad': 'mensual', 'fecha_inicio': (self.hoy + timedelta(days=10)).isoformat()}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        nueva = Inscripcion.objects.get(nino=self.insc.nino, activa=True)
+        h = self._historial(nueva)
+        self.assertEqual(len(h['inscripciones']), 2)
+        self.assertEqual({i['modalidad'] for i in h['inscripciones']}, {'diaria', 'mensual'})
+        movs = h['movimientos']
+        # Sigue el abono y el cobro por día de la inscripción cerrada...
+        self.assertIn('abono', {m['tipo'] for m in movs if m['modalidad'] == 'diaria'})
+        self.assertIn('cobro', {m['tipo'] for m in movs if m['modalidad'] == 'diaria'})
+        # ...y se ve el cambio y la mensualidad nueva.
+        self.assertTrue(any(m['tipo'] == 'inscripcion' and 'Cambio:' in m['titulo'] for m in movs))
+        self.assertTrue(any(m['tipo'] == 'cobro' and m['modalidad'] == 'mensual' for m in movs))
+        self.assertEqual(h['totales']['recibido'], dec('120.00'))
+
+    def test_el_historial_se_puede_pedir_desde_la_inscripcion_cerrada(self):
+        self.client.post(f'{URL_INSC}{self.insc.id}/cambiar-modalidad/', {
+            'modalidad': 'mensual', 'fecha_inicio': (self.hoy + timedelta(days=5)).isoformat()}, format='json')
+        h = self._historial(Inscripcion.objects.get(pk=self.insc.pk))
+        self.assertEqual(len(h['inscripciones']), 2)
+
+    def test_la_devolucion_aparece_como_salida_con_recibo(self):
+        self.client.post(f'{URL_INSC}{self.insc.id}/devolver-saldo/', {
+            'monto': '40', 'metodo_pago': 'efectivo', 'motivo': 'Prueba'}, format='json')
+        dev = [m for m in self._historial(self.insc)['movimientos'] if m['tipo'] == 'devolucion']
+        self.assertEqual(len(dev), 1)
+        self.assertEqual(dev[0]['efecto'], 'sale')
+        self.assertEqual(dev[0]['recibo']['tipo'], 'devolucion')
+
+
+class CambioDeModalidadCasosTests(PorDiaBase):
+    """Qué pasa al pasar de por día a mensual con saldo, deuda o fechas que chocan."""
+
+    def _pasar(self, insc, fecha):
+        return self.client.post(f'{URL_INSC}{insc.id}/cambiar-modalidad/',
+                                {'modalidad': 'mensual', 'fecha_inicio': fecha.isoformat()}, format='json')
+
+    def _con_dias_pasados(self, nombre, dias_atras=(5, 4, 2, 1), abono=None):
+        insc = self._inscribir(self._otro_nino(nombre, 'Caso'), fecha_inicio=self.hoy - timedelta(days=6))
+        if abono:
+            self.abonar(insc, abono)
+        for k in dias_atras:
+            self.marcar(insc, self.hoy - timedelta(days=k), 'presente')
+        return insc
+
+    def test_el_saldo_a_favor_se_aplica_a_la_primera_mensualidad(self):
+        insc = self._con_dias_pasados('Saldo', abono=400)          # 4 días × 40 = 160 usados, 240 de saldo
+        r = self._pasar(insc, self.hoy)
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        self.assertEqual(r.data['traspaso']['saldo_aplicado'], dec('240.00'))
+        nueva = Inscripcion.objects.get(nino=insc.nino, activa=True)
+        c = Cobro.objects.get(inscripcion=nueva)
+        self.assertEqual(c.monto_pagado, dec('240.00'))
+        self.assertEqual(estado_pago(nueva)['falta_pagar'], dec('410.00'))
+
+    def test_el_saldo_mayor_a_la_mensualidad_deja_el_resto_a_favor(self):
+        insc = self._con_dias_pasados('Mucho', abono=1000)         # 840 de saldo > 650
+        r = self._pasar(insc, self.hoy)
+        self.assertEqual(r.data['traspaso']['saldo_aplicado'], dec('650.00'))
+        nueva = Inscripcion.objects.get(nino=insc.nino, activa=True)
+        self.assertEqual(saldo_a_favor(nueva), dec('190.00'))
+        self.assertEqual(estado_pago(nueva)['nivel'], 'al_dia')
+
+    def test_la_deuda_de_dias_cobrados_sigue_visible_tras_pasar_a_mensual(self):
+        insc = self._con_dias_pasados('Debe', dias_atras=(2, 1))   # 2 días cobrados sin pagar = 80
+        self.assertEqual(self._pasar(insc, self.hoy).status_code, status.HTTP_201_CREATED)
+        nueva = Inscripcion.objects.get(nino=insc.nino, activa=True)
+        # Aunque la mensualidad quedara pagada, la deuda anterior mantiene la alerta.
+        c = Cobro.objects.get(inscripcion=nueva)
+        self.client.post(f'{URL_COBROS}{c.id}/registrar-pago/', {'monto': '650'}, format='json')
+        e = estado_pago(nueva)
+        self.assertEqual(e['nivel'], 'deuda')
+        self.assertEqual(e['deuda_anterior'], dec('80.00'))
+        self.assertEqual(e['deuda_total'], dec('80.00'))
+        self.assertIn('inscripción anterior', e['mensaje'])
+        r = self.client.get(URL_INSC + '?page_size=100&estado_pago=deuda')
+        self.assertIn(str(nueva.id), {f['id'] for f in r.data['results']})
+
+    def test_pagar_la_deuda_anterior_quita_la_alerta(self):
+        insc = self._con_dias_pasados('Paga', dias_atras=(2, 1))
+        self._pasar(insc, self.hoy)
+        nueva = Inscripcion.objects.get(nino=insc.nino, activa=True)
+        self.client.post(f'{URL_COBROS}{Cobro.objects.get(inscripcion=nueva).id}/registrar-pago/',
+                         {'monto': '650'}, format='json')
+        for c in Cobro.objects.filter(inscripcion=insc, tipo=Cobro.TIPO_DIARIO):
+            r = self.client.post(f'{URL_COBROS}{c.id}/registrar-pago/', {'monto': '40'}, format='json')
+            self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        e = estado_pago(nueva)
+        self.assertEqual(e['nivel'], 'al_dia')
+        self.assertEqual(e['deuda_anterior'], dec('0'))
+
+    def test_no_se_puede_empezar_la_mensualidad_encima_de_dias_ya_cobrados(self):
+        insc = self._con_dias_pasados('Choque', abono=400)         # asistió hace 5, 4, 2 y 1 días
+        r = self._pasar(insc, self.hoy - timedelta(days=3))
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('dos veces', r.data['error'])
+        self.assertIn((self.hoy).strftime('%d/%m/%Y'), r.data['error'])      # sugiere hoy (día siguiente al último)
+        self.assertTrue(Inscripcion.objects.get(pk=insc.pk).activa)           # no se cambió nada
+        self.assertEqual(Inscripcion.objects.filter(nino=insc.nino).count(), 1)
+
+    def test_empezar_el_dia_siguiente_al_ultimo_asistido_si_se_puede(self):
+        insc = self._con_dias_pasados('Ok', abono=400)
+        self.assertEqual(self._pasar(insc, self.hoy).status_code, status.HTTP_201_CREATED)
