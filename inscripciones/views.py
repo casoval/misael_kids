@@ -746,6 +746,24 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             return Response({'error': 'La nueva modalidad no puede empezar antes que la inscripción actual.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        # Precio de la nueva modalidad (puede ser distinto al estándar o al de la inscripción actual).
+        costos = {}
+        for campo in ('costo_mensual', 'costo_diario'):
+            if data.get(campo) not in (None, ''):
+                try:
+                    valor = Decimal(str(data[campo]))
+                except InvalidOperation:
+                    return Response({'error': 'El precio indicado no es un número válido.'}, status=status.HTTP_400_BAD_REQUEST)
+                if not valor.is_finite() or valor <= 0 or valor >= 100000:
+                    return Response({'error': 'El precio debe ser mayor a cero.'}, status=status.HTTP_400_BAD_REQUEST)
+                costos[campo] = valor.quantize(Decimal('0.01'))
+        campo_destino = 'costo_mensual' if destino == Inscripcion.MODALIDAD_MENSUAL else 'costo_diario'
+        if campo_destino in costos and costos[campo_destino] != getattr(actual, campo_destino):
+            etiqueta = 'mensualidad' if destino == Inscripcion.MODALIDAD_MENSUAL else 'por día'
+            motivo_precio = f' Precio {etiqueta} acordado: Bs. {costos[campo_destino]} (antes Bs. {getattr(actual, campo_destino)}).'
+        else:
+            motivo_precio = ''
+
         dias_semana = (validar_dias_semana(data.get('dias_semana', []))
                        if destino == Inscripcion.MODALIDAD_DIARIA else [])
         # Por día con calendario: el primer día es la primera fecha elegida.
@@ -768,6 +786,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST)
         nota = f'Cambio de modalidad ({actual.get_modalidad_pago_display()} → ' \
                f'{dict(Inscripcion.MODALIDADES)[destino]}) el {fecha_inicio:%d/%m/%Y}.'
+        nota += motivo_precio
         if data.get('motivo'):
             nota += f' {data["motivo"]}'
 
@@ -788,8 +807,8 @@ class InscripcionViewSet(viewsets.ModelViewSet):
                 nino=actual.nino, sucursal=actual.sucursal, sala=actual.sala, turno=actual.turno,
                 modalidad_pago=destino, fecha_inicio=fecha_inicio, dias_semana=dias_semana,
                 dias_programados=dias_prog,
-                costo_mensual=data.get('costo_mensual') or actual.costo_mensual,
-                costo_diario=data.get('costo_diario') or actual.costo_diario,
+                costo_mensual=costos.get('costo_mensual', actual.costo_mensual),
+                costo_diario=costos.get('costo_diario', actual.costo_diario),
                 tipo_ajuste=actual.tipo_ajuste, porcentaje_ajuste=actual.porcentaje_ajuste,
                 monto_ajuste=actual.monto_ajuste,
                 motivo_ajuste=(f'{actual.motivo_ajuste}\n{nota}'.strip() if actual.motivo_ajuste else nota),

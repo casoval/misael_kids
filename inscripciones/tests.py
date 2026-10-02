@@ -596,6 +596,40 @@ class CambioDeModalidadTests(PorDiaBase):
         self.assertEqual(r.data['codigo'], 'deuda_pendiente')
         self.assertTrue(Inscripcion.objects.get(pk=self.insc.pk).activa)
 
+    def test_al_pasar_a_mensual_se_puede_indicar_otro_precio(self):
+        r = self.client.post(self.url(), {'costo_mensual': '500.00'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        nueva = Inscripcion.objects.get(pk=r.data['inscripcion']['id'])
+        self.assertEqual(nueva.costo_mensual, dec('500.00'))
+        self.assertEqual(nueva.costo_diario, dec('40.00'))                       # el otro precio no se toca
+        self.assertEqual(Cobro.objects.get(inscripcion=nueva, tipo=Cobro.TIPO_MENSUALIDAD).monto_final, dec('500.00'))
+        self.assertIn('Precio mensualidad acordado: Bs. 500.00', nueva.motivo_ajuste)
+
+    def test_al_pasar_a_por_dia_se_puede_indicar_otro_precio_y_se_mantiene_el_descuento(self):
+        m = self._inscribir(self._otro_nino('Rosa', 'Precio'), modalidad=Inscripcion.MODALIDAD_MENSUAL,
+                            tipo_ajuste=Inscripcion.AJUSTE_DESCUENTO_PCT, porcentaje_ajuste='10')
+        generar_ciclo_mensual(m, ciclo_num=0)
+        c = Cobro.objects.get(inscripcion=m, tipo=Cobro.TIPO_MENSUALIDAD)
+        self.client.post(f'{URL_COBROS}{c.id}/registrar-pago/', {'monto': str(c.monto_final)}, format='json')
+        r = self.client.post(self.url(m), {'dias_semana': [1, 3], 'costo_diario': '50'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        nueva = Inscripcion.objects.get(pk=r.data['inscripcion']['id'])
+        self.assertEqual(nueva.costo_diario, dec('50.00'))
+        self.assertEqual(nueva.costo_diario_final, dec('45.00'))                  # 10 % de descuento heredado
+
+    def test_sin_indicar_precio_se_conserva_el_de_la_inscripcion(self):
+        self.insc.costo_mensual = dec('600')                                      # precio negociado
+        self.insc.save()
+        r = self.client.post(self.url(), {}, format='json')
+        self.assertEqual(Inscripcion.objects.get(pk=r.data['inscripcion']['id']).costo_mensual, dec('600.00'))
+
+    def test_un_precio_no_valido_se_rechaza_sin_cambiar_nada(self):
+        for malo in ('abc', '0', '-50', '999999'):
+            r = self.client.post(self.url(), {'costo_mensual': malo}, format='json')
+            self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST, malo)
+        self.assertTrue(Inscripcion.objects.get(pk=self.insc.pk).activa)
+        self.assertEqual(Inscripcion.objects.filter(nino=self.insc.nino).count(), 1)
+
     def test_mensual_a_diaria_con_dias_de_la_semana(self):
         m = self._inscribir(self._otro_nino('Ana', 'Choque'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
         r = self.client.post(self.url(m), {'dias_semana': [1, 3]}, format='json')
