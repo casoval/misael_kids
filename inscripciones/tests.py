@@ -1555,3 +1555,55 @@ class DiasAFavorTests(PorDiaBase):
         r = self.client.post(f'{URL_INSC}{self.insc5.id}/actualizar-dias/', {'dias': dias}, format='json')
         self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
         self.assertEqual(r.data['resumen']['cuenta']['dias_a_favor'], 0)
+
+    def test_reprogramar_un_dia_lo_absorbe_el_saldo_y_no_figura_deuda(self):
+        self.marcar(self.insc5, self.d(1), 'ausente_justificado')
+        dias = [self.d(i).isoformat() for i in range(1, 6)] + [self.d(8).isoformat()]
+        r = self.client.post(f'{URL_INSC}{self.insc5.id}/actualizar-dias/', {'dias': dias}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        c = self.cuenta()['cuenta']
+        self.assertEqual(c['nivel'], 'al_dia')
+        self.assertEqual(c['falta_pagar'], dec('0'))
+        self.assertEqual(c['dias_a_pagar'], 5)
+        self.assertEqual(c['dias_permiso_sin_cobro'], 1)
+        self.assertFalse(c['sobre_acordado'])
+        # El dinero cubre el día nuevo y no el día con permiso.
+        self.assertIn(self.d(8).isoformat(), c['dias_cubiertos'])
+        self.assertNotIn(self.d(1).isoformat(), c['dias_cubiertos'])
+        # La lista tampoco lo marca con deuda.
+        r = self.client.get(URL_INSC + '?page_size=100&estado_pago=deuda')
+        self.assertNotIn(str(self.insc5.id), {f['id'] for f in r.data['results']})
+
+    def test_con_saldo_a_favor_la_cuenta_queda_por_encima_de_lo_acordado(self):
+        self.marcar(self.insc5, self.d(1), 'ausente_justificado')
+        c = self.cuenta()['cuenta']
+        self.assertTrue(c['sobre_acordado'])
+        self.assertEqual(c['pagado_de_mas'], dec('40.00'))
+        self.assertEqual(c['dias_sobre_acordado'], 1)
+        self.assertGreater(c['pct_pagado'], 100)
+        self.assertIn('por encima de lo acordado', c['mensaje'])
+
+    def _devolver(self, monto):
+        return self.client.post(f'{URL_INSC}{self.insc5.id}/devolver-saldo/', {
+            'monto': monto, 'metodo_pago': 'efectivo', 'motivo': 'Devolución por permiso'}, format='json')
+
+    def test_devolver_el_saldo_del_permiso_deja_la_cuenta_al_dia_sin_alertas(self):
+        self.marcar(self.insc5, self.d(1), 'ausente_justificado')
+        r = self._devolver('40')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        c = self.cuenta()['cuenta']
+        self.assertEqual(c['nivel'], 'al_dia')
+        self.assertEqual(c['dias_a_favor'], 0)
+        self.assertFalse(c['sobre_acordado'])
+        self.assertEqual(c['pagado_total'], dec('160.00'))
+        self.assertEqual(c['falta_pagar'], dec('0'))
+
+    def test_devolver_el_saldo_que_cubria_un_dia_nuevo_vuelve_a_marcar_deuda(self):
+        self.marcar(self.insc5, self.d(1), 'ausente_justificado')
+        dias = [self.d(i).isoformat() for i in range(1, 6)] + [self.d(8).isoformat()]
+        self.client.post(f'{URL_INSC}{self.insc5.id}/actualizar-dias/', {'dias': dias}, format='json')
+        self._devolver('40')
+        c = self.cuenta()['cuenta']
+        self.assertEqual(c['nivel'], 'deuda')
+        self.assertEqual(c['falta_pagar'], dec('40.00'))
+        self.assertNotIn(self.d(8).isoformat(), c['dias_cubiertos'])

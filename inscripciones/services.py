@@ -450,13 +450,29 @@ def estado_pago_diario(inscripcion):
     # (neto de devoluciones) más lo que todavía está como saldo a favor.
     pagado_total = saldo + sum((c.monto_pagado for c in cobros), CERO)
 
+    # Un día del calendario con permiso (falta avisada) que no generó cobro NO se
+    # paga: el dinero de ese día queda libre y absorbe automáticamente un día
+    # agregado después (reprogramación). Por eso no cuenta en lo que hay que pagar.
+    programados = sorted(inscripcion.dias_programados or [])
+    permisos_libres = []
+    if programados:
+        from asistencia.models import Asistencia
+        con_cobro_iso = {c.fecha_vencimiento.isoformat() for c in cobros if c.fecha_vencimiento}
+        justificados_iso = {a.fecha.isoformat() for a in Asistencia.objects.filter(
+            inscripcion=inscripcion, estado=Asistencia.ESTADO_AUSENTE_JUSTIFICADO)}
+        permisos_libres = [f for f in programados if f in justificados_iso and f not in con_cobro_iso]
+
     # Si ya se cobraron más días que los acordados, esos también hay que cubrirlos.
-    dias_a_pagar = max(acordados, cobrados)
+    dias_calendario = max(acordados, cobrados)
+    dias_a_pagar = max(dias_calendario - len(permisos_libres), cobrados)
     monto_acordado = costo * dias_a_pagar
     falta = monto_acordado - pagado_total - condonado
     if falta < 0:
         falta = CERO
-    dias_pagados = int(pagado_total // costo) if costo > 0 else 0
+    dias_pagados = min(int(pagado_total // costo), dias_a_pagar) if costo > 0 else 0
+    # Días del calendario que el dinero cubre, en orden (sin los permisos libres).
+    pagables = [f for f in programados if f not in set(permisos_libres)]
+    dias_cubiertos = pagables[:int(pagado_total // costo)] if costo > 0 else []
 
     # ── Días a favor: dinero ya pagado por días que no se van a usar ──
     # Con calendario, el saldo a favor se reparte entre los días acordados que
@@ -495,7 +511,10 @@ def estado_pago_diario(inscripcion):
         mensaje = (f'Los {dias_a_pagar} día{"" if dias_a_pagar == 1 else "s"} acordados '
                    f'(Bs. {monto_acordado}) están pagados.')
         if de_mas > 0:
-            mensaje += f' Tiene Bs. {de_mas} de más (saldo a favor).'
+            mensaje += f' Está por encima de lo acordado: Bs. {de_mas} de más (saldo a favor).'
+        if permisos_libres:
+            mensaje += (f' {len(permisos_libres)} día{"" if len(permisos_libres) == 1 else "s"} '
+                        'con permiso no se cobra.')
 
     return {
         'nivel': nivel, 'titulo': titulo, 'mensaje': mensaje,
@@ -507,6 +526,13 @@ def estado_pago_diario(inscripcion):
         'saldo_a_favor': saldo,
         'falta_pagar': falta, 'dias_sin_pagar': dias_sin_pagar, 'dias_pagados': dias_pagados,
         'pagado_de_mas': de_mas,
+        'dias_calendario': dias_calendario,
+        'dias_permiso_sin_cobro': len(permisos_libres),
+        'dias_cubiertos': dias_cubiertos,
+        'sobre_acordado': de_mas > 0,
+        'dias_sobre_acordado': int(de_mas // costo) if costo > 0 and de_mas > 0 else 0,
+        'pct_pagado': (int(pagado_total * 100 / monto_acordado) if monto_acordado > 0
+                       else (100 if pagado_total > 0 else 0)),
         'dias_a_favor': dias_a_favor,
         'dias_a_favor_permiso': dias_a_favor_permiso,
         'monto_a_favor': monto_a_favor,

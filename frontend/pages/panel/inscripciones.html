@@ -58,6 +58,12 @@
     .pg-barra { height:12px;border-radius:99px;background:var(--gris-200);overflow:hidden;margin:10px 0 4px; }
     .pg-barra > div { height:100%;background:#16A34A;border-radius:99px;transition:width .3s; }
     .pg-barra.rojo > div { background:#DC2626; }
+    .pg-barra.sobre { display:flex;overflow:visible;position:relative; }
+    .pg-barra.sobre > div { border-radius:0; }
+    .pg-barra.sobre > .ok { background:#16A34A;border-radius:99px 0 0 99px; }
+    .pg-barra.sobre > .extra { background:repeating-linear-gradient(45deg,#2563EB,#2563EB 6px,#60A5FA 6px,#60A5FA 12px);border-radius:0 99px 99px 0; }
+    .pg-barra.sobre > .marca { position:absolute;top:-4px;bottom:-4px;width:3px;background:#0F172A;border-radius:2px; }
+    .pg-sobre-nota { font-size:var(--text-sm);font-weight:700;color:#1D4ED8;margin-top:2px; }
     .pg-nota { font-size:var(--text-xs);color:var(--texto-suave);margin-top:8px;line-height:1.45; }
     /* Estado de pago en la lista de inscripciones */
     tr.fila-deuda td { background:#FFF5F5; }
@@ -1628,8 +1634,8 @@ function pgPintarDiario(cal, r) {
   // todavía no lleguen) y el resto aparece como "sin pagar".
   const cu = r && r.cuenta ? r.cuenta : null;
   const programados = (r && r.dias_programados ? [...r.dias_programados] : []).sort();
-  const diasPagados = cu ? cu.dias_pagados : 0;
-  const cubiertos = new Set(programados.slice(0, diasPagados));
+  // El backend ya excluye los días con permiso (no se pagan) al repartir el dinero.
+  const cubiertos = new Set(cu && cu.dias_cubiertos ? cu.dias_cubiertos : programados.slice(0, cu ? cu.dias_pagados : 0));
   const hoyIso = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
   const dow = ['L','M','X','J','V','S','D'];
@@ -1708,11 +1714,27 @@ function pgHtmlCuentaDiaria(r) {
 
   // ── 2) Cuenta paso a paso (monto, pagado, falta) ──
   const costo = UI.moneda(c.costo_diario);
-  const pct = c.monto_acordado > 0 ? Math.min(100, Math.round(parseFloat(c.pagado_total) / parseFloat(c.monto_acordado) * 100)) : 0;
+  const pctReal = c.pct_pagado != null ? c.pct_pagado
+    : (c.monto_acordado > 0 ? Math.round(parseFloat(c.pagado_total) / parseFloat(c.monto_acordado) * 100) : 0);
+  const sobre = !!c.sobre_acordado;
+  const pct = Math.min(100, pctReal);
+  // Barra: si pagó de más, el tramo azul rayado es lo que está por encima de lo acordado.
+  const escala = sobre ? Math.max(pctReal, 101) : 100;
+  const barra = sobre
+    ? `<div class="pg-barra sobre"><div class="ok" style="width:${100 / escala * 100}%"></div>
+         <div class="extra" style="width:${(escala - 100) / escala * 100}%"></div>
+         <div class="marca" style="left:calc(${100 / escala * 100}% - 1px)" title="Lo acordado"></div></div>
+       <div class="pg-sobre-nota">⬆ Por encima de lo acordado: +${UI.moneda(c.pagado_de_mas)}${c.dias_sobre_acordado > 0 ? ' (' + plural(c.dias_sobre_acordado, 'día', 'días') + ' a favor)' : ''}</div>
+       <div class="pg-nota">Lo acordado está 100% pagado y sobran ${UI.moneda(c.pagado_de_mas)}. La línea negra marca el monto acordado.</div>`
+    : `<div class="pg-barra ${parseFloat(c.falta_pagar) > 0 ? 'rojo' : ''}"><div style="width:${pct}%"></div></div>
+       <div class="pg-nota">${pctReal}% pagado · ${plural(c.dias_pagados, 'día pagado', 'días pagados')} de ${c.dias_a_pagar}.</div>`;
   const calculo = c.dias_a_pagar > 0 ? `
     <table class="pg-calculo">
       <tr><td>Días acordados<small>Los días elegidos en el calendario${c.dias_cobrados > c.dias_acordados ? ' (se cobraron más de los acordados)' : ''}</small></td>
-          <td>${c.dias_a_pagar} día${c.dias_a_pagar === 1 ? '' : 's'}</td></tr>
+          <td>${c.dias_permiso_sin_cobro > 0 ? c.dias_calendario : c.dias_a_pagar} día${(c.dias_permiso_sin_cobro > 0 ? c.dias_calendario : c.dias_a_pagar) === 1 ? '' : 's'}</td></tr>
+      ${c.dias_permiso_sin_cobro > 0 ? `<tr><td>Con permiso (no se cobra)<small>Falta avisada: ese día no se paga y su dinero cubre otro día</small></td>
+          <td>− ${plural(c.dias_permiso_sin_cobro, 'día', 'días')}</td></tr>
+      <tr><td>Días a pagar</td><td>${plural(c.dias_a_pagar, 'día', 'días')}</td></tr>` : ''}
       <tr><td>Costo por día</td><td>${costo}</td></tr>
       <tr><td>Monto a pagar por adelantado<small>${c.dias_a_pagar} × ${costo}</small></td><td>${UI.moneda(c.monto_acordado)}</td></tr>
       <tr><td>Ya pagó<small>Todo lo abonado y cobrado, menos devoluciones</small></td>
@@ -1720,10 +1742,9 @@ function pgHtmlCuentaDiaria(r) {
       <tr class="pg-total"><td>${parseFloat(c.falta_pagar) > 0 ? 'Falta pagar para estar al día' : 'Falta pagar'}
           ${parseFloat(c.falta_pagar) > 0 ? `<small>Equivale a ${plural(c.dias_sin_pagar, 'día', 'días')} sin pagar</small>` : ''}</td>
           <td style="color:${parseFloat(c.falta_pagar) > 0 ? '#B91C1C' : '#15803D'}">${UI.moneda(c.falta_pagar)}</td></tr>
-      ${parseFloat(c.pagado_de_mas) > 0 ? `<tr><td>Pagó de más<small>Queda como saldo a favor para más días</small></td><td style="color:#1D4ED8">${UI.moneda(c.pagado_de_mas)}</td></tr>` : ''}
+      ${parseFloat(c.pagado_de_mas) > 0 ? `<tr><td>Por encima de lo acordado<small>Queda como saldo a favor para más días</small></td><td style="color:#1D4ED8">${UI.moneda(c.pagado_de_mas)}</td></tr>` : ''}
     </table>
-    <div class="pg-barra ${parseFloat(c.falta_pagar) > 0 ? 'rojo' : ''}"><div style="width:${pct}%"></div></div>
-    <div class="pg-nota">${pct}% pagado · ${plural(c.dias_pagados, 'día pagado', 'días pagados')} de ${c.dias_a_pagar}.</div>` : '';
+    ${barra}` : '';
 
   // ── 3) Uso de los días ──
   const uso = `
