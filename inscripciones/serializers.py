@@ -1,6 +1,7 @@
 """
 inscripciones/serializers.py
 """
+from datetime import date
 from rest_framework import serializers
 from .models import Inscripcion, Cobro, Pago, Devolucion, AbonoDiario
 
@@ -46,6 +47,29 @@ def validar_dias_semana(valor):
     if any(d < 0 or d > 6 for d in dias):
         raise serializers.ValidationError('Los días deben estar entre 0 (lunes) y 6 (domingo).')
     return dias
+
+
+MAX_DIAS_PROGRAMADOS = 366
+
+
+def validar_dias_programados(valor):
+    """
+    Lista de fechas ISO ('YYYY-MM-DD') elegidas en el calendario: sin repetir y
+    ordenadas. Vacío = sin calendario (inscripción antigua o mensualidad).
+    """
+    if valor in (None, ''):
+        return []
+    if not isinstance(valor, (list, tuple)):
+        raise serializers.ValidationError('Debe ser una lista de fechas (YYYY-MM-DD).')
+    fechas = set()
+    for v in valor:
+        try:
+            fechas.add(date.fromisoformat(str(v)[:10]).isoformat())
+        except ValueError:
+            raise serializers.ValidationError(f'La fecha "{v}" no es válida, usa formato YYYY-MM-DD.')
+    if len(fechas) > MAX_DIAS_PROGRAMADOS:
+        raise serializers.ValidationError(f'No se pueden elegir más de {MAX_DIAS_PROGRAMADOS} días.')
+    return sorted(fechas)
 
 
 class DevolucionSerializer(serializers.ModelSerializer):
@@ -128,7 +152,7 @@ class InscripcionSerializer(serializers.ModelSerializer):
             'turno', 'turno_nombre',
             'modalidad_pago', 'modalidad_display',
             'fecha_inicio', 'fecha_fin',
-            'dias_semana', 'dias_semana_display',
+            'dias_semana', 'dias_semana_display', 'dias_programados',
             'costo_mensual', 'costo_diario',
             'tipo_ajuste', 'tipo_ajuste_display',
             'porcentaje_ajuste', 'monto_ajuste', 'motivo_ajuste',
@@ -137,9 +161,15 @@ class InscripcionSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+        # En la modalidad por día con calendario, el primer día se deduce de las
+        # fechas elegidas, así que no hace falta mandarlo.
+        extra_kwargs = {'fecha_inicio': {'required': False}}
 
     def validate_dias_semana(self, valor):
         return validar_dias_semana(valor)
+
+    def validate_dias_programados(self, valor):
+        return validar_dias_programados(valor)
 
     def validate(self, data):
         # Los días de la semana solo existen en la modalidad por día: en una
@@ -147,6 +177,19 @@ class InscripcionSerializer(serializers.ModelSerializer):
         modalidad = data.get('modalidad_pago', getattr(self.instance, 'modalidad_pago', None))
         if modalidad == Inscripcion.MODALIDAD_MENSUAL:
             data['dias_semana'] = []
+            data['dias_programados'] = []
+        elif self.instance is not None:
+            # Las fechas del calendario de una inscripción existente solo se
+            # cambian con /actualizar-dias/ (valida lo ya asistido y deja
+            # historial de ampliación/reducción), nunca editando la inscripción.
+            data.pop('dias_programados', None)
+
+        # Por día con calendario: el primer día de asistencia es la primera fecha elegida.
+        if self.instance is None:
+            if data.get('dias_programados') and modalidad == Inscripcion.MODALIDAD_DIARIA:
+                data['fecha_inicio'] = date.fromisoformat(data['dias_programados'][0])
+            elif not data.get('fecha_inicio'):
+                raise serializers.ValidationError({'fecha_inicio': 'Este campo es requerido.'})
 
         # Un niño solo puede tener UNA inscripción activa en todo el sistema.
         # Para cambiarlo de sala/turno/sucursal se debe usar el endpoint
@@ -217,6 +260,6 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
             'sucursal_nombre', 'sala_nombre', 'turno_nombre',
             'modalidad_pago', 'modalidad_display', 'tipo_ajuste',
             'costo_mensual_final', 'costo_diario_final',
-            'dias_semana', 'dias_semana_display',
+            'dias_semana', 'dias_semana_display', 'dias_programados',
             'activa', 'fecha_inicio',
         ]

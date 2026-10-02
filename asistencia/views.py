@@ -453,8 +453,7 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
         inscripciones = [
             i for i in inscripciones
             if i.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL
-            or not i.dias_semana
-            or fecha.weekday() in i.dias_semana
+            or i.es_dia_esperado(fecha)      # respeta calendario, días de la semana, inicio y fin
             or i.id in con_registro
         ]
 

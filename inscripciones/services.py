@@ -349,6 +349,75 @@ def registrar_dias_contratados(inscripcion, cantidad, tipo=None, nota='', usuari
     )
 
 
+def dias_bloqueados(inscripcion):
+    """
+    Fechas del calendario que ya no se pueden quitar: tienen una asistencia
+    marcada o un día ya cobrado (no anulado). Devuelve fechas ISO ordenadas.
+    """
+    from asistencia.models import Asistencia
+
+    fechas = {a.isoformat() for a in Asistencia.objects.filter(
+        inscripcion=inscripcion).values_list('fecha', flat=True)}
+    fechas |= {f.isoformat() for f in Cobro.objects.filter(
+        inscripcion=inscripcion, tipo=Cobro.TIPO_DIARIO,
+    ).exclude(estado=Cobro.ESTADO_ANULADO).values_list('fecha_vencimiento', flat=True) if f}
+    return sorted(fechas)
+
+
+class DiasProgramadosError(ValueError):
+    """Cambio de calendario no permitido (se muestra tal cual al usuario)."""
+
+
+@transaction.atomic
+def actualizar_dias_programados(inscripcion, nuevas_fechas, nota='', usuario=None):
+    """
+    Cambia las fechas del calendario de una inscripción por día y deja el
+    rastro en el historial de días acordados:
+      - fechas agregadas  → 'inicial' (si es la primera vez) o 'ampliacion'
+      - fechas quitadas   → 'reduccion'
+    No se puede quitar una fecha que ya tiene asistencia o cobro. En una
+    inscripción antigua (sin calendario) el historial se concilia contra los
+    días acordados que ya tenía, para no duplicarlos.
+    `nuevas_fechas` ya viene validada y ordenada (ISO). Devuelve (agregadas, quitadas).
+    """
+    if inscripcion.modalidad_pago != Inscripcion.MODALIDAD_DIARIA:
+        raise DiasProgramadosError('Solo las inscripciones por día tienen calendario de días.')
+    if not inscripcion.activa:
+        raise DiasProgramadosError('Esta inscripción ya no está activa.')
+    if not nuevas_fechas:
+        raise DiasProgramadosError('Elige al menos un día en el calendario.')
+
+    actuales = set(inscripcion.dias_programados or [])
+    nuevas = set(nuevas_fechas)
+    quitadas = actuales - nuevas
+    agregadas = nuevas - actuales
+
+    bloqueadas = quitadas & set(dias_bloqueados(inscripcion))
+    if bloqueadas:
+        lista = ', '.join(date.fromisoformat(f).strftime('%d/%m') for f in sorted(bloqueadas))
+        raise DiasProgramadosError(
+            f'No se pueden quitar días que ya tienen asistencia o cobro: {lista}.')
+
+    if actuales:
+        delta = len(agregadas) - len(quitadas)
+    else:
+        # Inscripción antigua: se concilia con lo ya acordado (0 si nunca se anotó).
+        delta = len(nuevas) - dias_contratados_total(inscripcion)
+
+    inscripcion.dias_programados = sorted(nuevas)
+    inscripcion.fecha_inicio = min(date.fromisoformat(f) for f in nuevas)
+    inscripcion.save(update_fields=['dias_programados', 'fecha_inicio', 'updated_at'])
+
+    if delta != 0:
+        nota_auto = nota or (
+            f'Calendario: +{len(agregadas)} / −{len(quitadas)} día(s).'
+            if actuales else f'Calendario de {len(nuevas)} día(s).')
+        registrar_dias_contratados(
+            inscripcion, abs(delta), usuario=usuario, nota=nota_auto,
+            tipo=(DiasContratados.TIPO_REDUCCION if delta < 0 else None))
+    return sorted(agregadas), sorted(quitadas)
+
+
 def resumen_diario(inscripcion):
     """
     Estado de cuenta de una inscripción "por día": saldo a favor, deuda,
@@ -393,6 +462,8 @@ def resumen_diario(inscripcion):
         'abonado_total': abonado,
         'costo_diario': costo,
         'dias_que_cubre_el_saldo': int(saldo // costo) if costo and costo > 0 else None,
+        'dias_programados': list(inscripcion.dias_programados or []),
+        'dias_bloqueados':  dias_bloqueados(inscripcion) if inscripcion.dias_programados else [],
         'dias_contratados': {
             'total': contratados,
             'cobrados': cobrados,
@@ -742,7 +813,8 @@ def calendario_pagos_diario(inscripcion, anio, mes):
             'dia':          n,
             'fecha':        dia.isoformat(),
             'dia_semana':   dia.weekday(),  # 0=lunes ... 6=domingo
-            'esperado':     inscripcion.es_dia_esperado(dia),   # respeta inicio, fin y dias_semana
+            'esperado':     inscripcion.es_dia_esperado(dia),   # respeta inicio, fin, calendario y dias_semana
+            'programado':   dia.isoformat() in (inscripcion.dias_programados or []),
             'asistencia':   asistencias.get(dia),               # presente / ausente / ausente_justificado / None
             'cobro':        _serializar_cobro_resumen(cobro) if cobro else None,
             'bloqueado_por': bloqueado_por,

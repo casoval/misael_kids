@@ -33,13 +33,36 @@
     .pg-dia.pg-justificado { background:var(--violeta-l);color:var(--violeta-d); }
     .pg-dia.pg-esperado { background:var(--blanco);color:var(--texto);border:1.5px dashed var(--gris-300); }
     .pg-dia.pg-futuro { background:var(--blanco);color:var(--texto-suave);border:1.5px dotted var(--gris-200); }
-    .dias-pills { display:flex;gap:6px;flex-wrap:wrap; }
-    .dia-pill { display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;
-      border:1.5px solid var(--gris-200);border-radius:50%;font-size:var(--text-sm);font-weight:700;
-      color:var(--texto-suave);cursor:pointer;user-select:none;background:var(--blanco); }
-    .dia-pill input { position:absolute;opacity:0;pointer-events:none; }
-    .dia-pill:has(input:checked) { border-color:var(--turquesa);background:var(--turquesa-l);color:var(--turquesa-d); }
-    .dia-pill:has(input:focus-visible) { outline:2px solid var(--turquesa-d);outline-offset:2px; }
+    /* Calendario grande para elegir los días (pago por día) */
+    .cal-dias { background:var(--blanco);border:1.5px solid var(--gris-200);border-radius:var(--radio-lg);padding:var(--gap-md); }
+    .cal-dias-cab { display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--gap-sm); }
+    .cal-dias-mes { font-family:var(--font-display);font-size:var(--text-xl);color:var(--texto);text-transform:capitalize; }
+    .cal-dias-nav { width:42px;height:42px;border-radius:50%;border:1.5px solid var(--gris-200);background:var(--blanco);
+      font-size:1.25rem;line-height:1;color:var(--texto-suave);cursor:pointer; }
+    .cal-dias-nav:hover { border-color:var(--turquesa);color:var(--turquesa-d); }
+    .cal-dias-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:6px; }
+    .cal-dias-sem { text-align:center;font-size:var(--text-xs);font-weight:800;color:var(--texto-suave);padding-bottom:2px; }
+    .cal-dia { position:relative;height:56px;display:flex;align-items:center;justify-content:center;padding:0;
+      border:1.5px solid var(--gris-200);border-radius:var(--radio-md);background:var(--blanco);
+      font:700 var(--text-base) var(--font-body);color:var(--texto);cursor:pointer;user-select:none;
+      transition:background var(--trans-fast),border-color var(--trans-fast),transform var(--trans-fast); }
+    .cal-dia:hover:not(:disabled) { border-color:var(--turquesa);transform:translateY(-1px); }
+    .cal-dia:focus-visible { outline:2px solid var(--turquesa-d);outline-offset:2px; }
+    .cal-dia.finde { background:var(--gris-50); }
+    .cal-dia.pasado { color:var(--gris-400); }
+    .cal-dia.hoy { border-color:var(--turquesa-d);border-width:2px; }
+    .cal-dia.sel { background:var(--turquesa);border-color:var(--turquesa-d);color:#fff; }
+    .cal-dia.nuevo { background:var(--verde);border-color:var(--verde-d);color:#fff; }
+    .cal-dia.quitado { background:var(--coral-l);border-color:var(--coral);color:var(--coral-d);text-decoration:line-through; }
+    .cal-dia.bloq { cursor:not-allowed; }
+    .cal-dia:disabled:not(.sel):not(.nuevo):not(.quitado) { cursor:default; }
+    .cal-dia small { position:absolute;top:3px;right:5px;font-size:.65rem;font-weight:800;line-height:1; }
+    .cal-dias-pie { display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:var(--gap-md);font-size:var(--text-sm); }
+    .cal-dias-pie .cal-cuenta { flex:1;min-width:160px;color:var(--texto); }
+    .cal-mas { color:var(--verde-d);font-weight:800; }
+    .cal-menos { color:var(--coral-d);font-weight:800; }
+    .cal-dias-leyenda { display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:var(--text-xs);color:var(--texto-suave); }
+    @media (max-width:520px) { .cal-dia { height:44px; } .cal-dias-grid { gap:4px; } }
     .pg-cuenta { background:var(--blanco);border:1.5px solid var(--gris-200);border-radius:var(--radio-lg);
       padding:.85rem 1rem;margin-bottom:var(--gap-md); }
     .pg-cuenta-cifras { display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px; }
@@ -205,31 +228,19 @@
           <option value="diaria">Pago por día</option>
         </select>
       </div>
-      <div class="form-grupo">
+      <div class="form-grupo" id="grupo-inicio">
         <label class="form-label" id="i-inicio-label">Fecha de inicio *</label>
         <input type="date" id="i-inicio" class="form-input">
         <span class="form-error" data-error="i-inicio"></span>
       </div>
-      <div class="form-grupo" id="grupo-dias-semana" style="display:none;grid-column:1/-1">
-        <label class="form-label">Días de la semana en que asiste (opcional)</label>
-        <div class="dias-pills" id="i-dias-semana">
-          <label class="dia-pill" title="Lunes"><input type="checkbox" value="0">L</label>
-          <label class="dia-pill" title="Martes"><input type="checkbox" value="1">M</label>
-          <label class="dia-pill" title="Miércoles"><input type="checkbox" value="2">X</label>
-          <label class="dia-pill" title="Jueves"><input type="checkbox" value="3">J</label>
-          <label class="dia-pill" title="Viernes"><input type="checkbox" value="4">V</label>
-          <label class="dia-pill" title="Sábado"><input type="checkbox" value="5">S</label>
-          <label class="dia-pill" title="Domingo"><input type="checkbox" value="6">D</label>
-        </div>
-        <span style="font-size:var(--text-xs);color:var(--texto-suave);display:block;margin-top:6px">
-          Sin marcar = lo esperamos todos los días desde el primer día. Si marcas días, solo aparecerá en
-          la lista de asistencia esos días y una falta sin aviso solo se cobra esos días.
+      <div class="form-grupo" id="grupo-calendario" style="display:none;grid-column:1/-1">
+        <label class="form-label" id="i-cal-label">Días en que asistirá *</label>
+        <div id="i-cal"></div>
+        <span class="form-error" data-error="i-cal"></span>
+        <span id="i-cal-ayuda" style="font-size:var(--text-xs);color:var(--texto-suave);display:block;margin-top:6px">
+          Toca en el calendario los días que asistirá (el primero es su primer día). Solo aparecerá en la lista de
+          asistencia esos días y una falta sin aviso solo se cobra esos días.
         </span>
-      </div>
-      <div class="form-grupo" id="grupo-dias-acordados" style="display:none">
-        <label class="form-label">Días acordados con el tutor (opcional)</label>
-        <input type="number" id="i-dias-acordados" class="form-input" min="1" placeholder="Ej: 5">
-        <span style="font-size:var(--text-xs);color:var(--texto-suave)">Sirve de control: te avisamos si se pasa de lo acordado.</span>
       </div>
     </div>
 
@@ -617,36 +628,24 @@
 </div>
 
 <div class="modal-overlay" id="modal-pg-dias">
-  <div class="modal" style="max-width:420px">
+  <div class="modal" style="max-width:600px">
     <div class="modal-header">
-      <h3 class="modal-titulo">Días acordados</h3>
+      <h3 class="modal-titulo">🗓️ Aumentar o disminuir días</h3>
       <button class="modal-cerrar">✕</button>
     </div>
     <p style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)">
-      Es un control: el cobro sigue dependiendo de la asistencia. Cada cambio queda en el historial.
+      Toca un día para agregarlo o quitarlo. Es un control: el cobro sigue dependiendo de la asistencia.
+      Cada cambio queda en el historial.
     </p>
-    <div class="grid-2">
-      <div class="form-grupo">
-        <label class="form-label">Tipo</label>
-        <select id="pgd-tipo" class="form-select">
-          <option value="inicial">Días iniciales</option>
-          <option value="ampliacion">Ampliación</option>
-          <option value="reduccion">Reducción</option>
-        </select>
-      </div>
-      <div class="form-grupo">
-        <label class="form-label">Cantidad de días *</label>
-        <input type="number" id="pgd-cantidad" class="form-input" min="1">
-      </div>
-    </div>
-    <div class="form-grupo">
+    <div id="pgd-cal"></div>
+    <div class="form-grupo" style="margin-top:var(--gap-md)">
       <label class="form-label">Nota (opcional)</label>
       <textarea id="pgd-nota" class="form-textarea" style="min-height:60px" placeholder="Ej: La mamá pidió pasar de 5 a 10 días"></textarea>
     </div>
     <span class="form-error" id="pgd-error"></span>
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-pg-dias')">Cancelar</button>
-      <button class="btn btn-primary" onclick="pgConfirmarDias()">Guardar</button>
+      <button class="btn btn-primary" onclick="pgConfirmarDias()">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -659,21 +658,13 @@
     </div>
     <div id="cm-nombre" style="font-weight:700;font-size:var(--text-lg);margin-bottom:6px"></div>
     <p id="cm-texto" style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)"></p>
-    <div class="form-grupo">
+    <div class="form-grupo" id="cm-grupo-fecha">
       <label class="form-label" id="cm-fecha-label"></label>
       <input type="date" id="cm-fecha" class="form-input">
     </div>
     <div class="form-grupo" id="cm-grupo-dias" style="display:none">
-      <label class="form-label">Días de la semana en que asiste (opcional)</label>
-      <div class="dias-pills" id="cm-dias-semana">
-        <label class="dia-pill" title="Lunes"><input type="checkbox" value="0">L</label>
-        <label class="dia-pill" title="Martes"><input type="checkbox" value="1">M</label>
-        <label class="dia-pill" title="Miércoles"><input type="checkbox" value="2">X</label>
-        <label class="dia-pill" title="Jueves"><input type="checkbox" value="3">J</label>
-        <label class="dia-pill" title="Viernes"><input type="checkbox" value="4">V</label>
-        <label class="dia-pill" title="Sábado"><input type="checkbox" value="5">S</label>
-        <label class="dia-pill" title="Domingo"><input type="checkbox" value="6">D</label>
-      </div>
+      <label class="form-label">Días en que asistirá *</label>
+      <div id="cm-cal"></div>
     </div>
     <div class="form-grupo">
       <label class="form-label">Motivo (opcional)</label>
@@ -708,6 +699,8 @@ initPanel('inscripciones', ['admin', 'directora', 'recepcionista']);
 const hoy = new Date().toISOString().split('T')[0];
 document.getElementById('i-inicio').value = hoy;
 let editandoId = null;
+let editandoConCalendario = false;   // editando una inscripción por día que ya tiene calendario
+let calInsc = null;                  // calendario del modal de inscripción
 let ninosData  = [];
 
 async function inicializar() {
@@ -813,6 +806,7 @@ function limpiarFiltros() {
 
 function abrirNuevo() {
   editandoId = null;
+  editandoConCalendario = false;
   document.getElementById('titulo-modal-insc').textContent = 'Nueva inscripción';
   ['i-id','i-motivo-ajuste'].forEach(id=>document.getElementById(id).value='');
   ['i-nino','i-sucursal','i-turno'].forEach(id=>document.getElementById(id).value='');
@@ -821,8 +815,7 @@ function abrirNuevo() {
   document.getElementById('i-modalidad').value = 'mensual';
   document.getElementById('i-tipo-ajuste').value = 'ninguno';
   document.getElementById('i-inicio').value = hoy;
-  ponerDias('i-dias-semana', []);
-  document.getElementById('i-dias-acordados').value = '';
+  calInsc = crearCalDias('i-cal', { costoDia: costoDiaFinalForm, onChange: () => limpiarErrorCal() });
   ['i-costo-mensual','i-costo-diario','i-pct-ajuste','i-monto-ajuste'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('aviso-edad').style.display = 'none';
   document.getElementById('preview-costos').style.display = 'none';
@@ -835,6 +828,7 @@ function abrirNuevo() {
 
 async function editar(id) {
   editandoId = id;
+  editandoConCalendario = false;
   document.getElementById('titulo-modal-insc').textContent = 'Editar inscripción';
   try {
     const i = await API.get('/inscripciones/inscripciones/'+id+'/');
@@ -847,7 +841,8 @@ async function editar(id) {
     document.getElementById('i-turno').value          = i.turno;
     document.getElementById('i-modalidad').value      = i.modalidad_pago;
     document.getElementById('i-inicio').value         = i.fecha_inicio;
-    ponerDias('i-dias-semana', i.dias_semana);
+    editandoConCalendario = (i.dias_programados || []).length > 0;
+    calInsc = crearCalDias('i-cal', { seleccion: i.dias_programados || [], soloLectura: true, costoDia: costoDiaFinalForm });
     document.getElementById('i-costo-mensual').value  = i.costo_mensual;
     document.getElementById('i-costo-diario').value   = i.costo_diario;
     document.getElementById('i-tipo-ajuste').value    = i.tipo_ajuste;
@@ -917,19 +912,140 @@ function actualizarVistaCostos() {
   document.getElementById('i-costo-mensual').closest('.form-grupo').style.display = esMensual ? '' : 'none';
   document.getElementById('i-costo-diario').closest('.form-grupo').style.display  = esMensual ? 'none' : '';
   document.getElementById('prev-final-diario').closest('.costo-fila').style.display = esMensual ? 'none' : '';
-  // Campos propios de la modalidad por día
-  document.getElementById('grupo-dias-semana').style.display = esMensual ? 'none' : '';
-  document.getElementById('grupo-dias-acordados').style.display = (esMensual || editandoId) ? 'none' : '';
-  document.getElementById('i-inicio-label').textContent = esMensual ? 'Fecha de inicio *' : 'Primer día de asistencia *';
+  // Por día: los días se eligen en el calendario (el primero es el primer día de asistencia).
+  // Solo una inscripción por día antigua, sin calendario, conserva la fecha de inicio suelta.
+  const usaCalendario = !esMensual && (!editandoId || editandoConCalendario);
+  document.getElementById('grupo-calendario').style.display = usaCalendario ? '' : 'none';
+  document.getElementById('grupo-inicio').style.display = usaCalendario ? 'none' : '';
+  document.getElementById('i-cal-label').textContent = editandoId ? 'Días elegidos' : 'Días en que asistirá *';
+  document.getElementById('i-cal-ayuda').innerHTML = editandoId
+    ? 'Para aumentar o disminuir días usa <strong>🗓️ Ajustar días</strong> en la cuenta de pagos de este niño.'
+    : 'Toca en el calendario los días que asistirá (el primero es su primer día). Solo aparecerá en la lista de asistencia esos días y una falta sin aviso solo se cobra esos días.';
+  document.getElementById('i-inicio-label').textContent = 'Fecha de inicio *';
+  if (calInsc) calInsc.refrescar();
   calcularCostoFinal();
 }
 
-// Casillas de días de la semana (0=lunes ... 6=domingo)
-function leerDias(contId) {
-  return [...document.querySelectorAll('#' + contId + ' input:checked')].map(c => parseInt(c.value, 10));
+// ── Calendario grande para elegir los días (pago por día) ──
+// Guarda fechas exactas (YYYY-MM-DD). Con `original` marca lo agregado (verde) y lo quitado (rojo);
+// `bloqueados` son días con asistencia/cobro: no se pueden quitar.
+const CAL_MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function isoLocal(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
-function ponerDias(contId, dias) {
-  document.querySelectorAll('#' + contId + ' input').forEach(c => { c.checked = (dias || []).includes(parseInt(c.value, 10)); });
+
+function crearCalDias(contId, opts = {}) {
+  const cont = document.getElementById(contId);
+  const sel = new Set(opts.seleccion || []);
+  const original = new Set(opts.original || []);
+  const bloq = new Set(opts.bloqueados || []);
+  const modoCambios = !!opts.conCambios;
+  const soloLectura = !!opts.soloLectura;
+  const hoyIso = isoLocal(new Date());
+  const ancla = [...sel].sort()[0] || hoyIso;
+  let anio = +ancla.slice(0, 4), mes = +ancla.slice(5, 7) - 1;
+
+  function textoCuenta() {
+    const n = sel.size;
+    let t = `<strong>${n}</strong> día${n === 1 ? '' : 's'} elegido${n === 1 ? '' : 's'}`;
+    if (modoCambios) {
+      const nuevos = [...sel].filter(f => !original.has(f)).length;
+      const quitados = [...original].filter(f => !sel.has(f)).length;
+      t += ` · <span class="cal-mas">+${nuevos}</span> <span class="cal-menos">−${quitados}</span>`;
+    }
+    const costo = opts.costoDia ? opts.costoDia() : 0;
+    if (costo > 0 && n > 0) t += ` · aprox. ${UI.moneda(n * costo)}`;
+    return t;
+  }
+
+  function render() {
+    const primerDow = (new Date(anio, mes, 1).getDay() + 6) % 7;      // 0 = lunes
+    const nDias = new Date(anio, mes + 1, 0).getDate();
+    let celdas = ['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<div class="cal-dias-sem">${d}</div>`).join('');
+    for (let i = 0; i < primerDow; i++) celdas += '<div></div>';
+    for (let n = 1; n <= nDias; n++) {
+      const f = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(n).padStart(2, '0')}`;
+      const dow = (primerDow + n - 1) % 7;
+      const esSel = sel.has(f), esOrig = original.has(f), esBloq = bloq.has(f) && esSel;
+      const nuevo = modoCambios && esSel && !esOrig, quitado = modoCambios && !esSel && esOrig;
+      const cls = ['cal-dia', dow >= 5 ? 'finde' : '', f < hoyIso ? 'pasado' : '', f === hoyIso ? 'hoy' : '',
+        nuevo ? 'nuevo' : (esSel ? 'sel' : ''), quitado ? 'quitado' : '', esBloq ? 'bloq' : ''].filter(Boolean).join(' ');
+      const marca = esBloq ? '<small>🔒</small>' : nuevo ? '<small>+</small>' : quitado ? '<small>−</small>' : '';
+      const titulo = esBloq ? 'Ya tiene asistencia o cobro: no se puede quitar'
+        : nuevo ? 'Día nuevo' : quitado ? 'Día quitado' : esSel ? 'Elegido' : '';
+      celdas += `<button type="button" class="${cls}" data-f="${f}" aria-pressed="${esSel}" title="${titulo}" ${(esBloq || soloLectura) ? 'disabled' : ''}>${n}${marca}</button>`;
+    }
+    const acciones = soloLectura ? '' : `
+      <button type="button" class="btn btn-outline btn-sm" data-acc="semana" title="Agrega los lunes a viernes de este mes, desde hoy">Lun–Vie del mes</button>
+      <button type="button" class="btn btn-outline btn-sm" data-acc="limpiar">Limpiar</button>`;
+    const leyenda = modoCambios ? `
+      <div class="cal-dias-leyenda"><span>🟦 Elegido</span><span>🟩 Nuevo</span><span>🟥 Quitado</span><span>🔒 Con asistencia o cobro</span></div>` : '';
+    cont.innerHTML = `
+      <div class="cal-dias">
+        <div class="cal-dias-cab">
+          <button type="button" class="cal-dias-nav" data-nav="-1" aria-label="Mes anterior">‹</button>
+          <span class="cal-dias-mes">${CAL_MESES[mes]} ${anio}</span>
+          <button type="button" class="cal-dias-nav" data-nav="1" aria-label="Mes siguiente">›</button>
+        </div>
+        <div class="cal-dias-grid">${celdas}</div>
+        <div class="cal-dias-pie"><span class="cal-cuenta">${textoCuenta()}</span>${acciones}</div>
+        ${leyenda}
+      </div>`;
+  }
+
+  function cambio() { render(); if (opts.onChange) opts.onChange(api); }
+
+  cont.onclick = e => {
+    const nav = e.target.closest('[data-nav]');
+    if (nav) { mes += +nav.dataset.nav; if (mes < 0) { mes = 11; anio--; } if (mes > 11) { mes = 0; anio++; } render(); return; }
+    if (soloLectura) return;
+    const acc = e.target.closest('[data-acc]');
+    if (acc) {
+      if (acc.dataset.acc === 'limpiar') { [...sel].forEach(f => { if (!bloq.has(f)) sel.delete(f); }); }
+      else {
+        const nDias = new Date(anio, mes + 1, 0).getDate();
+        for (let n = 1; n <= nDias; n++) {
+          const f = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(n).padStart(2, '0')}`;
+          const dow = (new Date(anio, mes, n).getDay() + 6) % 7;
+          if (dow < 5 && f >= hoyIso) sel.add(f);
+        }
+      }
+      cambio(); return;
+    }
+    const dia = e.target.closest('[data-f]');
+    if (dia && !dia.disabled) {
+      const f = dia.dataset.f;
+      if (sel.has(f)) sel.delete(f); else sel.add(f);
+      cambio();
+    }
+  };
+
+  const api = {
+    dias: () => [...sel].sort(),
+    cambios: () => ({
+      agregadas: [...sel].filter(f => !original.has(f)).sort(),
+      quitadas: [...original].filter(f => !sel.has(f)).sort(),
+    }),
+    refrescar: render,
+  };
+  render();
+  return api;
+}
+
+// Costo diario final (con descuento/beca) según lo que hay en el formulario
+function costoDiaFinalForm() {
+  const base  = parseFloat(document.getElementById('i-costo-diario').value) || 0;
+  const tipo  = document.getElementById('i-tipo-ajuste').value;
+  const pct   = parseFloat(document.getElementById('i-pct-ajuste').value) || 0;
+  const monto = parseFloat(document.getElementById('i-monto-ajuste').value) || 0;
+  if (tipo === 'beca') return 0;
+  if (tipo === 'descuento_porcentaje') return base * (1 - pct / 100);
+  if (tipo === 'descuento_monto') return Math.max(0, base - monto);
+  return base;
+}
+function limpiarErrorCal() {
+  const el = document.querySelector('#modal-insc [data-error="i-cal"]');
+  if (el) el.textContent = '';
 }
 
 function mostrarCamposAjuste() {
@@ -941,6 +1057,7 @@ function mostrarCamposAjuste() {
 }
 
 function calcularCostoFinal() {
+  if (calInsc) calInsc.refrescar();
   const base    = parseFloat(document.getElementById('i-costo-mensual').value)||0;
   const baseDia = parseFloat(document.getElementById('i-costo-diario').value)||0;
   const tipo    = document.getElementById('i-tipo-ajuste').value;
@@ -967,12 +1084,16 @@ function calcularCostoFinal() {
 }
 
 async function guardarInscripcion() {
+  const esDiaria = document.getElementById('i-modalidad').value === 'diaria';
+  const usaCalendario = esDiaria && (!editandoId || editandoConCalendario);
+  const diasElegidos = usaCalendario && !editandoId && calInsc ? calInsc.dias() : [];
   const errores = Validar.formulario({
     'i-nino':         [()=>Validar.requerido(document.getElementById('i-nino').value,'Niño/a')],
     'i-sucursal':     [()=>Validar.requerido(document.getElementById('i-sucursal').value,'Sucursal')],
     'i-sala':         [()=>Validar.requerido(document.getElementById('i-sala').value,'Sala')],
     'i-turno':        [()=>Validar.requerido(document.getElementById('i-turno').value,'Turno')],
-    'i-inicio':       [()=>Validar.fecha(document.getElementById('i-inicio').value,'Fecha de inicio')],
+    ...(usaCalendario ? {} : { 'i-inicio': [()=>Validar.fecha(document.getElementById('i-inicio').value,'Fecha de inicio')] }),
+    ...(usaCalendario && !editandoId ? { 'i-cal': [()=>diasElegidos.length ? null : 'Elige al menos un día en el calendario'] } : {}),
     'i-costo-mensual':[()=>Validar.numero(document.getElementById('i-costo-mensual').value,'Costo mensual')],
     'i-costo-diario': [()=>Validar.numero(document.getElementById('i-costo-diario').value,'Costo diario')],
   });
@@ -985,7 +1106,6 @@ async function guardarInscripcion() {
     sala:             document.getElementById('i-sala').value,
     turno:            document.getElementById('i-turno').value,
     modalidad_pago:   document.getElementById('i-modalidad').value,
-    fecha_inicio:     document.getElementById('i-inicio').value,
     costo_mensual:    document.getElementById('i-costo-mensual').value,
     costo_diario:     document.getElementById('i-costo-diario').value,
     tipo_ajuste:      tipo,
@@ -993,10 +1113,11 @@ async function guardarInscripcion() {
     monto_ajuste:     tipo==='descuento_monto'?document.getElementById('i-monto-ajuste').value:0,
     motivo_ajuste:    document.getElementById('i-motivo-ajuste').value,
     activa:           true,
-    dias_semana:      document.getElementById('i-modalidad').value === 'diaria' ? leerDias('i-dias-semana') : [],
   };
-  const acordados = parseInt(document.getElementById('i-dias-acordados').value, 10);
-  if (!editandoId && datos.modalidad_pago === 'diaria' && acordados > 0) datos.dias_contratados = acordados;
+  // Mensual (o por día antigua sin calendario): fecha de inicio suelta. Por día con calendario:
+  // el servidor toma el primer día elegido; los días solo se cambian desde "Ajustar días".
+  if (!usaCalendario) datos.fecha_inicio = document.getElementById('i-inicio').value;
+  if (usaCalendario && !editandoId) datos.dias_programados = diasElegidos;
   try {
     let creando = !editandoId;
     if (editandoId) await API.patch('/inscripciones/inscripciones/'+editandoId+'/',datos);
@@ -1407,7 +1528,7 @@ function pgPintarDiario(cal, r) {
       celdas += `<div class="pg-dia pg-justificado" title="Falta avisada: no se cobra">${d.dia}</div>`;
     } else if (d.esperado && d.fecha <= hoy) {
       celdas += `<div class="pg-dia pg-esperado" title="Le tocaba asistir y no hay asistencia marcada">${d.dia}</div>`;
-    } else if (d.esperado && !esFinde) {
+    } else if (d.esperado && (!esFinde || d.programado)) {
       celdas += `<div class="pg-dia pg-futuro" title="Le toca asistir">${d.dia}</div>`;
     } else {
       celdas += `<div class="pg-dia ${esFinde ? 'pg-finde' : 'pg-sin'}">${esFinde ? '' : d.dia}</div>`;
@@ -1451,7 +1572,7 @@ function pgHtmlCuentaDiaria(r) {
       ${alertas}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <button class="btn btn-primary btn-sm" onclick="pgAbrirAbono()">💵 Registrar abono</button>
-        <button class="btn btn-outline btn-sm" onclick="pgAbrirDias()">🗓️ Ajustar días acordados</button>
+        <button class="btn btn-outline btn-sm" onclick="pgAbrirDias()">🗓️ Ajustar días (aumentar / disminuir)</button>
         ${parseFloat(r.saldo_a_favor) > 0 ? '<button class="btn btn-outline btn-sm" onclick="pgAbrirDevolverSaldo()">↩️ Devolver saldo</button>' : ''}
       </div>
     </div>`;
@@ -1549,32 +1670,42 @@ async function pgConfirmarDevolverSaldo() {
   } catch (err) { errorEl.textContent = err.message; }
 }
 
-// ── Ajuste de días acordados ──
+// ── Ajuste de días acordados (aumentar / disminuir con el calendario) ──
+let calPg = null;
+
 function pgAbrirDias() {
-  document.getElementById('pgd-tipo').value = (pgResumenDiario && pgResumenDiario.dias_contratados.historial.length) ? 'ampliacion' : 'inicial';
-  ['pgd-cantidad','pgd-nota'].forEach(id => document.getElementById(id).value = '');
+  const r = pgResumenDiario || {};
+  const actuales = r.dias_programados || [];
+  document.getElementById('pgd-nota').value = '';
   document.getElementById('pgd-error').textContent = '';
+  calPg = crearCalDias('pgd-cal', {
+    seleccion: actuales, original: actuales, bloqueados: r.dias_bloqueados || [], conCambios: true,
+    costoDia: () => parseFloat(r.costo_diario) || 0,
+  });
   UI.abrirModal('modal-pg-dias');
 }
 
 async function pgConfirmarDias() {
-  const cantidad = parseInt(document.getElementById('pgd-cantidad').value, 10);
   const errorEl = document.getElementById('pgd-error');
-  if (!cantidad || cantidad <= 0) { errorEl.textContent = 'Indica cuántos días.'; return; }
+  const dias = calPg ? calPg.dias() : [];
+  if (!dias.length) { errorEl.textContent = 'Deja al menos un día en el calendario.'; return; }
+  const c = calPg.cambios();
+  if (!c.agregadas.length && !c.quitadas.length && (pgResumenDiario.dias_programados || []).length) {
+    errorEl.textContent = 'No hiciste ningún cambio.'; return;
+  }
   errorEl.textContent = '';
   try {
-    await API.post(`/inscripciones/inscripciones/${pgInscripcionId}/contratar-dias/`, {
-      tipo: document.getElementById('pgd-tipo').value, cantidad,
-      nota: document.getElementById('pgd-nota').value,
+    await API.post(`/inscripciones/inscripciones/${pgInscripcionId}/actualizar-dias/`, {
+      dias, nota: document.getElementById('pgd-nota').value,
     });
     UI.cerrarModal('modal-pg-dias');
-    UI.toast('✅ Días acordados actualizados', 'exito');
+    UI.toast('✅ Días actualizados', 'exito');
     pgCargar();
-  } catch (err) { UI.toast('Error: ' + err.message, 'error'); }
+  } catch (err) { errorEl.textContent = err.message; }
 }
 
 // ── Cambio de modalidad (por día ⇄ mensual) ──
-let cmId = null, cmDestino = null;
+let cmId = null, cmDestino = null, calCm = null;
 
 function abrirCambiarModalidad(id, nombre, modalidadActual) {
   cmId = id;
@@ -1583,11 +1714,13 @@ function abrirCambiarModalidad(id, nombre, modalidadActual) {
   document.getElementById('cm-texto').innerHTML = cmDestino === 'mensual'
     ? 'Se cierra la inscripción por día (sus días, pagos y recibos quedan intactos) y se crea una <strong>mensualidad</strong> desde la fecha elegida. Tu <strong>saldo a favor</strong> se aplica a la primera mensualidad; los descuentos y becas se mantienen.'
     : 'Se cierra la mensualidad (sus cobros y pagos quedan intactos) y se crea una inscripción <strong>por día</strong> desde la fecha elegida.';
+  // Por día: se eligen los días en el calendario (el primero es el primer día). Mensual: fecha de inicio.
   document.getElementById('cm-grupo-dias').style.display = cmDestino === 'diaria' ? '' : 'none';
-  document.getElementById('cm-fecha-label').textContent = cmDestino === 'mensual' ? 'La mensualidad empieza el *' : 'Primer día por día *';
+  document.getElementById('cm-grupo-fecha').style.display = cmDestino === 'diaria' ? 'none' : '';
+  document.getElementById('cm-fecha-label').textContent = 'La mensualidad empieza el *';
   document.getElementById('cm-fecha').value = hoy;
   document.getElementById('cm-motivo').value = '';
-  ponerDias('cm-dias-semana', []);
+  calCm = cmDestino === 'diaria' ? crearCalDias('cm-cal', {}) : null;
   document.getElementById('cm-error').textContent = '';
   UI.abrirModal('modal-cambiar-modalidad');
 }
@@ -1595,10 +1728,12 @@ function abrirCambiarModalidad(id, nombre, modalidadActual) {
 async function confirmarCambiarModalidad() {
   const errorEl = document.getElementById('cm-error');
   const fecha = document.getElementById('cm-fecha').value;
-  if (!fecha) { errorEl.textContent = 'Indica la fecha de inicio.'; return; }
+  const dias = cmDestino === 'diaria' && calCm ? calCm.dias() : [];
+  if (cmDestino === 'diaria' && !dias.length) { errorEl.textContent = 'Elige al menos un día en el calendario.'; return; }
+  if (cmDestino === 'mensual' && !fecha) { errorEl.textContent = 'Indica la fecha de inicio.'; return; }
   errorEl.textContent = '';
-  const datos = { modalidad: cmDestino, fecha_inicio: fecha, motivo: document.getElementById('cm-motivo').value };
-  if (cmDestino === 'diaria') datos.dias_semana = leerDias('cm-dias-semana');
+  const datos = { modalidad: cmDestino, motivo: document.getElementById('cm-motivo').value };
+  if (cmDestino === 'diaria') datos.dias_programados = dias; else datos.fecha_inicio = fecha;
   try {
     const resp = await API.post(`/inscripciones/inscripciones/${cmId}/cambiar-modalidad/`, datos);
     UI.cerrarModal('modal-cambiar-modalidad');

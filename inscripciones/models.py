@@ -49,6 +49,14 @@ class Inscripcion(ModeloBase):
         default=list, blank=True,
         help_text='Días de la semana en que asiste (0=lunes ... 6=domingo). Vacío = todos los días.'
     )
+    # Solo modalidad diaria. Fechas exactas (ISO 'YYYY-MM-DD') que el tutor
+    # acordó y se eligen en un calendario. Si hay fechas, mandan sobre
+    # `dias_semana`: el niño solo está esperado esos días. Vacío = inscripciones
+    # antiguas, que siguen usando `dias_semana` / todos los días.
+    dias_programados  = models.JSONField(
+        default=list, blank=True,
+        help_text='Fechas exactas (YYYY-MM-DD) en que asistirá. Solo modalidad por día.'
+    )
 
     # Costos copiados del turno pero editables individualmente
     costo_mensual     = models.DecimalField(max_digits=8, decimal_places=2)
@@ -88,6 +96,9 @@ class Inscripcion(ModeloBase):
 
     @property
     def dias_semana_display(self):
+        if self.dias_programados:
+            n = len(self.dias_programados)
+            return f'{n} día{"" if n == 1 else "s"} elegido{"" if n == 1 else "s"}'
         if not self.dias_semana:
             return 'Todos los días'
         return ', '.join(self.DIAS_SEMANA_ES[d] for d in sorted(self.dias_semana))
@@ -97,6 +108,12 @@ class Inscripcion(ModeloBase):
         ¿Le tocaba asistir al niño en `fecha`? Solo tiene sentido para la
         modalidad diaria: respeta fecha_inicio, fecha_fin y dias_semana.
         """
+        if self.dias_programados:
+            # Calendario: solo esas fechas exactas; si la inscripción se cerró,
+            # las fechas posteriores al cierre ya no cuentan.
+            if self.fecha_fin and fecha > self.fecha_fin:
+                return False
+            return fecha.isoformat() in self.dias_programados
         if fecha < self.fecha_inicio:
             return False
         if self.fecha_fin and fecha > self.fecha_fin:

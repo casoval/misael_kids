@@ -20,6 +20,7 @@ from .models import Inscripcion, Cobro, Pago, Devolucion, AbonoDiario, DiasContr
 from .serializers import (
     InscripcionSerializer, InscripcionResumenSerializer, CobroSerializer,
     PagoSerializer, DevolucionSerializer, AbonoDiarioSerializer, validar_dias_semana,
+    validar_dias_programados,
 )
 from .services import (
     generar_ciclo_mensual, calendario_pagos_mensual, calendario_pagos_diario,
@@ -27,6 +28,7 @@ from .services import (
     resumen_financiero,
     aplicar_saldo, resumen_diario, registrar_dias_contratados,
     dias_contratados_total, trasladar_cuenta_diaria, deuda_diaria,
+    actualizar_dias_programados, DiasProgramadosError,
     ciclo_vigente, calcular_ajuste_precio, continuar_ciclos_en_inscripcion_nueva,
     mover_saldo_disponible, trasladar_saldo_del_nino, deuda_abierta, saldo_a_favor,
     devolver_saldo, SaldoInsuficiente,
@@ -66,11 +68,15 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         if inscripcion.activa and inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
             generar_ciclo_mensual(inscripcion, ciclo_num=0, usuario=self.request.user)
         elif inscripcion.modalidad_pago == Inscripcion.MODALIDAD_DIARIA:
-            # Opcional: cuántos días acordó el tutor al inscribir (control, no cobro).
-            try:
-                dias = int(self.request.data.get('dias_contratados') or 0)
-            except (TypeError, ValueError):
-                dias = 0
+            # Los días acordados salen del calendario; en inscripciones antiguas
+            # (sin calendario) se puede mandar a mano `dias_contratados`.
+            if inscripcion.dias_programados:
+                dias = len(inscripcion.dias_programados)
+            else:
+                try:
+                    dias = int(self.request.data.get('dias_contratados') or 0)
+                except (TypeError, ValueError):
+                    dias = 0
             if dias > 0:
                 registrar_dias_contratados(
                     inscripcion, dias, tipo=DiasContratados.TIPO_INICIAL,
@@ -203,6 +209,18 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             validar_dias_semana(data.get('dias_semana', inscripcion_actual.dias_semana))
             if modalidad_destino == Inscripcion.MODALIDAD_DIARIA else []
         )
+        # Calendario: si se mandan fechas nuevas rigen esas; si no, el niño conserva
+        # las fechas que aún le quedan por delante en su calendario.
+        dias_prog_destino, aviso_calendario = [], None
+        if modalidad_destino == Inscripcion.MODALIDAD_DIARIA:
+            if data.get('dias_programados'):
+                dias_prog_destino = validar_dias_programados(data.get('dias_programados'))
+            elif inscripcion_actual.dias_programados:
+                dias_prog_destino = [f for f in inscripcion_actual.dias_programados
+                                     if f >= fecha_transferencia.isoformat()]
+                if not dias_prog_destino:
+                    aviso_calendario = ('A su calendario no le quedaban días por delante, así que la nueva '
+                                        'inscripción quedó sin días elegidos. Elígelos en su cuenta (Ajustar días).')
 
         # Precio: si el turno de destino cuesta igual que el actual, la
         # inscripción conserva su precio (incluido un precio negociado) y no
@@ -239,7 +257,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Para cerrar el ciclo con lo pagado debes indicar el motivo.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        advertencias = []
+        advertencias = [aviso_calendario] if aviso_calendario else []
         deuda_anterior = deuda_abierta(inscripcion_actual) - (vigente.saldo_pendiente if vigente and vigente.estado in ESTADOS_ABIERTOS else 0)
         if continua and deuda_anterior > 0:
             advertencias.append(
@@ -270,6 +288,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
                 modalidad_pago      = modalidad_destino,
                 fecha_inicio        = fecha_transferencia,
                 dias_semana         = dias_semana_destino,
+                dias_programados    = dias_prog_destino,
                 costo_mensual       = costo_mensual,
                 costo_diario        = costo_diario,
                 motivo_ajuste       = data.get(
@@ -281,6 +300,10 @@ class InscripcionViewSet(viewsets.ModelViewSet):
                 **ajuste,
             )
             nueva.refresh_from_db()
+            if nueva.dias_programados and inscripcion_actual.modalidad_pago != Inscripcion.MODALIDAD_DIARIA:
+                registrar_dias_contratados(
+                    nueva, len(nueva.dias_programados), tipo=DiasContratados.TIPO_INICIAL,
+                    usuario=request.user, nota='Días elegidos en el calendario al transferir.')
 
             resultado_ciclo = None
             if inscripcion_actual.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL:
@@ -575,6 +598,32 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             inscripcion, cantidad, tipo=tipo, nota=request.data.get('nota', ''), usuario=request.user)
         return Response(resumen_diario(inscripcion), status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['post'], url_path='actualizar-dias')
+    def actualizar_dias(self, request, pk=None):
+        """
+        Cambia los días del calendario de una inscripción por día (aumentar o
+        disminuir). Body: `dias` (lista completa de fechas YYYY-MM-DD que
+        quedan elegidas) y `nota` opcional. Lo agregado se anota como
+        ampliación y lo quitado como reducción en el historial de días
+        acordados; no se puede quitar un día que ya tiene asistencia o cobro.
+        """
+        inscripcion = self.get_object()
+        error = self._exigir_diaria(inscripcion)
+        if error:
+            return error
+        dias = validar_dias_programados(request.data.get('dias'))
+        try:
+            agregadas, quitadas = actualizar_dias_programados(
+                inscripcion, dias, nota=(request.data.get('nota') or '').strip(), usuario=request.user)
+        except DiasProgramadosError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        inscripcion.refresh_from_db()
+        return Response({
+            'agregadas': agregadas, 'quitadas': quitadas,
+            'inscripcion': InscripcionSerializer(inscripcion).data,
+            'resumen': resumen_diario(inscripcion),
+        })
+
     @action(detail=True, methods=['post'], url_path='cambiar-modalidad')
     def cambiar_modalidad(self, request, pk=None):
         """
@@ -618,6 +667,14 @@ class InscripcionViewSet(viewsets.ModelViewSet):
 
         dias_semana = (validar_dias_semana(data.get('dias_semana', []))
                        if destino == Inscripcion.MODALIDAD_DIARIA else [])
+        # Por día con calendario: el primer día es la primera fecha elegida.
+        dias_prog = (validar_dias_programados(data.get('dias_programados'))
+                     if destino == Inscripcion.MODALIDAD_DIARIA else [])
+        if dias_prog:
+            fecha_inicio = date.fromisoformat(dias_prog[0])
+            if fecha_inicio < actual.fecha_inicio:
+                return Response({'error': 'La nueva modalidad no puede empezar antes que la inscripción actual.'},
+                                status=status.HTTP_400_BAD_REQUEST)
         nota = f'Cambio de modalidad ({actual.get_modalidad_pago_display()} → ' \
                f'{dict(Inscripcion.MODALIDADES)[destino]}) el {fecha_inicio:%d/%m/%Y}.'
         if data.get('motivo'):
@@ -639,6 +696,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             nueva = Inscripcion.objects.create(
                 nino=actual.nino, sucursal=actual.sucursal, sala=actual.sala, turno=actual.turno,
                 modalidad_pago=destino, fecha_inicio=fecha_inicio, dias_semana=dias_semana,
+                dias_programados=dias_prog,
                 costo_mensual=data.get('costo_mensual') or actual.costo_mensual,
                 costo_diario=data.get('costo_diario') or actual.costo_diario,
                 tipo_ajuste=actual.tipo_ajuste, porcentaje_ajuste=actual.porcentaje_ajuste,
@@ -649,6 +707,10 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             if destino == Inscripcion.MODALIDAD_MENSUAL:
                 generar_ciclo_mensual(nueva, ciclo_num=0, usuario=request.user)
             traspaso = trasladar_cuenta_diaria(actual, nueva, request.user)
+            if dias_prog:
+                registrar_dias_contratados(
+                    nueva, len(dias_prog), tipo=DiasContratados.TIPO_INICIAL, usuario=request.user,
+                    nota='Días elegidos en el calendario al cambiar de modalidad.')
 
         traspaso['deuda_dias_pendientes'] = deuda_diaria(actual) if actual.modalidad_pago == Inscripcion.MODALIDAD_DIARIA else 0
         if traspaso['saldo_restante'] > 0 and destino == Inscripcion.MODALIDAD_MENSUAL:

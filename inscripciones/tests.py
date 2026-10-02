@@ -1098,3 +1098,215 @@ class DevolverSaldoTests(PorDiaBase):
     def test_una_devolucion_no_puede_quedar_sin_cobro_ni_inscripcion(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
             Devolucion.objects.create(monto=dec(5), motivo='x')
+
+
+# ═══════════════════════════════════════════════════════════════════
+class CalendarioDeDiasTests(PorDiaBase):
+    """Pago por día: los días se eligen en un calendario (fechas exactas)."""
+
+    def d(self, n):
+        """Un día futuro: hoy + n."""
+        return self.hoy + timedelta(days=n)
+
+    def iso(self, *fechas):
+        return [f.isoformat() for f in fechas]
+
+    def crear(self, dias, **extra):
+        otro = self._otro_nino('Luz', 'Mamani')
+        body = {
+            'nino': str(otro.id), 'sucursal': self.sucursal.id, 'sala': self.sala.id, 'turno': self.turno.id,
+            'modalidad_pago': 'diaria', 'costo_mensual': '650.00', 'costo_diario': '40.00',
+            'dias_programados': dias, **extra,
+        }
+        return self.client.post(URL_INSC, body, format='json')
+
+    def planilla_ids(self, fecha):
+        r = self.client.get(f'{URL_ASIST}planilla/?fecha={fecha.isoformat()}&sala={self.sala.id}')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        return [n['inscripcion'] for n in r.data['ninos']]
+
+    # ── crear ──
+    def test_crear_ordena_deduplica_y_toma_el_primer_dia_como_inicio(self):
+        r = self.crear(self.iso(self.d(5), self.d(2), self.d(2), self.d(9)))
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        self.assertEqual(r.data['dias_programados'], self.iso(self.d(2), self.d(5), self.d(9)))
+        self.assertEqual(r.data['fecha_inicio'], self.d(2).isoformat())      # no hizo falta mandarlo
+        self.assertEqual(r.data['dias_semana_display'], '3 días elegidos')
+        self.assertEqual(Cobro.objects.filter(inscripcion_id=r.data['id']).count(), 0)
+
+    def test_crear_anota_los_dias_acordados_desde_el_calendario(self):
+        r = self.crear(self.iso(self.d(1), self.d(2), self.d(3)))
+        insc = Inscripcion.objects.get(pk=r.data['id'])
+        self.assertEqual(resumen_diario(insc)['dias_contratados']['total'], 3)
+        self.assertEqual(insc.dias_contratados.get().tipo, DiasContratados.TIPO_INICIAL)
+
+    def test_fechas_invalidas_se_rechazan(self):
+        for malo in (['2026-13-40'], ['hola'], 'lunes', [5]):
+            r = self.crear(malo)
+            self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST, malo)
+
+    def test_diaria_sin_calendario_ni_fecha_inicio_se_rechaza(self):
+        r = self.crear([])
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('fecha_inicio', r.data)
+
+    def test_inscripcion_antigua_sin_calendario_sigue_funcionando(self):
+        r = self.crear([], fecha_inicio=self.hoy.isoformat(), dias_semana=[0, 2])
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        self.assertEqual(r.data['dias_programados'], [])
+        self.assertEqual(r.data['dias_semana_display'], 'Lun, Mié')
+
+    def test_mensual_ignora_el_calendario(self):
+        r = self.crear(self.iso(self.d(1)), modalidad_pago='mensual', fecha_inicio=self.hoy.isoformat())
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        self.assertEqual(r.data['dias_programados'], [])
+
+    def test_editar_la_inscripcion_no_cambia_el_calendario(self):
+        r = self.crear(self.iso(self.d(1), self.d(2)))
+        r2 = self.client.patch(f'{URL_INSC}{r.data["id"]}/', {'dias_programados': self.iso(self.d(8))}, format='json')
+        self.assertEqual(r2.status_code, status.HTTP_200_OK, r2.data)
+        self.assertEqual(r2.data['dias_programados'], self.iso(self.d(1), self.d(2)))
+
+    # ── planilla y cobro ──
+    def test_solo_aparece_en_la_planilla_los_dias_elegidos(self):
+        r = self.crear(self.iso(self.hoy, self.d(3)))
+        nuevo = r.data['id']
+        self.assertIn(nuevo, [str(i) for i in self.planilla_ids(self.hoy)])
+        self.assertNotIn(nuevo, [str(i) for i in self.planilla_ids(self.d(1))])
+        self.assertIn(nuevo, [str(i) for i in self.planilla_ids(self.d(3))])
+
+    def test_falta_sin_aviso_solo_cobra_en_dia_elegido(self):
+        r = self.crear(self.iso(self.hoy))
+        insc = Inscripcion.objects.get(pk=r.data['id'])
+        self.marcar(insc, self.hoy, 'ausente')
+        self.assertIsNotNone(self.cobro_de(insc, self.hoy))
+        fuera = self.hoy - timedelta(days=1)
+        insc.fecha_inicio = fuera
+        insc.save()
+        self.marcar(insc, fuera, 'ausente')              # un día que NO eligió
+        self.assertIsNone(self.cobro_de(insc, fuera))
+
+    def test_presente_en_dia_no_elegido_si_cobra(self):
+        r = self.crear(self.iso(self.d(4)))
+        insc = Inscripcion.objects.get(pk=r.data['id'])
+        insc.fecha_inicio = self.hoy
+        insc.save()
+        self.marcar(insc, self.hoy, 'presente')
+        self.assertIsNotNone(self.cobro_de(insc, self.hoy))
+
+    def test_calendario_respeta_fecha_fin_al_cerrar(self):
+        r = self.crear(self.iso(self.d(1), self.d(6)))
+        insc = Inscripcion.objects.get(pk=r.data['id'])
+        insc.fecha_fin = self.d(3)
+        self.assertTrue(insc.es_dia_esperado(self.d(1)))
+        self.assertFalse(insc.es_dia_esperado(self.d(6)))
+
+    # ── aumentar / disminuir ──
+    def url_dias(self, insc):
+        return f'{URL_INSC}{insc.id}/actualizar-dias/'
+
+    def nuevo(self, *dias):
+        r = self.crear(self.iso(*dias))
+        return Inscripcion.objects.get(pk=r.data['id'])
+
+    def test_aumentar_dias_registra_ampliacion(self):
+        insc = self.nuevo(self.d(1), self.d(2))
+        r = self.client.post(self.url_dias(insc), {
+            'dias': self.iso(self.d(1), self.d(2), self.d(5), self.d(6), self.d(7))}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['agregadas'], self.iso(self.d(5), self.d(6), self.d(7)))
+        self.assertEqual(r.data['quitadas'], [])
+        hist = r.data['resumen']['dias_contratados']
+        self.assertEqual(hist['total'], 5)
+        self.assertEqual([(h['tipo'], h['cantidad']) for h in hist['historial']],
+                         [('inicial', 2), ('ampliacion', 3)])
+
+    def test_disminuir_dias_registra_reduccion(self):
+        insc = self.nuevo(self.d(1), self.d(2), self.d(3), self.d(4))
+        r = self.client.post(self.url_dias(insc), {'dias': self.iso(self.d(1), self.d(2))}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['quitadas'], self.iso(self.d(3), self.d(4)))
+        hist = r.data['resumen']['dias_contratados']
+        self.assertEqual(hist['total'], 2)
+        self.assertEqual(hist['historial'][-1]['tipo'], 'reduccion')
+        self.assertEqual(hist['historial'][-1]['cantidad'], 2)
+
+    def test_cambio_mixto_registra_solo_la_diferencia(self):
+        insc = self.nuevo(self.d(1), self.d(2), self.d(3))
+        # quita 1 y agrega 3 → +2 netos
+        r = self.client.post(self.url_dias(insc), {
+            'dias': self.iso(self.d(2), self.d(3), self.d(8), self.d(9), self.d(10))}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['resumen']['dias_contratados']['total'], 5)
+        insc.refresh_from_db()
+        self.assertEqual(insc.fecha_inicio, self.d(2))                 # el primer día se recalcula
+
+    def test_sin_cambios_no_ensucia_el_historial(self):
+        insc = self.nuevo(self.d(1), self.d(2))
+        r = self.client.post(self.url_dias(insc), {'dias': self.iso(self.d(2), self.d(1))}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(insc.dias_contratados.count(), 1)
+
+    def test_no_se_puede_quitar_un_dia_con_asistencia_o_cobro(self):
+        insc = self.nuevo(self.hoy, self.d(2))
+        self.marcar(insc, self.hoy, 'presente')
+        r = self.client.post(self.url_dias(insc), {'dias': self.iso(self.d(2))}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('asistencia o cobro', r.data['error'])
+        insc.refresh_from_db()
+        self.assertEqual(insc.dias_programados, self.iso(self.hoy, self.d(2)))
+
+    def test_el_resumen_marca_los_dias_bloqueados(self):
+        insc = self.nuevo(self.hoy, self.d(2))
+        self.marcar(insc, self.hoy, 'presente')
+        res = resumen_diario(insc)
+        self.assertEqual(res['dias_programados'], self.iso(self.hoy, self.d(2)))
+        self.assertEqual(res['dias_bloqueados'], self.iso(self.hoy))
+
+    def test_calendario_vacio_se_rechaza(self):
+        insc = self.nuevo(self.d(1))
+        r = self.client.post(self.url_dias(insc), {'dias': []}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_fecha_invalida_en_actualizar_dias(self):
+        insc = self.nuevo(self.d(1))
+        r = self.client.post(self.url_dias(insc), {'dias': ['mañana']}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_mensual_no_tiene_calendario(self):
+        m = self._inscribir(self._otro_nino('Ana', 'Choque'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        r = self.client.post(self.url_dias(m), {'dias': self.iso(self.d(1))}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_inscripcion_antigua_concilia_con_lo_ya_acordado(self):
+        # Tenía 5 días acordados (a mano) y sin calendario; al elegir 7 fechas, +2.
+        self.client.post(f'{URL_INSC}{self.insc.id}/contratar-dias/', {'cantidad': 5, 'tipo': 'inicial'}, format='json')
+        r = self.client.post(self.url_dias(self.insc), {
+            'dias': self.iso(*[self.d(i) for i in range(1, 8)])}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['resumen']['dias_contratados']['total'], 7)
+
+    # ── transferir / cambiar modalidad ──
+    def test_transferir_conserva_las_fechas_que_quedan_por_delante(self):
+        insc = self.nuevo(self.hoy - timedelta(days=0), self.d(3), self.d(4))
+        sala2 = Sala.objects.create(sucursal=self.sucursal, nombre='Sala 2',
+                                    edad_min_meses=0, edad_max_meses=36, capacidad_maxima=10)
+        turno2 = Turno.objects.create(sala=sala2, nombre='Tarde', tipo=Turno.TIPO_TARDE,
+                                      hora_inicio='14:00', hora_fin='18:00',
+                                      costo_mensual='650.00', costo_diario='40.00')
+        r = self.client.post(f'{URL_INSC}{insc.id}/transferir/', {
+            'sucursal': self.sucursal.id, 'sala': sala2.id, 'turno': turno2.id,
+            'fecha_transferencia': self.d(2).isoformat()}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        self.assertEqual(r.data['dias_programados'], self.iso(self.d(3), self.d(4)))
+
+    def test_cambiar_de_mensual_a_diaria_con_calendario(self):
+        m = self._inscribir(self._otro_nino('Ana', 'Choque'), modalidad=Inscripcion.MODALIDAD_MENSUAL,
+                            fecha_inicio=self.hoy - timedelta(days=3))
+        r = self.client.post(f'{URL_INSC}{m.id}/cambiar-modalidad/', {
+            'dias_programados': self.iso(self.d(2), self.d(1), self.d(5))}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        nueva = Inscripcion.objects.get(pk=r.data['inscripcion']['id'])
+        self.assertEqual(nueva.dias_programados, self.iso(self.d(1), self.d(2), self.d(5)))
+        self.assertEqual(nueva.fecha_inicio, self.d(1))
+        self.assertEqual(resumen_diario(nueva)['dias_contratados']['total'], 3)
