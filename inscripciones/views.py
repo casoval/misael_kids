@@ -31,6 +31,7 @@ from .services import (
     actualizar_dias_programados, DiasProgramadosError,
     ciclo_vigente, calcular_ajuste_precio, continuar_ciclos_en_inscripcion_nueva,
     mover_saldo_disponible, trasladar_saldo_del_nino, deuda_abierta, saldo_a_favor,
+    deuda_para_cambio_modalidad,
     devolver_saldo, SaldoInsuficiente, estado_pago_mensual, historial_cuenta,
     ultimo_dia_consumido,
     ESTADOS_ABIERTOS,
@@ -240,6 +241,15 @@ class InscripcionViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
 
         modalidad_destino = data.get('modalidad_pago', inscripcion_actual.modalidad_pago)
+        # Transferir cambiando de modalidad es un cambio de modalidad: exige estar al día.
+        if modalidad_destino != inscripcion_actual.modalidad_pago:
+            deuda = deuda_para_cambio_modalidad(inscripcion_actual)
+            if deuda['monto'] > 0:
+                return Response({
+                    'error': (f'No se puede cambiar de modalidad al transferir: primero debe quedar al día. '
+                              f'Debe Bs. {deuda["monto"]}. Registra el pago en 💳 Pagos y vuelve a intentarlo.'),
+                    'codigo': 'deuda_pendiente', 'deuda': deuda['monto'],
+                }, status=status.HTTP_400_BAD_REQUEST)
         dias_semana_destino = (
             validar_dias_semana(data.get('dias_semana', inscripcion_actual.dias_semana))
             if modalidad_destino == Inscripcion.MODALIDAD_DIARIA else []
@@ -689,6 +699,8 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         (por defecto los de la inscripción actual, respetando precios
         negociados), `dias_semana` (si el destino es por día) y `motivo`.
 
+        - Solo se puede cambiar si la cuenta está AL DÍA: con deuda se rechaza
+          (400, `codigo: deuda_pendiente`) hasta que se pague.
         - El ajuste (beca/descuento) se hereda.
         - De por día a mensual, el saldo a favor se aplica a la primera
           mensualidad; lo que sobre queda en la inscripción cerrada.
@@ -708,6 +720,23 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Modalidad no válida.'}, status=status.HTTP_400_BAD_REQUEST)
         if destino == actual.modalidad_pago:
             return Response({'error': 'La inscripción ya tiene esa modalidad.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Para cambiar de modalidad hay que estar al día (igual que para pasar de una
+        # mensualidad a otra, la anterior debe estar pagada). Si debe, se bloquea.
+        deuda = deuda_para_cambio_modalidad(actual)
+        if deuda['monto'] > 0:
+            origen = ('la inscripción por día' if actual.modalidad_pago == Inscripcion.MODALIDAD_DIARIA
+                      else f'la mensualidad ({deuda["detalle"]})' if deuda['propia'] > 0 else 'la inscripción actual')
+            partes = []
+            if deuda['propia'] > 0:
+                partes.append(f'Bs. {deuda["propia"]} en {origen}')
+            if deuda['anterior'] > 0:
+                partes.append(f'Bs. {deuda["anterior"]} de una inscripción anterior (cóbrala desde 📚 Historial)')
+            return Response({
+                'error': (f'No se puede cambiar de modalidad: primero debe quedar al día. Debe {" y ".join(partes)}. '
+                          'Registra el pago en 💳 Pagos y vuelve a intentarlo.'),
+                'codigo': 'deuda_pendiente', 'deuda': deuda['monto'],
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             fecha_inicio = date.fromisoformat(data['fecha_inicio']) if data.get('fecha_inicio') else date.today()

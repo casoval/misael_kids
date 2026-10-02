@@ -456,6 +456,7 @@ class CambioDeModalidadTests(PorDiaBase):
         return f'{URL_INSC}{(insc or self.insc).id}/cambiar-modalidad/'
 
     def test_diaria_a_mensual_cierra_la_anterior_y_conserva_su_historial(self):
+        self.abonar(self.insc, 40)                      # debe estar al día para poder cambiar
         self.marcar(self.insc, self.dia(2), 'presente')
         cobro_viejo = self.cobro_de(self.insc, self.dia(2))
         r = self.client.post(self.url(), {'fecha_inicio': self.hoy.isoformat()}, format='json')
@@ -520,22 +521,80 @@ class CambioDeModalidadTests(PorDiaBase):
         self.assertEqual(siguiente.monto_pagado, dec(50))
         self.assertEqual(saldo_a_favor(nueva), dec(0))
 
-    def test_los_dias_adeudados_quedan_en_la_inscripcion_cerrada_y_se_informan(self):
+    def test_con_deuda_por_dias_no_se_puede_pasar_a_mensual_hasta_pagar(self):
         self.marcar(self.insc, self.dia(2), 'presente')
-        self.marcar(self.insc, self.dia(1), 'ausente')
+        self.marcar(self.insc, self.dia(1), 'ausente')            # 2 días cobrados sin pagar = 80
         r = self.client.post(self.url(), {}, format='json')
-        self.assertEqual(dec(r.data['traspaso']['deuda_dias_pendientes']), dec(80))
-        self.assertTrue(any('sin pagar' in a for a in r.data['advertencias']))
-        nueva = Inscripcion.objects.get(pk=r.data['inscripcion']['id'])
-        # esa deuda no bloquea la mensualidad nueva
-        mens = Cobro.objects.get(inscripcion=nueva, tipo=Cobro.TIPO_MENSUALIDAD)
-        pago = self.client.post(f'{URL_COBROS}{mens.id}/registrar-pago/', {'monto': '100'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(r.data['codigo'], 'deuda_pendiente')
+        self.assertEqual(dec(r.data['deuda']), dec(80))
+        self.assertIn('al día', r.data['error'])
+        # no se cambió nada
+        self.assertTrue(Inscripcion.objects.get(pk=self.insc.pk).activa)
+        self.assertEqual(Inscripcion.objects.filter(nino=self.insc.nino).count(), 1)
+        # al pagar lo que debe, ya puede pasar a mensual
+        self.abonar(self.insc, 80)
+        r = self.client.post(self.url(), {}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        self.assertEqual(dec(r.data['traspaso']['deuda_dias_pendientes']), dec(0))
+
+    def test_con_deuda_en_la_mensualidad_no_se_puede_pasar_a_por_dia(self):
+        m = self._inscribir(self._otro_nino('Deuda', 'Mensual'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        generar_ciclo_mensual(m, ciclo_num=0)
+        # la mensualidad generada aún no está pagada
+        r = self.client.post(self.url(m), {'dias_semana': [1, 3]}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(r.data['codigo'], 'deuda_pendiente')
+        self.assertTrue(Inscripcion.objects.get(pk=m.pk).activa)
+        # pagada completa → ya puede cambiar
+        c = Cobro.objects.get(inscripcion=m, tipo=Cobro.TIPO_MENSUALIDAD)
+        pago = self.client.post(f'{URL_COBROS}{c.id}/registrar-pago/', {'monto': str(c.monto_final)}, format='json')
         self.assertEqual(pago.status_code, status.HTTP_200_OK, pago.data)
+        r = self.client.post(self.url(m), {'dias_semana': [1, 3]}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+
+    def test_con_la_mensualidad_pagada_a_medias_tambien_se_bloquea(self):
+        m = self._inscribir(self._otro_nino('Parcial', 'Mensual'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        generar_ciclo_mensual(m, ciclo_num=0)
+        c = Cobro.objects.get(inscripcion=m, tipo=Cobro.TIPO_MENSUALIDAD)
+        self.client.post(f'{URL_COBROS}{c.id}/registrar-pago/', {'monto': '100'}, format='json')
+        r = self.client.post(self.url(m), {'dias_semana': [1, 3]}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(dec(r.data['deuda']), c.monto_final - dec(100))
+
+    def test_la_deuda_de_una_inscripcion_anterior_tambien_bloquea_el_cambio(self):
+        # Primero se paga y pasa a mensual; luego se reabre una deuda en la inscripción cerrada.
+        self.abonar(self.insc, 40)
+        self.marcar(self.insc, self.dia(1), 'presente')
+        r = self.client.post(self.url(), {'fecha_inicio': self.hoy.isoformat()}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        nueva = Inscripcion.objects.get(pk=r.data['inscripcion']['id'])
+        c = Cobro.objects.get(inscripcion=nueva, tipo=Cobro.TIPO_MENSUALIDAD)
+        self.client.post(f'{URL_COBROS}{c.id}/registrar-pago/', {'monto': str(c.monto_final)}, format='json')
+        viejo = Cobro.objects.get(inscripcion=self.insc, tipo=Cobro.TIPO_DIARIO)
+        viejo.pagos.all().delete()
+        viejo.estado = Cobro.ESTADO_PENDIENTE
+        viejo.save()
+        r = self.client.post(self.url(nueva), {'dias_semana': [1, 3]}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('inscripción anterior', r.data['error'])
 
     def test_advierte_si_el_dia_de_inicio_ya_estaba_cobrado_por_dia(self):
+        self.abonar(self.insc, 40)
         self.marcar(self.insc, self.hoy, 'presente')
         r = self.client.post(self.url(), {'fecha_inicio': self.hoy.isoformat()}, format='json')
         self.assertTrue(any('dos veces' in a for a in r.data['advertencias']))
+
+    def test_transferir_cambiando_de_modalidad_tambien_exige_estar_al_dia(self):
+        self.marcar(self.insc, self.dia(1), 'presente')            # 40 sin pagar
+        tarde = Turno.objects.create(
+            sala=self.sala, nombre='Turno tarde', tipo=Turno.TIPO_TARDE,
+            hora_inicio='14:00', hora_fin='18:00', costo_mensual='650.00', costo_diario='40.00')
+        r = self.client.post(f'{URL_INSC}{self.insc.id}/transferir/', {
+            'sala': self.sala.id, 'turno': tarde.id, 'modalidad_pago': 'mensual'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(r.data['codigo'], 'deuda_pendiente')
+        self.assertTrue(Inscripcion.objects.get(pk=self.insc.pk).activa)
 
     def test_mensual_a_diaria_con_dias_de_la_semana(self):
         m = self._inscribir(self._otro_nino('Ana', 'Choque'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
@@ -1729,13 +1788,22 @@ class CambioDeModalidadCasosTests(PorDiaBase):
         self.assertEqual(saldo_a_favor(nueva), dec('190.00'))
         self.assertEqual(estado_pago(nueva)['nivel'], 'al_dia')
 
-    def test_la_deuda_de_dias_cobrados_sigue_visible_tras_pasar_a_mensual(self):
-        insc = self._con_dias_pasados('Debe', dias_atras=(2, 1))   # 2 días cobrados sin pagar = 80
+    def _con_deuda_anterior(self, nombre):
+        """Pasa a mensual estando al día y luego reabre una deuda en la inscripción por día cerrada
+        (p. ej. un cobro corregido después). Devuelve (inscripción cerrada, mensual nueva)."""
+        insc = self._con_dias_pasados(nombre, dias_atras=(2, 1), abono=80)
         self.assertEqual(self._pasar(insc, self.hoy).status_code, status.HTTP_201_CREATED)
         nueva = Inscripcion.objects.get(nino=insc.nino, activa=True)
-        # Aunque la mensualidad quedara pagada, la deuda anterior mantiene la alerta.
         c = Cobro.objects.get(inscripcion=nueva)
         self.client.post(f'{URL_COBROS}{c.id}/registrar-pago/', {'monto': '650'}, format='json')
+        for viejo in Cobro.objects.filter(inscripcion=insc, tipo=Cobro.TIPO_DIARIO):
+            viejo.pagos.all().delete()
+            viejo.estado = Cobro.ESTADO_PENDIENTE
+            viejo.save()
+        return insc, nueva
+
+    def test_la_deuda_de_dias_cobrados_sigue_visible_tras_pasar_a_mensual(self):
+        insc, nueva = self._con_deuda_anterior('Debe')
         e = estado_pago(nueva)
         self.assertEqual(e['nivel'], 'deuda')
         self.assertEqual(e['deuda_anterior'], dec('80.00'))
@@ -1745,11 +1813,7 @@ class CambioDeModalidadCasosTests(PorDiaBase):
         self.assertIn(str(nueva.id), {f['id'] for f in r.data['results']})
 
     def test_pagar_la_deuda_anterior_quita_la_alerta(self):
-        insc = self._con_dias_pasados('Paga', dias_atras=(2, 1))
-        self._pasar(insc, self.hoy)
-        nueva = Inscripcion.objects.get(nino=insc.nino, activa=True)
-        self.client.post(f'{URL_COBROS}{Cobro.objects.get(inscripcion=nueva).id}/registrar-pago/',
-                         {'monto': '650'}, format='json')
+        insc, nueva = self._con_deuda_anterior('Paga')
         for c in Cobro.objects.filter(inscripcion=insc, tipo=Cobro.TIPO_DIARIO):
             r = self.client.post(f'{URL_COBROS}{c.id}/registrar-pago/', {'monto': '40'}, format='json')
             self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)

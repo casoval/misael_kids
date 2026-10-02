@@ -592,6 +592,30 @@ def _sumar_deuda_anterior(inscripcion, cuenta):
     return cuenta
 
 
+def deuda_para_cambio_modalidad(inscripcion):
+    """
+    Lo que el niño debe pagar ANTES de poder cambiar de modalidad (por día ⇄ mensual).
+    Regla del jardín: para pasar a otra modalidad hay que estar al día, igual que para
+    pasar de una mensualidad a otra la anterior debe estar pagada.
+
+    Devuelve {'monto', 'propia', 'anterior', 'detalle'}:
+      - por día: lo que falta para estar al día (días acordados/consumidos sin pagar);
+      - mensual: TODAS las mensualidades abiertas, incluso una que aún no empieza;
+      - en ambos casos suma la deuda de inscripciones anteriores ya cerradas.
+    """
+    if inscripcion.modalidad_pago == Inscripcion.MODALIDAD_DIARIA:
+        propia = max(estado_pago_diario(inscripcion)['falta_pagar'], deuda_diaria(inscripcion))
+        detalle = 'días de la inscripción por día sin pagar'
+    else:
+        abiertos = [c for c in Cobro.objects.filter(
+            inscripcion=inscripcion, tipo=Cobro.TIPO_MENSUALIDAD, estado__in=ESTADOS_ABIERTOS,
+        ).prefetch_related('pagos', 'devoluciones').order_by('periodo_inicio') if c.saldo_pendiente > 0]
+        propia = sum((c.saldo_pendiente for c in abiertos), CERO)
+        detalle = ', '.join(etiqueta_periodo(c) for c in abiertos)
+    anterior, _ = deuda_inscripciones_anteriores(inscripcion)
+    return {'monto': propia + anterior, 'propia': propia, 'anterior': anterior, 'detalle': detalle}
+
+
 def estado_pago_mensual(inscripcion):
     """
     Estado de cuenta de una inscripción mensual. Como se paga por adelantado,

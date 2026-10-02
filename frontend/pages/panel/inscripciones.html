@@ -743,6 +743,7 @@
     </div>
     <div id="cm-nombre" style="font-weight:700;font-size:var(--text-lg);margin-bottom:6px"></div>
     <p id="cm-texto" style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)"></p>
+    <div id="cm-deuda" class="alerta alerta-peligro" style="display:none;margin-bottom:var(--gap-md)"></div>
     <div class="form-grupo" id="cm-grupo-fecha">
       <label class="form-label" id="cm-fecha-label"></label>
       <input type="date" id="cm-fecha" class="form-input">
@@ -758,7 +759,7 @@
     <span class="form-error" id="cm-error"></span>
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-cambiar-modalidad')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarCambiarModalidad()">Cambiar modalidad</button>
+      <button class="btn btn-primary" id="cm-confirmar" onclick="confirmarCambiarModalidad()">Cambiar modalidad</button>
     </div>
   </div>
 </div>
@@ -842,6 +843,7 @@ async function cargar() {
   try {
     const data  = await API.get(url);
     const lista = data.results||data;
+    window.inscCache = Object.fromEntries(lista.map(i => [i.id, i]));
     document.getElementById('total-insc').textContent = (data.count||lista.length)+' inscripción(es)';
     if (!lista.length) {
       tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin inscripciones</td></tr>';
@@ -1973,8 +1975,8 @@ function abrirCambiarModalidad(id, nombre, modalidadActual) {
   cmDestino = modalidadActual === 'diaria' ? 'mensual' : 'diaria';
   document.getElementById('cm-nombre').textContent = nombre;
   document.getElementById('cm-texto').innerHTML = cmDestino === 'mensual'
-    ? 'Se cierra la inscripción por día (sus días, pagos y recibos quedan intactos) y se crea una <strong>mensualidad</strong> desde la fecha elegida. Tu <strong>saldo a favor</strong> se aplica a la primera mensualidad; los descuentos y becas se mantienen.'
-    : 'Se cierra la mensualidad (sus cobros y pagos quedan intactos) y se crea una inscripción <strong>por día</strong> desde la fecha elegida.';
+    ? 'Se cierra la inscripción por día (sus días, pagos y recibos quedan intactos) y se crea una <strong>mensualidad</strong> desde la fecha elegida. Requiere estar <strong>al día</strong>. Tu <strong>saldo a favor</strong> se aplica a la primera mensualidad; los descuentos y becas se mantienen.'
+    : 'Se cierra la mensualidad (sus cobros y pagos quedan intactos) y se crea una inscripción <strong>por día</strong> desde la fecha elegida. Requiere que la mensualidad esté <strong>pagada</strong>.';
   // Por día: se eligen los días en el calendario (el primero es el primer día). Mensual: fecha de inicio.
   document.getElementById('cm-grupo-dias').style.display = cmDestino === 'diaria' ? '' : 'none';
   document.getElementById('cm-grupo-fecha').style.display = cmDestino === 'diaria' ? 'none' : '';
@@ -1983,6 +1985,26 @@ function abrirCambiarModalidad(id, nombre, modalidadActual) {
   document.getElementById('cm-motivo').value = '';
   calCm = cmDestino === 'diaria' ? crearCalDias('cm-cal', {}) : null;
   document.getElementById('cm-error').textContent = '';
+
+  // Regla: para cambiar de modalidad la cuenta debe estar AL DÍA. Se avisa de antemano
+  // (el servidor lo vuelve a comprobar y es quien manda).
+  const e = ((window.inscCache || {})[id] || {}).estado_pago || {};
+  let deuda = parseFloat(e.deuda_total != null ? e.deuda_total : (e.falta_pagar || 0)) || 0;
+  if (modalidadActual !== 'diaria') deuda += parseFloat(e.por_pagar_proximo || 0) || 0;   // mensualidad por iniciar sin pagar
+  const caja = document.getElementById('cm-deuda');
+  const btn = document.getElementById('cm-confirmar');
+  if (deuda > 0) {
+    const que = modalidadActual === 'diaria' ? 'los días por pagar' : 'la mensualidad anterior';
+    caja.innerHTML = `<b>⚠️ Primero debe quedar al día.</b> Debe ${UI.moneda(deuda)} (${que}`
+      + (parseFloat(e.deuda_anterior) > 0 ? ` y una inscripción anterior` : '') + `). `
+      + `Registra el pago en <b>💳 Pagos</b> y vuelve a intentarlo.<br>`
+      + `<button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="UI.cerrarModal('modal-cambiar-modalidad'); abrirPagos('${id}','${nombre.replace(/'/g, '')}','','${modalidadActual}')">💳 Ir a Pagos</button>`;
+    caja.style.display = '';
+    btn.disabled = true;
+  } else {
+    caja.style.display = 'none';
+    btn.disabled = false;
+  }
   UI.abrirModal('modal-cambiar-modalidad');
 }
 
