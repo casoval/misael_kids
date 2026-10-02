@@ -252,6 +252,12 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
     costo_mensual_final = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     costo_diario_final  = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
     dias_semana_display = serializers.CharField(read_only=True)
+    estado_pago         = serializers.SerializerMethodField()
+
+    def get_estado_pago(self, obj):
+        # Import local: services importa los modelos y evita ciclos al cargar.
+        from .services import estado_pago
+        return estado_pago(obj)
 
     class Meta:
         model  = Inscripcion
@@ -261,5 +267,5 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
             'modalidad_pago', 'modalidad_display', 'tipo_ajuste',
             'costo_mensual_final', 'costo_diario_final',
             'dias_semana', 'dias_semana_display', 'dias_programados',
-            'activa', 'fecha_inicio',
+            'activa', 'fecha_inicio', 'estado_pago',
         ]

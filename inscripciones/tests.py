@@ -1310,3 +1310,132 @@ class CalendarioDeDiasTests(PorDiaBase):
         self.assertEqual(nueva.dias_programados, self.iso(self.d(1), self.d(2), self.d(5)))
         self.assertEqual(nueva.fecha_inicio, self.d(1))
         self.assertEqual(resumen_diario(nueva)['dias_contratados']['total'], 3)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Estado de pago (política: se paga por adelantado) y días acordados
+# ═══════════════════════════════════════════════════════════════════
+class EstadoDePagoTests(PorDiaBase):
+    """El estado de cuenta debe decir cuánto es, cuánto se pagó y cuánto falta,
+    y los días acordados deben seguir al calendario (no a abonos anteriores)."""
+
+    def d(self, n):
+        return self.hoy + timedelta(days=n)
+
+    def iso(self, *fechas):
+        return [f.isoformat() for f in fechas]
+
+    def diaria_con_calendario(self, n_dias=5):
+        insc = self._inscribir(self._otro_nino('Franquito', 'Castro'),
+                               dias_programados=self.iso(*[self.d(i) for i in range(n_dias)]))
+        DiasContratados.objects.create(inscripcion=insc, tipo='inicial', cantidad=n_dias)
+        return insc
+
+    def cuenta(self, insc):
+        return self.client.get(f'{URL_INSC}{insc.id}/calendario-pagos/').data['resumen']['cuenta']
+
+    def test_diaria_sin_pagar_es_deuda_por_adelantado(self):
+        insc = self.diaria_con_calendario(5)
+        c = self.cuenta(insc)
+        self.assertEqual(c['nivel'], 'deuda')
+        self.assertEqual(c['dias_acordados'], 5)
+        self.assertEqual(c['monto_acordado'], dec('200.00'))
+        self.assertEqual(c['pagado_total'], dec('0'))
+        self.assertEqual(c['falta_pagar'], dec('200.00'))
+        self.assertEqual(c['dias_sin_pagar'], 5)
+
+    def test_diaria_pagada_por_adelantado_esta_al_dia(self):
+        insc = self.diaria_con_calendario(5)
+        self.abonar(insc, 200)
+        c = self.cuenta(insc)
+        self.assertEqual(c['nivel'], 'al_dia')
+        self.assertEqual(c['falta_pagar'], dec('0'))
+        self.assertEqual(c['dias_pagados'], 5)
+
+    def test_pago_parcial_muestra_cuanto_falta(self):
+        insc = self.diaria_con_calendario(5)
+        self.abonar(insc, 120)
+        c = self.cuenta(insc)
+        self.assertEqual(c['nivel'], 'deuda')
+        self.assertEqual(c['falta_pagar'], dec('80.00'))
+        self.assertEqual(c['dias_pagados'], 3)
+        self.assertEqual(c['dias_sin_pagar'], 2)
+
+    def test_el_pago_sigue_contando_cuando_el_dia_ya_se_cobro_por_asistencia(self):
+        # El monto pagado no cambia al consumirse el saldo: sigue al día.
+        insc = self.diaria_con_calendario(5)
+        self.abonar(insc, 200)
+        self.marcar(insc, self.d(0), 'presente')
+        c = self.cuenta(insc)
+        self.assertEqual(c['nivel'], 'al_dia')
+        self.assertEqual(c['pagado_total'], dec('200.00'))
+        self.assertEqual(c['dias_cobrados'], 1)
+        self.assertEqual(c['saldo_a_favor'], dec('160.00'))
+
+    def test_pagar_de_mas_se_informa_como_saldo(self):
+        insc = self.diaria_con_calendario(2)
+        self.abonar(insc, 200)
+        c = self.cuenta(insc)
+        self.assertEqual(c['nivel'], 'al_dia')
+        self.assertEqual(c['pagado_de_mas'], dec('120.00'))
+
+    def test_devolver_saldo_reabre_la_deuda(self):
+        insc = self.diaria_con_calendario(5)
+        self.abonar(insc, 200)
+        self.client.post(f'{URL_INSC}{insc.id}/devolver-saldo/', {
+            'monto': '80', 'metodo_pago': 'efectivo', 'motivo': 'Pidió devolución'}, format='json')
+        c = self.cuenta(insc)
+        self.assertEqual(c['nivel'], 'deuda')
+        self.assertEqual(c['falta_pagar'], dec('80.00'))
+
+    # ── días acordados vs calendario (el bug del "2 de 9") ──
+    def test_abono_con_dias_no_se_suma_a_los_acordados_del_calendario(self):
+        insc = self.diaria_con_calendario(5)
+        self.abonar(insc, 200, dias=4)       # antes sumaba 4 y el contador quedaba en 9
+        r = self.client.get(f'{URL_INSC}{insc.id}/calendario-pagos/')
+        self.assertEqual(r.data['resumen']['dias_contratados']['total'], 5)
+
+    def test_cambiar_el_calendario_actualiza_los_dias_acordados(self):
+        insc = self.diaria_con_calendario(5)
+        r = self.client.post(f'{URL_INSC}{insc.id}/actualizar-dias/', {
+            'dias': self.iso(*[self.d(i) for i in range(8)])}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['resumen']['dias_contratados']['total'], 8)
+        self.assertEqual(r.data['resumen']['cuenta']['monto_acordado'], dec('320.00'))
+        r = self.client.post(f'{URL_INSC}{insc.id}/actualizar-dias/', {
+            'dias': self.iso(*[self.d(i) for i in range(3)])}, format='json')
+        self.assertEqual(r.data['resumen']['dias_contratados']['total'], 3)
+        self.assertEqual(r.data['resumen']['cuenta']['monto_acordado'], dec('120.00'))
+
+    # ── lista de inscripciones ──
+    def test_la_lista_trae_el_estado_de_pago(self):
+        deudor = self.diaria_con_calendario(5)
+        pagado = self._inscribir(self._otro_nino('Ana', 'Choque'),
+                                 dias_programados=self.iso(self.d(1), self.d(2)))
+        self.abonar(pagado, 80)
+        r = self.client.get(URL_INSC + '?page_size=100&activa=true')
+        filas = {f['id']: f for f in (r.data.get('results') or r.data)}
+        self.assertEqual(filas[str(deudor.id)]['estado_pago']['nivel'], 'deuda')
+        self.assertEqual(filas[str(pagado.id)]['estado_pago']['nivel'], 'al_dia')
+
+    def test_mensualidad_sin_pagar_es_deuda_y_pagada_esta_al_dia(self):
+        m = self._inscribir(self._otro_nino('Luz', 'Mamani'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        cobro = generar_ciclo_mensual(m, ciclo_num=0)
+        lista = {f['id']: f for f in (self.client.get(URL_INSC + '?page_size=100').data.get('results'))}
+        e = lista[str(m.id)]['estado_pago']
+        self.assertEqual(e['nivel'], 'deuda')
+        self.assertEqual(e['falta_pagar'], dec('650.00'))
+        Pago.objects.create(cobro=cobro, monto='650.00')
+        cobro.recalcular_estado()
+        lista = {f['id']: f for f in (self.client.get(URL_INSC + '?page_size=100').data.get('results'))}
+        e = lista[str(m.id)]['estado_pago']
+        self.assertEqual(e['nivel'], 'al_dia')
+        self.assertEqual(e['pagado_total'], dec('650.00'))
+
+    def test_inscripcion_inactiva_no_muestra_estado(self):
+        insc = self.diaria_con_calendario(2)
+        insc.activa = False
+        insc.save()
+        r = self.client.get(URL_INSC + '?page_size=100&activa=false')
+        fila = [f for f in (r.data.get('results') or r.data) if f['id'] == str(insc.id)][0]
+        self.assertIsNone(fila['estado_pago'])

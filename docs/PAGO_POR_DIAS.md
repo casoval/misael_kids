@@ -86,3 +86,16 @@ colgar de un cobro cuelga de la **inscripción** (`Devolucion.inscripcion`, con 
 - En la baja: `devolver_saldo: true` (+ `metodo_pago`) devuelve todo el saldo en el mismo paso y deja el recibo.
 - En la pantalla: botón "Devolver saldo" en el panel de pagos (mensual y por día) y casilla en "Dar de baja".
 - Las devoluciones `a_cuenta` (movimiento interno al cambiar de turno) siguen sin tocar la caja; esta sí.
+
+## Estado de pago y días acordados (política: pago por adelantado)
+
+- **Días acordados** = los días elegidos en el calendario de la inscripción. Ya no se suman por separado
+  los "días que cubre" de un abono: aumentar o disminuir días en el calendario actualiza el contador al instante.
+  (Solo las inscripciones antiguas, sin calendario, siguen usando el historial de ajustes.)
+- **Monto a pagar** = días acordados × costo por día. **Pagado** = lo abonado + lo pagado en cobros, menos devoluciones.
+  **Falta pagar** = monto − pagado. Si falta algo, la inscripción queda con *Deuda pendiente*.
+- `GET /inscripciones/inscripciones/` devuelve `estado_pago` (por día y mensual) y la lista lo muestra
+  como columna "Estado de pago", con una alerta arriba que enumera a quienes tienen deuda.
+- `resumen_diario` expone `cuenta` con el desglose (`monto_acordado`, `pagado_total`, `falta_pagar`, `dias_pagados`...).
+- En el calendario del modal de Pagos, los días acordados se pintan como *pagados por adelantado* (azul) o
+  *sin pagar* (rojo), según cuántos días cubre el dinero ya recibido, en orden cronológico.

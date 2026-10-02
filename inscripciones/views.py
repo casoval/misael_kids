@@ -31,7 +31,7 @@ from .services import (
     actualizar_dias_programados, DiasProgramadosError,
     ciclo_vigente, calcular_ajuste_precio, continuar_ciclos_en_inscripcion_nueva,
     mover_saldo_disponible, trasladar_saldo_del_nino, deuda_abierta, saldo_a_favor,
-    devolver_saldo, SaldoInsuficiente,
+    devolver_saldo, SaldoInsuficiente, estado_pago_mensual,
     ESTADOS_ABIERTOS,
 )
 
@@ -481,6 +481,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
                 'modalidad': 'mensual',
                 'ciclos':    calendario_pagos_mensual(inscripcion),
                 'saldo_a_favor': saldo_a_favor(inscripcion),   # lo que sobró de un cambio de turno, p. ej.
+                'cuenta':    estado_pago_mensual(inscripcion),
             })
 
         hoy  = date.today()
@@ -561,7 +562,11 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             )
             asignar_numero_recibo(abono)
             aplicado = aplicar_saldo(inscripcion)
-            if dias > 0:
+            # Con calendario, los días acordados son los días elegidos en él:
+            # un abono no los modifica (antes se sumaban encima y el contador
+            # quedaba desfasado). Solo las inscripciones antiguas, sin
+            # calendario, siguen anotando los días del abono.
+            if dias > 0 and not inscripcion.dias_programados:
                 registrar_dias_contratados(
                     inscripcion, dias, nota=f'Abono de {monto} Bs. del {fecha_pago:%d/%m/%Y}.', usuario=request.user)
 

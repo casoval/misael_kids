@@ -329,6 +329,14 @@ def liberar_aplicaciones(cobro):
 
 
 def dias_contratados_total(inscripcion):
+    """
+    Días acordados con el tutor. Si la inscripción tiene calendario, los días
+    acordados SON los días elegidos en él (así nunca quedan desfasados al
+    aumentar o disminuir). Solo las inscripciones antiguas, sin calendario,
+    usan el historial de ajustes.
+    """
+    if inscripcion.dias_programados:
+        return len(inscripcion.dias_programados)
     total = 0
     for d in inscripcion.dias_contratados.all():
         total += -d.cantidad if d.tipo == DiasContratados.TIPO_REDUCCION else d.cantidad
@@ -418,6 +426,115 @@ def actualizar_dias_programados(inscripcion, nuevas_fechas, nota='', usuario=Non
     return sorted(agregadas), sorted(quitadas)
 
 
+def estado_pago_diario(inscripcion):
+    """
+    Estado de cuenta de una inscripción "por día" bajo la política del jardín:
+    SE PAGA POR ADELANTADO. Los días acordados deben estar pagados desde el
+    momento en que se piden, no cuando el niño asiste.
+
+      monto_acordado = días a pagar × costo por día
+      pagado_total   = dinero que realmente tiene la cuenta (abonos y pagos,
+                       menos devoluciones; incluye el saldo a favor)
+      falta_pagar    = lo que aún falta para estar al día
+    """
+    costo = Decimal(str(inscripcion.costo_diario_final or 0))
+    acordados = dias_contratados_total(inscripcion)
+    cobros = list(Cobro.objects.filter(
+        inscripcion=inscripcion, tipo=Cobro.TIPO_DIARIO,
+    ).exclude(estado=Cobro.ESTADO_ANULADO).prefetch_related('pagos', 'devoluciones'))
+    cobrados = len(cobros)
+    consumido = sum((c.monto_final for c in cobros), CERO)
+    condonado = sum((c.monto_condonado or CERO for c in cobros), CERO)
+    saldo = saldo_a_favor(inscripcion)
+    # Dinero que realmente entró y sigue en la cuenta: lo ya aplicado a días
+    # (neto de devoluciones) más lo que todavía está como saldo a favor.
+    pagado_total = saldo + sum((c.monto_pagado for c in cobros), CERO)
+
+    # Si ya se cobraron más días que los acordados, esos también hay que cubrirlos.
+    dias_a_pagar = max(acordados, cobrados)
+    monto_acordado = costo * dias_a_pagar
+    falta = monto_acordado - pagado_total - condonado
+    if falta < 0:
+        falta = CERO
+    dias_pagados = int(pagado_total // costo) if costo > 0 else 0
+    dias_sin_pagar = int(-(-falta // costo)) if costo > 0 and falta > 0 else 0   # redondeo hacia arriba
+    de_mas = pagado_total + condonado - monto_acordado
+    de_mas = de_mas if de_mas > 0 else CERO
+
+    if dias_a_pagar == 0 and pagado_total <= 0:
+        nivel, titulo = 'sin_dias', 'Sin días acordados'
+        mensaje = 'Todavía no tiene días acordados ni pagos registrados.'
+    elif falta > 0:
+        nivel, titulo = 'deuda', 'Deuda pendiente'
+        mensaje = (f'Se acordaron {dias_a_pagar} día{"" if dias_a_pagar == 1 else "s"} '
+                   f'(Bs. {monto_acordado}) y solo se pagó Bs. {pagado_total}. '
+                   f'Falta pagar Bs. {falta} ({dias_sin_pagar} día{"" if dias_sin_pagar == 1 else "s"}). '
+                   'El jardín cobra por adelantado.')
+    else:
+        nivel, titulo = 'al_dia', 'Al día'
+        mensaje = (f'Los {dias_a_pagar} día{"" if dias_a_pagar == 1 else "s"} acordados '
+                   f'(Bs. {monto_acordado}) están pagados.')
+        if de_mas > 0:
+            mensaje += f' Tiene Bs. {de_mas} de más (saldo a favor).'
+
+    return {
+        'nivel': nivel, 'titulo': titulo, 'mensaje': mensaje,
+        'costo_diario': costo,
+        'dias_acordados': acordados, 'dias_cobrados': cobrados, 'dias_a_pagar': dias_a_pagar,
+        'monto_acordado': monto_acordado,
+        'pagado_total': pagado_total,
+        'consumido': consumido,
+        'saldo_a_favor': saldo,
+        'falta_pagar': falta, 'dias_sin_pagar': dias_sin_pagar, 'dias_pagados': dias_pagados,
+        'pagado_de_mas': de_mas,
+    }
+
+
+def estado_pago_mensual(inscripcion):
+    """
+    Estado de cuenta de una inscripción mensual. Como se paga por adelantado,
+    toda mensualidad cuyo ciclo ya empezó debería estar pagada: si no lo está,
+    es deuda pendiente.
+    """
+    hoy = date.today()
+    cobros = list(Cobro.objects.filter(
+        inscripcion=inscripcion, tipo=Cobro.TIPO_MENSUALIDAD,
+    ).exclude(estado=Cobro.ESTADO_ANULADO).prefetch_related('pagos', 'devoluciones').order_by('periodo_inicio'))
+    vigentes = [c for c in cobros if c.periodo_inicio and c.periodo_inicio <= hoy]
+    adeudados = [c for c in vigentes if c.estado in ESTADOS_ABIERTOS and c.saldo_pendiente > 0]
+    monto_total = sum((c.monto_final for c in vigentes), CERO)
+    pagado_total = sum((c.monto_pagado for c in vigentes), CERO)
+    falta = sum((c.saldo_pendiente for c in adeudados), CERO)
+    actual = next((c for c in reversed(vigentes) if c.periodo_inicio <= hoy), None)
+    etiqueta = (f'{MESES_ES[actual.periodo_inicio.month]} {actual.periodo_inicio.year}' if actual else '')
+
+    if not vigentes:
+        nivel, titulo = 'sin_cobro', 'Sin mensualidad generada'
+        mensaje = 'Aún no se generó la mensualidad de este ciclo.'
+    elif falta > 0:
+        meses = ', '.join(f'{MESES_ES[c.periodo_inicio.month]} {c.periodo_inicio.year}' for c in adeudados)
+        nivel, titulo = 'deuda', 'Deuda pendiente'
+        mensaje = f'Falta pagar Bs. {falta} ({meses}). El jardín cobra por adelantado.'
+    else:
+        nivel, titulo = 'al_dia', 'Al día'
+        mensaje = f'La mensualidad de {etiqueta} (Bs. {actual.monto_final}) está pagada.'
+
+    return {
+        'nivel': nivel, 'titulo': titulo, 'mensaje': mensaje,
+        'monto_acordado': monto_total, 'pagado_total': pagado_total, 'falta_pagar': falta,
+        'saldo_a_favor': saldo_a_favor(inscripcion), 'periodo_actual': etiqueta,
+    }
+
+
+def estado_pago(inscripcion):
+    """Estado de pago de cualquier inscripción (por día o mensual) para la lista."""
+    if not inscripcion.activa:
+        return None
+    if inscripcion.modalidad_pago == Inscripcion.MODALIDAD_DIARIA:
+        return estado_pago_diario(inscripcion)
+    return estado_pago_mensual(inscripcion)
+
+
 def resumen_diario(inscripcion):
     """
     Estado de cuenta de una inscripción "por día": saldo a favor, deuda,
@@ -456,7 +573,14 @@ def resumen_diario(inscripcion):
         alertas.append({'codigo': 'saldo_agotado', 'nivel': 'medio',
                         'mensaje': 'El saldo a favor se agotó; el próximo día quedará pendiente de pago.'})
 
+    cuenta = estado_pago_diario(inscripcion)
+    if cuenta['falta_pagar'] > 0 and deuda <= 0:
+        alertas.append({'codigo': 'deuda_adelantada', 'nivel': 'alto',
+                        'mensaje': f'Faltan Bs. {cuenta["falta_pagar"]} para cubrir los días acordados. '
+                                   'Recuerda: se paga por adelantado.'})
+
     return {
+        'cuenta': cuenta,
         'saldo_a_favor': saldo,
         'deuda': deuda,
         'abonado_total': abonado,

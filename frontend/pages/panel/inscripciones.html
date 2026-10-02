@@ -23,16 +23,52 @@
     .pg-mes-card { background:var(--blanco);border:1.5px solid var(--gris-200);border-radius:var(--radio-lg);
       padding:.85rem 1rem; }
     .pg-mes-card.pg-actual { border-color:var(--turquesa);border-width:2px; }
-    .pg-dia { aspect-ratio:1;display:flex;align-items:center;justify-content:center;
-      border-radius:var(--radio-sm,6px);font-size:var(--text-xs);font-weight:700;cursor:default; }
-    .pg-dia.pg-pagado { background:var(--verde-l);color:var(--verde-d); }
-    .pg-dia.pg-pendiente { background:var(--amarillo-l);color:var(--amarillo-d);cursor:pointer; }
-    .pg-dia.pg-bloqueado { background:var(--gris-100);color:var(--gris-500);cursor:not-allowed; }
-    .pg-dia.pg-sin { background:var(--gris-50);color:var(--texto-suave); }
-    .pg-dia.pg-finde { background:transparent; }
-    .pg-dia.pg-justificado { background:var(--violeta-l);color:var(--violeta-d); }
-    .pg-dia.pg-esperado { background:var(--blanco);color:var(--texto);border:1.5px dashed var(--gris-300); }
-    .pg-dia.pg-futuro { background:var(--blanco);color:var(--texto-suave);border:1.5px dotted var(--gris-200); }
+    .pg-dia { aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative;
+      border-radius:10px;font-size:var(--text-sm);font-weight:800;cursor:default;border:2px solid transparent; }
+    /* Colores fuertes para que cada estado se distinga de un vistazo */
+    .pg-dia.pg-pagado     { background:#16A34A;color:#fff;border-color:#15803D; }                 /* asistió y está pagado */
+    .pg-dia.pg-pendiente  { background:#FBBF24;color:#78350F;border-color:#D97706;cursor:pointer; } /* asistió, falta pagar */
+    .pg-dia.pg-adelantado { background:#2563EB;color:#fff;border-color:#1D4ED8; }                 /* pagado por adelantado */
+    .pg-dia.pg-sinpagar   { background:#FEE2E2;color:#B91C1C;border-color:#DC2626; }              /* acordado y sin pagar */
+    .pg-dia.pg-justificado{ background:#8B5CF6;color:#fff;border-color:#6D28D9; }                 /* falta avisada */
+    .pg-dia.pg-bloqueado  { background:#CBD5E1;color:#334155;border-color:#94A3B8;cursor:not-allowed; }
+    .pg-dia.pg-esperado   { background:#fff;color:#334155;border:2px dashed #475569; }            /* le tocaba, sin asistencia */
+    .pg-dia.pg-futuro     { background:#fff;color:#334155;border:2px dotted #94A3B8; }
+    .pg-dia.pg-sin        { background:var(--gris-100);color:var(--gris-400);font-weight:600; }
+    .pg-dia.pg-finde      { background:transparent; }
+    .pg-dia.pg-hoy        { box-shadow:0 0 0 3px #0F172A; }
+    .pg-dia.pg-falta::after { content:'';position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;
+      background:#DC2626;border:1.5px solid #fff; }
+    .pg-leyenda { display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 14px;margin-top:14px;
+      font-size:var(--text-xs);color:var(--texto); }
+    .pg-leyenda span { display:flex;align-items:center;gap:8px; }
+    .pg-leyenda i { display:inline-block;flex:none;width:22px;height:22px;border-radius:6px;border:2px solid transparent; }
+    /* Resumen de la cuenta (por día) */
+    .pg-estado { border-radius:var(--radio-md,12px);padding:.7rem .9rem;margin-bottom:12px;font-size:var(--text-sm);
+      font-weight:700;display:flex;gap:10px;align-items:flex-start; }
+    .pg-estado.al_dia  { background:#DCFCE7;border:2px solid #16A34A;color:#14532D; }
+    .pg-estado.deuda   { background:#FEE2E2;border:2px solid #DC2626;color:#7F1D1D; }
+    .pg-estado.sin_dias,.pg-estado.sin_cobro { background:var(--gris-100);border:2px solid var(--gris-300);color:var(--gris-700); }
+    .pg-estado b { font-family:var(--font-display);font-size:var(--text-lg);display:block; }
+    .pg-calculo { width:100%;border-collapse:collapse;font-size:var(--text-sm);margin:4px 0 2px; }
+    .pg-calculo td { padding:7px 0;border-bottom:1px dashed var(--gris-200);vertical-align:top; }
+    .pg-calculo td:last-child { text-align:right;white-space:nowrap;font-weight:800; }
+    .pg-calculo small { display:block;font-size:var(--text-xs);color:var(--texto-suave);font-weight:600; }
+    .pg-calculo tr.pg-total td { border-bottom:none;border-top:2px solid var(--gris-300);font-size:var(--text-base,1rem);padding-top:9px; }
+    .pg-barra { height:12px;border-radius:99px;background:var(--gris-200);overflow:hidden;margin:10px 0 4px; }
+    .pg-barra > div { height:100%;background:#16A34A;border-radius:99px;transition:width .3s; }
+    .pg-barra.rojo > div { background:#DC2626; }
+    .pg-nota { font-size:var(--text-xs);color:var(--texto-suave);margin-top:8px;line-height:1.45; }
+    /* Estado de pago en la lista de inscripciones */
+    tr.fila-deuda td { background:#FFF5F5; }
+    tr.fila-deuda td:first-child { box-shadow:inset 4px 0 0 #DC2626; }
+    .est-pago { display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:.25rem .65rem;font-size:var(--text-xs);
+      font-weight:800;border:none;cursor:pointer;font-family:inherit; }
+    .est-pago.al_dia { background:#DCFCE7;color:#14532D;border:1.5px solid #16A34A; }
+    .est-pago.deuda  { background:#DC2626;color:#fff; }
+    .est-pago.sin_dias,.est-pago.sin_cobro { background:var(--gris-100);color:var(--gris-600);border:1.5px solid var(--gris-300); }
+    .est-pago-det { font-size:var(--text-xs);color:var(--texto-suave);margin-top:4px;line-height:1.35; }
+    .est-pago-det.rojo { color:#B91C1C;font-weight:700; }
     /* Calendario grande para elegir los días (pago por día) */
     .cal-dias { background:var(--blanco);border:1.5px solid var(--gris-200);border-radius:var(--radio-lg);padding:var(--gap-md); }
     .cal-dias-cab { display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--gap-sm); }
@@ -162,12 +198,13 @@
           <h3 class="card-titulo">Lista de inscripciones</h3>
           <span id="total-insc" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
         </div>
+        <div id="alerta-deudas" style="margin-bottom:var(--gap-md)"></div>
         <div class="tabla-wrap">
           <table>
             <thead><tr>
               <th>Niño/a</th><th>Sucursal</th><th>Sala / Turno</th>
               <th>Modalidad</th><th>Costo mensual</th><th>Ajuste</th>
-              <th>Inicio</th><th>Estado</th><th>Acciones</th>
+              <th>Inicio</th><th>Estado</th><th>Estado de pago</th><th>Acciones</th>
             </tr></thead>
             <tbody id="tbody-insc"></tbody>
           </table>
@@ -599,14 +636,13 @@
         <label class="form-label">Monto entregado (Bs.) *</label>
         <input type="number" id="pga-monto" class="form-input" step="0.01" oninput="pgaSugerirDias()">
       </div>
-      <div class="form-grupo">
+      <div class="form-grupo" id="pga-dias-grupo">
         <label class="form-label">Días que cubre (opcional)</label>
         <input type="number" id="pga-dias" class="form-input" min="0" oninput="pgaDiasEditado = true">
       </div>
     </div>
-    <span style="font-size:var(--text-xs);color:var(--texto-suave);display:block;margin:-6px 0 var(--gap-md)">
-      Si indicas los días, se suman a los días acordados con el tutor.
-    </span>
+    <button type="button" id="pga-btn-falta" class="btn btn-outline btn-sm" style="display:none;margin:-4px 0 var(--gap-sm)" onclick="pgaCompletarFalta()"></button>
+    <span id="pga-dias-hint" style="font-size:var(--text-xs);color:var(--texto-suave);display:block;margin:-6px 0 var(--gap-md)"></span>
     <div class="form-grupo">
       <label class="form-label">Método de pago</label>
       <div style="display:flex;gap:8px">
@@ -751,18 +787,24 @@ async function cargar() {
   if (sala)     url += '&sala='+sala;
   if (modalidad)url += '&modalidad_pago='+modalidad;
   if (activa)   url += '&activa='+activa;
-  tbody.innerHTML = '<tr><td colspan="9"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10"><div class="loader"><div class="spinner"></div></div></td></tr>';
   try {
     const data  = await API.get(url);
     const lista = data.results||data;
     document.getElementById('total-insc').textContent = (data.count||lista.length)+' inscripción(es)';
     if (!lista.length) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin inscripciones</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin inscripciones</td></tr>';
       return;
     }
     const ajusteLabel = { ninguno:'—', descuento_porcentaje:'% Desc.', descuento_monto:'$ Desc.', beca:'🎓 Beca' };
+    const conDeuda = lista.filter(i => i.estado_pago && i.estado_pago.nivel === 'deuda');
+    document.getElementById('alerta-deudas').innerHTML = conDeuda.length
+      ? `<div class="alerta alerta-peligro" style="font-weight:700">⚠️ ${conDeuda.length} inscripción(es) con deuda pendiente — recuerda que el jardín cobra por adelantado:
+          <ul style="margin:6px 0 0 18px;font-weight:600">${conDeuda.map(i =>
+            `<li>${i.nino_nombre}: debe ${UI.moneda(i.estado_pago.falta_pagar)}</li>`).join('')}</ul></div>`
+      : '';
     tbody.innerHTML = lista.map(i => `
-      <tr>
+      <tr class="${i.estado_pago && i.estado_pago.nivel === 'deuda' ? 'fila-deuda' : ''}">
         <td style="font-weight:700">${i.nino_nombre}</td>
         <td style="font-size:var(--text-xs)">${i.sucursal_nombre}</td>
         <td>
@@ -780,6 +822,7 @@ async function cargar() {
         <td>${i.tipo_ajuste!=='ninguno'?'<span class="chip chip-violeta">'+ajusteLabel[i.tipo_ajuste]+'</span>':'—'}</td>
         <td>${UI.fecha(i.fecha_inicio)}</td>
         <td>${i.activa?'<span class="chip chip-verde">Activa</span>':'<span class="chip chip-coral">Inactiva</span>'}</td>
+        <td>${htmlEstadoPago(i)}</td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn btn-outline btn-sm" onclick="editar('${i.id}')">Editar</button>
@@ -795,8 +838,28 @@ async function cargar() {
         </td>
       </tr>`).join('');
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="9"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
   }
+}
+
+function htmlEstadoPago(i) {
+  const e = i.estado_pago;
+  if (!e) return '<span style="color:var(--texto-suave)">—</span>';
+  const abrir = `abrirPagos('${i.id}','${i.nino_nombre}','${i.sala_nombre} · ${i.turno_nombre}','${i.modalidad_pago}')`;
+  const icono = { al_dia: '✅', deuda: '⚠️', sin_dias: '➖', sin_cobro: '➖' }[e.nivel] || '';
+  const etiqueta = e.nivel === 'deuda' ? `Debe ${UI.moneda(e.falta_pagar)}` : e.titulo;
+  let detalle = '';
+  if (i.modalidad_pago === 'diaria') {
+    if (e.dias_a_pagar > 0) {
+      detalle = `${e.dias_a_pagar} día${e.dias_a_pagar === 1 ? '' : 's'} acordado${e.dias_a_pagar === 1 ? '' : 's'} = ${UI.moneda(e.monto_acordado)}<br>`
+              + `Pagó ${UI.moneda(e.pagado_total)}`
+              + (e.nivel === 'deuda' ? ` · faltan ${e.dias_sin_pagar} día${e.dias_sin_pagar === 1 ? '' : 's'}` : '');
+    } else detalle = 'Sin días acordados';
+  } else if (e.nivel !== 'sin_cobro') {
+    detalle = `${e.periodo_actual ? 'Mensualidad ' + e.periodo_actual + '<br>' : ''}Pagó ${UI.moneda(e.pagado_total)} de ${UI.moneda(e.monto_acordado)}`;
+  } else detalle = 'Aún no se generó el cobro';
+  return `<button class="est-pago ${e.nivel}" title="${e.mensaje.replace(/"/g, '&quot;')}" onclick="${abrir}">${icono} ${etiqueta}</button>
+          <div class="est-pago-det ${e.nivel === 'deuda' ? 'rojo' : ''}">${detalle}</div>`;
 }
 
 function limpiarFiltros() {
@@ -1336,10 +1399,12 @@ let pgModalidad = null;
 let pgAnio = null, pgMes = null;
 let pgMetodoActual = 'efectivo';
 let pgCobroActual = null;
+let pgRefrescarLista = false;
 
 async function abrirPagos(id, ninoNombre, salaTurno, modalidad) {
   pgInscripcionId = id;
   pgModalidad = modalidad;
+  pgRefrescarLista = false;
   const hoy = new Date();
   pgAnio = hoy.getFullYear(); pgMes = hoy.getMonth() + 1;
   document.getElementById('pg-nombre').textContent = ninoNombre;
@@ -1355,8 +1420,12 @@ async function pgCargar() {
     let url = `/inscripciones/inscripciones/${pgInscripcionId}/calendario-pagos/`;
     if (pgModalidad === 'diaria') url += `?anio=${pgAnio}&mes=${pgMes}`;
     const data = await API.get(url);
-    if (data.modalidad === 'mensual') pgPintarMensual(data.ciclos, data.saldo_a_favor);
+    if (data.modalidad === 'mensual') pgPintarMensual(data.ciclos, data.saldo_a_favor, data.cuenta);
     else pgPintarDiario(data.calendario, data.resumen);
+    // Tras cada cambio (abono, ajuste de días, devolución...) la lista de atrás
+    // también se actualiza, para que su "Estado de pago" no quede desfasado.
+    if (pgRefrescarLista) cargar();
+    pgRefrescarLista = true;
   } catch (err) {
     document.getElementById('pg-contenido').innerHTML =
       `<div class="alerta alerta-peligro">Error: ${err.message}</div>`;
@@ -1391,9 +1460,10 @@ function pgPintarResumen(cobros, saldoAFavor) {
 
 let pgSaldoActual = 0;
 
-function pgPintarMensual(ciclos, saldoAFavor) {
+function pgPintarMensual(ciclos, saldoAFavor, cuenta) {
   pgSaldoActual = parseFloat(saldoAFavor) || 0;
   pgPintarResumen(ciclos.filter(c => c.cobro).map(c => c.cobro), saldoAFavor);
+  const banner = cuenta ? `<div class="pg-estado ${cuenta.nivel}"><span style="font-size:1.4rem">${cuenta.nivel === 'deuda' ? '⚠️' : cuenta.nivel === 'al_dia' ? '✅' : '➖'}</span><div><b>${cuenta.titulo}</b>${cuenta.mensaje}</div></div>` : '';
 
   let maxPeriodoFin = null;
   ciclos.forEach(c => {
@@ -1484,6 +1554,7 @@ function pgPintarMensual(ciclos, saldoAFavor) {
   }).join('');
 
   document.getElementById('pg-contenido').innerHTML = `
+    ${banner}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">${html}</div>
     <div style="margin-top:var(--gap-md);border-top:1.5px dashed var(--gris-200);padding-top:var(--gap-md)">
       <div id="pg-form-nueva" style="display:none;gap:8px;align-items:flex-end;flex-wrap:wrap">
@@ -1508,70 +1579,129 @@ function pgPintarDiario(cal, r) {
   pgSaldoActual = r ? parseFloat(r.saldo_a_favor) || 0 : 0;
   pgPintarResumen(cal.dias.filter(d => d.cobro).map(d => d.cobro));
 
+  // Política "pago por adelantado": el dinero pagado cubre, en orden, los días
+  // acordados del calendario. Los primeros N días ya están pagados (aunque
+  // todavía no lleguen) y el resto aparece como "sin pagar".
+  const cu = r && r.cuenta ? r.cuenta : null;
+  const programados = (r && r.dias_programados ? [...r.dias_programados] : []).sort();
+  const diasPagados = cu ? cu.dias_pagados : 0;
+  const cubiertos = new Set(programados.slice(0, diasPagados));
+  const hoyIso = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
   const dow = ['L','M','X','J','V','S','D'];
-  let celdas = dow.map(d => `<div style="text-align:center;font-size:var(--text-xs);color:var(--texto-suave)">${d}</div>`).join('');
+  let celdas = dow.map(d => `<div style="text-align:center;font-size:var(--text-xs);font-weight:700;color:var(--texto-suave)">${d}</div>`).join('');
   const primerDow = (new Date(cal.anio, cal.mes - 1, 1).getDay() + 6) % 7; // 0=lunes
   for (let i = 0; i < primerDow; i++) celdas += '<div></div>';
   cal.dias.forEach(d => {
     const esFinde = d.dia_semana >= 5;
     const co = d.cobro && d.cobro.estado !== 'anulado' ? d.cobro : null;
+    const extra = (d.fecha === hoyIso ? ' pg-hoy' : '') + (d.asistencia === 'ausente' ? ' pg-falta' : '');
+    const falta = d.asistencia === 'ausente' ? ' · faltó sin aviso (se cobra)' : '';
+    const hoyTxt = d.fecha === hoyIso ? ' · HOY' : '';
     if (co) {
-      const falta = d.asistencia === 'ausente' ? ' · falta sin aviso' : '';
       if (co.estado === 'pagado') {
-        celdas += `<div class="pg-dia pg-pagado" title="${UI.moneda(co.monto_final)} · pagado${falta}">${d.dia}</div>`;
+        celdas += `<div class="pg-dia pg-pagado${extra}" title="${UI.moneda(co.monto_final)} · asistió y está pagado${falta}${hoyTxt}">${d.dia}</div>`;
       } else if (d.bloqueado_por) {
-        celdas += `<div class="pg-dia pg-bloqueado" title="Bloqueado: primero cierra el ${UI.fecha(d.bloqueado_por)}">${d.dia}</div>`;
+        celdas += `<div class="pg-dia pg-bloqueado${extra}" title="Bloqueado: primero cierra el ${UI.fecha(d.bloqueado_por)}${hoyTxt}">${d.dia}</div>`;
       } else {
-        celdas += `<div class="pg-dia pg-pendiente" onclick='pgAbrirRegistrar(${JSON.stringify(co)})' title="${UI.moneda(co.monto_final)}${falta}">${d.dia}</div>`;
+        celdas += `<div class="pg-dia pg-pendiente${extra}" onclick='pgAbrirRegistrar(${JSON.stringify(co)})' title="${UI.moneda(co.monto_final)} · asistió y falta pagar${falta}${hoyTxt}">${d.dia}</div>`;
       }
     } else if (d.asistencia === 'ausente_justificado' || (d.cobro && d.cobro.estado === 'anulado')) {
-      celdas += `<div class="pg-dia pg-justificado" title="Falta avisada: no se cobra">${d.dia}</div>`;
-    } else if (d.esperado && d.fecha <= hoy) {
-      celdas += `<div class="pg-dia pg-esperado" title="Le tocaba asistir y no hay asistencia marcada">${d.dia}</div>`;
+      celdas += `<div class="pg-dia pg-justificado${extra}" title="Falta avisada: no se cobra${hoyTxt}">${d.dia}</div>`;
+    } else if (d.programado && cu) {
+      // Día acordado en el calendario que aún no tiene cobro por asistencia
+      if (cubiertos.has(d.fecha)) {
+        celdas += `<div class="pg-dia pg-adelantado${extra}" title="Día acordado y pagado por adelantado${hoyTxt}">${d.dia}</div>`;
+      } else {
+        celdas += `<div class="pg-dia pg-sinpagar${extra}" title="Día acordado SIN pagar: se paga por adelantado${hoyTxt}">${d.dia}</div>`;
+      }
+    } else if (d.esperado && d.fecha <= hoyIso) {
+      celdas += `<div class="pg-dia pg-esperado${extra}" title="Le tocaba asistir y no hay asistencia marcada${hoyTxt}">${d.dia}</div>`;
     } else if (d.esperado && (!esFinde || d.programado)) {
-      celdas += `<div class="pg-dia pg-futuro" title="Le toca asistir">${d.dia}</div>`;
+      celdas += `<div class="pg-dia pg-futuro${extra}" title="Le toca asistir${hoyTxt}">${d.dia}</div>`;
     } else {
-      celdas += `<div class="pg-dia ${esFinde ? 'pg-finde' : 'pg-sin'}">${esFinde ? '' : d.dia}</div>`;
+      celdas += `<div class="pg-dia ${esFinde ? 'pg-finde' : 'pg-sin'}${extra}">${esFinde ? '' : d.dia}</div>`;
     }
   });
+
+  const leyenda = [
+    ['#16A34A', '#15803D', 'Asistió y está pagado'],
+    ['#FBBF24', '#D97706', 'Asistió y falta pagar (toca para cobrar)'],
+    ['#2563EB', '#1D4ED8', 'Acordado y pagado por adelantado'],
+    ['#FEE2E2', '#DC2626', 'Acordado y SIN pagar'],
+    ['#8B5CF6', '#6D28D9', 'Falta avisada (no se cobra)'],
+    ['#CBD5E1', '#94A3B8', 'Bloqueado: cierra primero el anterior'],
+    ['#fff', '#475569', 'Le tocaba y no hay asistencia marcada', 'dashed'],
+  ].map(([bg, bd, txt, est]) => `<span><i style="background:${bg};border:2px ${est || 'solid'} ${bd}"></i>${txt}</span>`).join('')
+    + `<span><i style="background:#fff;border:2px solid #0F172A"></i>Hoy</span>`
+    + `<span><i style="background:#fff;position:relative;border:2px solid var(--gris-300)"><b style="position:absolute;top:1px;right:1px;width:7px;height:7px;border-radius:50%;background:#DC2626"></b></i>Faltó sin aviso (se cobra)</span>`;
 
   document.getElementById('pg-contenido').innerHTML = `
     ${pgHtmlCuentaDiaria(r)}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <button class="btn btn-outline btn-sm" onclick="pgCambiarMes(-1)">‹</button>
-      <span style="font-weight:700">${cal.etiqueta}</span>
+      <span style="font-weight:800;font-size:var(--text-lg)">${cal.etiqueta}</span>
       <button class="btn btn-outline btn-sm" onclick="pgCambiarMes(1)">›</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">${celdas}</div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:var(--text-xs);color:var(--texto-suave);margin-top:12px">
-      <span>🟩 Pagado</span><span>🟨 Cobrado, falta pagar</span><span>🟪 Falta avisada (no se cobra)</span>
-      <span>🔒 Cierra primero el anterior</span><span>▫️ Le tocaba, sin asistencia marcada</span>
-    </div>
+    <div class="pg-leyenda">${leyenda}</div>
     ${pgHtmlHistorialDiario(r)}`;
 }
 
 function pgHtmlCuentaDiaria(r) {
   if (!r) return '';
+  const c = r.cuenta;
   const dc = r.dias_contratados;
   const niv = { alto: 'alerta-peligro', medio: 'alerta-warn' };
-  const alertas = (r.alertas || []).map(a => `<div class="alerta ${niv[a.nivel] || 'alerta-info'}" style="margin:8px 0 0">${a.mensaje}</div>`).join('');
-  const cubre = r.dias_que_cubre_el_saldo != null && parseFloat(r.saldo_a_favor) > 0
-    ? `<small>cubre ${r.dias_que_cubre_el_saldo} día${r.dias_que_cubre_el_saldo === 1 ? '' : 's'}</small>` : '';
-  const acordados = dc.total > 0
-    ? `<strong>${dc.cobrados} de ${dc.total}</strong><small>${dc.restantes >= 0 ? 'restan ' + dc.restantes : 'se pasó por ' + (-dc.restantes)}</small>`
-    : `<strong>${dc.cobrados}</strong><small>cobrados (sin días acordados)</small>`;
+  const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+  const alertas = (r.alertas || []).filter(a => a.codigo !== 'deuda_adelantada')
+    .map(a => `<div class="alerta ${niv[a.nivel] || 'alerta-info'}" style="margin:8px 0 0">${a.mensaje}</div>`).join('');
+
+  // ── 1) Estado general: ¿está al día o debe? ──
+  const icono = { al_dia: '✅', deuda: '⚠️', sin_dias: '➖' }[c.nivel] || '';
+  const estado = `<div class="pg-estado ${c.nivel}"><span style="font-size:1.6rem;line-height:1">${icono}</span>
+      <div><b>${c.titulo}${c.nivel === 'deuda' ? ' · Bs. ' + parseFloat(c.falta_pagar).toFixed(2) : ''}</b>${c.mensaje}</div></div>`;
+
+  // ── 2) Cuenta paso a paso (monto, pagado, falta) ──
+  const costo = UI.moneda(c.costo_diario);
+  const pct = c.monto_acordado > 0 ? Math.min(100, Math.round(parseFloat(c.pagado_total) / parseFloat(c.monto_acordado) * 100)) : 0;
+  const calculo = c.dias_a_pagar > 0 ? `
+    <table class="pg-calculo">
+      <tr><td>Días acordados<small>Los días elegidos en el calendario${c.dias_cobrados > c.dias_acordados ? ' (se cobraron más de los acordados)' : ''}</small></td>
+          <td>${c.dias_a_pagar} día${c.dias_a_pagar === 1 ? '' : 's'}</td></tr>
+      <tr><td>Costo por día</td><td>${costo}</td></tr>
+      <tr><td>Monto a pagar por adelantado<small>${c.dias_a_pagar} × ${costo}</small></td><td>${UI.moneda(c.monto_acordado)}</td></tr>
+      <tr><td>Ya pagó<small>Todo lo abonado y cobrado, menos devoluciones</small></td>
+          <td style="color:#15803D">${UI.moneda(c.pagado_total)}</td></tr>
+      <tr class="pg-total"><td>${parseFloat(c.falta_pagar) > 0 ? 'Falta pagar para estar al día' : 'Falta pagar'}
+          ${parseFloat(c.falta_pagar) > 0 ? `<small>Equivale a ${plural(c.dias_sin_pagar, 'día', 'días')} sin pagar</small>` : ''}</td>
+          <td style="color:${parseFloat(c.falta_pagar) > 0 ? '#B91C1C' : '#15803D'}">${UI.moneda(c.falta_pagar)}</td></tr>
+      ${parseFloat(c.pagado_de_mas) > 0 ? `<tr><td>Pagó de más<small>Queda como saldo a favor para más días</small></td><td style="color:#1D4ED8">${UI.moneda(c.pagado_de_mas)}</td></tr>` : ''}
+    </table>
+    <div class="pg-barra ${parseFloat(c.falta_pagar) > 0 ? 'rojo' : ''}"><div style="width:${pct}%"></div></div>
+    <div class="pg-nota">${pct}% pagado · ${plural(c.dias_pagados, 'día pagado', 'días pagados')} de ${c.dias_a_pagar}.</div>` : '';
+
+  // ── 3) Uso de los días ──
+  const uso = `
+    <div class="pg-cuenta-cifras" style="margin-top:12px;border-top:1.5px dashed var(--gris-200);padding-top:12px">
+      <div class="pg-cifra"><small>Días ya cobrados</small><strong>${dc.cobrados} de ${dc.total || dc.cobrados}</strong>
+        <small>${dc.total > 0 ? (dc.restantes >= 0 ? 'quedan ' + dc.restantes + ' por usar' : 'se pasó por ' + (-dc.restantes)) : 'sin días acordados'}</small></div>
+      <div class="pg-cifra"><small>Asistencia</small><strong>${r.asistencia.presentes}</strong>
+        <small>${r.asistencia.ausentes_cobrados} falta${r.asistencia.ausentes_cobrados === 1 ? '' : 's'} sin aviso · ${r.asistencia.justificados} avisada${r.asistencia.justificados === 1 ? '' : 's'}</small></div>
+      <div class="pg-cifra"><small>Saldo a favor</small><strong style="color:var(--verde-d)">${UI.moneda(r.saldo_a_favor)}</strong>
+        <small>${r.dias_que_cubre_el_saldo != null && parseFloat(r.saldo_a_favor) > 0 ? 'cubre ' + plural(r.dias_que_cubre_el_saldo, 'día', 'días') + ' que aún no asistió' : 'sin dinero guardado'}</small></div>
+    </div>`;
+
+  const falta = parseFloat(c.falta_pagar) > 0;
   return `
     <div class="pg-cuenta">
-      <div class="pg-cuenta-cifras">
-        <div class="pg-cifra"><small>Saldo a favor</small><strong style="color:var(--verde-d)">${UI.moneda(r.saldo_a_favor)}</strong>${cubre}</div>
-        <div class="pg-cifra"><small>Debe</small><strong style="color:${parseFloat(r.deuda) > 0 ? 'var(--coral-d)' : 'inherit'}">${UI.moneda(r.deuda)}</strong></div>
-        <div class="pg-cifra"><small>Días cobrados / acordados</small>${acordados}</div>
-        <div class="pg-cifra"><small>Asistencia</small><strong>${r.asistencia.presentes}</strong>
-          <small>${r.asistencia.ausentes_cobrados} falta${r.asistencia.ausentes_cobrados === 1 ? '' : 's'} sin aviso · ${r.asistencia.justificados} avisada${r.asistencia.justificados === 1 ? '' : 's'}</small></div>
-      </div>
+      ${estado}
+      ${calculo}
+      ${uso}
+      <div class="pg-nota">ℹ️ El jardín cobra <strong>por adelantado</strong>: los días acordados deben estar pagados antes de asistir. Un día "cobrado" es el que ya se descontó por asistencia (o por falta sin aviso).</div>
       ${alertas}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-        <button class="btn btn-primary btn-sm" onclick="pgAbrirAbono()">💵 Registrar abono</button>
+        <button class="btn btn-primary btn-sm" onclick="pgAbrirAbono()">💵 Registrar abono${falta ? ' (faltan ' + UI.moneda(c.falta_pagar) + ')' : ''}</button>
         <button class="btn btn-outline btn-sm" onclick="pgAbrirDias()">🗓️ Ajustar días (aumentar / disminuir)</button>
         ${parseFloat(r.saldo_a_favor) > 0 ? '<button class="btn btn-outline btn-sm" onclick="pgAbrirDevolverSaldo()">↩️ Devolver saldo</button>' : ''}
       </div>
@@ -1604,10 +1734,27 @@ function pgAbrirAbono() {
   ['pga-monto','pga-dias','pga-observacion'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('pga-error').textContent = '';
   const r = pgResumenDiario;
+  const conCalendario = !!(r && (r.dias_programados || []).length);
+  // Con calendario, los días acordados son los del calendario: el abono no los toca.
+  document.getElementById('pga-dias-grupo').style.display = conCalendario ? 'none' : '';
+  document.getElementById('pga-dias-hint').textContent = conCalendario
+    ? 'Los días acordados son los del calendario. Para aumentar o disminuir usa "Ajustar días".'
+    : 'Si indicas los días, se suman a los días acordados con el tutor.';
+  const falta = r && r.cuenta ? parseFloat(r.cuenta.falta_pagar) : 0;
+  const btnFalta = document.getElementById('pga-btn-falta');
+  btnFalta.style.display = falta > 0 ? '' : 'none';
+  btnFalta.textContent = `Completar lo que falta: ${UI.moneda(falta)}`;
+  btnFalta.dataset.monto = falta;
   document.getElementById('pga-info').textContent = r
-    ? `Costo por día: ${UI.moneda(r.costo_diario)}. ${parseFloat(r.deuda) > 0 ? 'Debe ' + UI.moneda(r.deuda) + ': el abono cubre primero los días más antiguos.' : 'Si aún no hay días cobrados, queda como saldo a favor y se descuenta al marcar asistencia.'}`
+    ? `Costo por día: ${UI.moneda(r.costo_diario)}. ${falta > 0 ? 'Para estar al día faltan ' + UI.moneda(falta) + ' (el jardín cobra por adelantado).' : 'La cuenta está al día; un nuevo abono queda como saldo a favor para más días.'}`
     : '';
   UI.abrirModal('modal-pg-abono');
+}
+
+function pgaCompletarFalta() {
+  const m = document.getElementById('pga-btn-falta').dataset.monto;
+  document.getElementById('pga-monto').value = m;
+  pgaSugerirDias();
 }
 
 function pgaSugerirDias() {
@@ -1631,7 +1778,7 @@ async function pgConfirmarAbono() {
   try {
     const resp = await API.post(`/inscripciones/inscripciones/${pgInscripcionId}/registrar-abono/`, {
       monto, metodo_pago: pgaMetodo,
-      dias: document.getElementById('pga-dias').value || 0,
+      dias: document.getElementById('pga-dias-grupo').style.display === 'none' ? 0 : (document.getElementById('pga-dias').value || 0),
       observacion: document.getElementById('pga-observacion').value,
     });
     UI.cerrarModal('modal-pg-abono');
