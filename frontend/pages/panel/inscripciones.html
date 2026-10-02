@@ -454,42 +454,6 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-pg-devolver-saldo">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-header">
-      <h3 class="modal-titulo">↩️ Devolver saldo a favor</h3>
-      <button class="modal-cerrar">✕</button>
-    </div>
-    <p id="pds-info" style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)"></p>
-    <div class="grid-2">
-      <div class="form-grupo">
-        <label class="form-label">Monto a devolver (Bs.) *</label>
-        <input type="number" id="pds-monto" class="form-input" step="0.01" min="0">
-      </div>
-      <div class="form-grupo">
-        <label class="form-label">Método</label>
-        <select id="pds-metodo" class="form-select">
-          <option value="efectivo">💵 Efectivo</option>
-          <option value="transferencia">🏦 Transferencia</option>
-          <option value="qr">📱 QR</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-grupo">
-      <label class="form-label">Motivo *</label>
-      <textarea id="pds-motivo" class="form-textarea" style="min-height:60px" placeholder="Ej: La familia pidió que se le devuelva lo que quedó a favor"></textarea>
-    </div>
-    <span style="font-size:var(--text-xs);color:var(--texto-suave);display:block;margin-bottom:var(--gap-sm)">
-      Sale de caja como una devolución, con su recibo, y descuenta el saldo del niño.
-    </span>
-    <span class="form-error" id="pds-error"></span>
-    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
-      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-pg-devolver-saldo')">Cancelar</button>
-      <button class="btn btn-primary" onclick="pgConfirmarDevolverSaldo()">Devolver</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="modal-baja">
   <div class="modal" style="max-width:460px">
     <div class="modal-header">
@@ -700,6 +664,42 @@
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
       <button class="btn btn-outline" onclick="UI.cerrarModal('modal-pg-dias')">Cancelar</button>
       <button class="btn btn-primary" onclick="pgConfirmarDias()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pg-devolver-saldo">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 class="modal-titulo">↩️ Devolver saldo a favor</h3>
+      <button class="modal-cerrar">✕</button>
+    </div>
+    <p id="pds-info" style="font-size:var(--text-sm);color:var(--texto-suave);margin-bottom:var(--gap-md)"></p>
+    <div class="grid-2">
+      <div class="form-grupo">
+        <label class="form-label">Monto a devolver (Bs.) *</label>
+        <input type="number" id="pds-monto" class="form-input" step="0.01" min="0">
+      </div>
+      <div class="form-grupo">
+        <label class="form-label">Método</label>
+        <select id="pds-metodo" class="form-select">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="transferencia">🏦 Transferencia</option>
+          <option value="qr">📱 QR</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grupo">
+      <label class="form-label">Motivo *</label>
+      <textarea id="pds-motivo" class="form-textarea" style="min-height:60px" placeholder="Ej: La familia pidió que se le devuelva lo que quedó a favor"></textarea>
+    </div>
+    <span style="font-size:var(--text-xs);color:var(--texto-suave);display:block;margin-bottom:var(--gap-sm)">
+      Sale de caja como una devolución, con su recibo, y descuenta el saldo del niño.
+    </span>
+    <span class="form-error" id="pds-error"></span>
+    <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end;margin-top:var(--gap-lg)">
+      <button class="btn btn-outline" onclick="UI.cerrarModal('modal-pg-devolver-saldo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="pgConfirmarDevolverSaldo()">Devolver</button>
     </div>
   </div>
 </div>
