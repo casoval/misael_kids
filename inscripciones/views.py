@@ -58,6 +58,7 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         'al_dia':       ('al_dia',),
         'deuda':        ('deuda',),
         'sin_registro': ('sin_dias', 'sin_cobro'),   # aún sin días acordados / sin cobro generado
+        'a_favor':      None,                        # con días pagados sin usar o saldo a favor
     }
 
     def filter_queryset(self, queryset):
@@ -67,14 +68,20 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         valor = self.request.query_params.get('estado_pago')
         if not valor:
             return queryset
-        niveles = self.FILTROS_ESTADO_PAGO.get(valor)
-        if niveles is None:
-            raise ValidationError({'estado_pago': 'Valor no válido (al_dia, deuda o sin_registro).'})
+        if valor not in self.FILTROS_ESTADO_PAGO:
+            raise ValidationError({'estado_pago': 'Valor no válido (al_dia, deuda, sin_registro o a_favor).'})
+        niveles = self.FILTROS_ESTADO_PAGO[valor]
         from .services import estado_pago
         ids = []
         for insc in queryset.filter(activa=True):
             e = estado_pago(insc)
-            if e and e['nivel'] in niveles:
+            if not e:
+                continue
+            if niveles is None:
+                if e.get('dias_a_favor', 0) > 0 or (insc.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL
+                                                    and e.get('saldo_a_favor', 0) > 0):
+                    ids.append(insc.id)
+            elif e['nivel'] in niveles:
                 ids.append(insc.id)
         return queryset.filter(id__in=ids)
 

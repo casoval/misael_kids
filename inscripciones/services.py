@@ -457,6 +457,26 @@ def estado_pago_diario(inscripcion):
     if falta < 0:
         falta = CERO
     dias_pagados = int(pagado_total // costo) if costo > 0 else 0
+
+    # ── Días a favor: dinero ya pagado por días que no se van a usar ──
+    # Con calendario, el saldo a favor se reparte entre los días acordados que
+    # todavía no se consumieron (sin asistencia ni cobro). Lo que sobra son días
+    # pagados "libres": típicamente una falta avisada (permiso, no se cobra) o un
+    # pago de más. El personal debe saberlo para reprogramar el día o devolver.
+    dias_a_favor = dias_a_favor_permiso = 0
+    if inscripcion.dias_programados and costo > 0:
+        from asistencia.models import Asistencia
+        con_asistencia = {a.fecha.isoformat() for a in Asistencia.objects.filter(inscripcion=inscripcion)}
+        con_cobro = {c.fecha_vencimiento.isoformat() for c in cobros if c.fecha_vencimiento}
+        por_consumir = [f for f in inscripcion.dias_programados if f not in con_asistencia | con_cobro]
+        dias_saldo = int(saldo // costo) if saldo > 0 else 0
+        dias_a_favor = max(dias_saldo - len(por_consumir), 0)
+        permisos = Asistencia.objects.filter(
+            inscripcion=inscripcion, estado=Asistencia.ESTADO_AUSENTE_JUSTIFICADO,
+            fecha__in=[date.fromisoformat(f) for f in inscripcion.dias_programados],
+        ).count()
+        dias_a_favor_permiso = min(dias_a_favor, permisos)
+    monto_a_favor = costo * dias_a_favor
     dias_sin_pagar = int(-(-falta // costo)) if costo > 0 and falta > 0 else 0   # redondeo hacia arriba
     de_mas = pagado_total + condonado - monto_acordado
     de_mas = de_mas if de_mas > 0 else CERO
@@ -487,6 +507,9 @@ def estado_pago_diario(inscripcion):
         'saldo_a_favor': saldo,
         'falta_pagar': falta, 'dias_sin_pagar': dias_sin_pagar, 'dias_pagados': dias_pagados,
         'pagado_de_mas': de_mas,
+        'dias_a_favor': dias_a_favor,
+        'dias_a_favor_permiso': dias_a_favor_permiso,
+        'monto_a_favor': monto_a_favor,
     }
 
 
@@ -578,6 +601,14 @@ def resumen_diario(inscripcion):
         alertas.append({'codigo': 'deuda_adelantada', 'nivel': 'alto',
                         'mensaje': f'Faltan Bs. {cuenta["falta_pagar"]} para cubrir los días acordados. '
                                    'Recuerda: se paga por adelantado.'})
+
+    if cuenta['dias_a_favor'] > 0:
+        n, p = cuenta['dias_a_favor'], cuenta['dias_a_favor_permiso']
+        origen = (f' ({p} por permiso: falta avisada, no se cobró)' if p else ' (pagado de más)')
+        alertas.append({'codigo': 'dias_a_favor', 'nivel': 'medio',
+                        'mensaje': f'Tiene {n} día{"" if n == 1 else "s"} pagado{"" if n == 1 else "s"} sin usar, '
+                                   f'Bs. {cuenta["monto_a_favor"]}{origen}. '
+                                   'Reprograma el día en "Ajustar días" o devuelve el saldo.'})
 
     return {
         'cuenta': cuenta,

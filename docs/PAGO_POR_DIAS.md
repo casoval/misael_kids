@@ -99,3 +99,10 @@ colgar de un cobro cuelga de la **inscripción** (`Devolucion.inscripcion`, con 
 - `resumen_diario` expone `cuenta` con el desglose (`monto_acordado`, `pagado_total`, `falta_pagar`, `dias_pagados`...).
 - En el calendario del modal de Pagos, los días acordados se pintan como *pagados por adelantado* (azul) o
   *sin pagar* (rojo), según cuántos días cubre el dinero ya recibido, en orden cronológico.
+
+### Días a favor (permisos y pagos de más)
+Con calendario, el saldo a favor se reparte entre los días acordados que aún no se consumieron. Los días
+pagados que sobran son **días a favor** (`cuenta.dias_a_favor`, `monto_a_favor`); `dias_a_favor_permiso` indica
+cuántos vienen de una falta avisada (no se cobra). La lista los muestra en azul bajo "Estado de pago", el modal
+de Pagos agrega una alerta, y se puede filtrar con `?estado_pago=a_favor`. Se resuelven reprogramando el día en
+"Ajustar días" o devolviendo el saldo.

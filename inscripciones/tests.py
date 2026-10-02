@@ -1494,3 +1494,64 @@ class FiltroEstadoPagoTests(PorDiaBase):
     def test_sin_filtro_trae_todas(self):
         ids = self.ids('')
         self.assertTrue({str(self.deudor.id), str(self.al_dia.id)} <= ids)
+
+
+class DiasAFavorTests(PorDiaBase):
+    """Días pagados que no se usan (p. ej. una falta avisada) deben alertar al personal."""
+
+    def d(self, n):
+        return self.hoy + timedelta(days=n)
+
+    def setUp(self):
+        super().setUp()
+        self.insc5 = self._inscribir(
+            self._otro_nino('Franquito', 'Castro'),
+            dias_programados=[self.d(i).isoformat() for i in range(1, 6)])
+        self.abonar(self.insc5, 200)
+
+    def cuenta(self, insc=None):
+        insc = insc or self.insc5
+        return self.client.get(f'{URL_INSC}{insc.id}/calendario-pagos/').data['resumen']
+
+    def test_pagado_y_todos_los_dias_por_venir_no_hay_dias_a_favor(self):
+        c = self.cuenta()['cuenta']
+        self.assertEqual(c['dias_a_favor'], 0)
+
+    def test_falta_avisada_deja_un_dia_a_favor_y_alerta(self):
+        self.marcar(self.insc5, self.d(1), 'ausente_justificado')
+        r = self.cuenta()
+        c = r['cuenta']
+        self.assertEqual(c['dias_a_favor'], 1)
+        self.assertEqual(c['dias_a_favor_permiso'], 1)
+        self.assertEqual(c['monto_a_favor'], dec('40.00'))
+        self.assertEqual(c['nivel'], 'al_dia')
+        self.assertIn('dias_a_favor', [a['codigo'] for a in r['alertas']])
+
+    def test_asistir_a_un_dia_acordado_no_genera_dias_a_favor(self):
+        insc = self._inscribir(self._otro_nino('Pablo', 'Rios'),
+                               dias_programados=[self.dia(2).isoformat(), self.dia(1).isoformat()])
+        self.abonar(insc, 80)
+        self.marcar(insc, self.dia(2), 'presente')
+        self.marcar(insc, self.dia(1), 'ausente')          # falta sin aviso: se cobra
+        self.assertEqual(self.cuenta(insc)['cuenta']['dias_a_favor'], 0)
+
+    def test_pagar_de_mas_se_marca_como_a_favor_sin_permiso(self):
+        self.abonar(self.insc5, 80)
+        c = self.cuenta()['cuenta']
+        self.assertEqual(c['dias_a_favor'], 2)
+        self.assertEqual(c['dias_a_favor_permiso'], 0)
+
+    def test_la_lista_trae_dias_a_favor_y_se_puede_filtrar(self):
+        self.marcar(self.insc5, self.d(1), 'ausente_justificado')
+        r = self.client.get(URL_INSC + '?page_size=100&activa=true')
+        fila = [f for f in r.data['results'] if f['id'] == str(self.insc5.id)][0]
+        self.assertEqual(fila['estado_pago']['dias_a_favor'], 1)
+        r = self.client.get(URL_INSC + '?page_size=100&estado_pago=a_favor')
+        self.assertEqual({f['id'] for f in r.data['results']}, {str(self.insc5.id)})
+
+    def test_el_dia_a_favor_se_recupera_reprogramando(self):
+        self.marcar(self.insc5, self.d(1), 'ausente_justificado')
+        dias = [self.d(i).isoformat() for i in range(1, 6)] + [self.d(8).isoformat()]
+        r = self.client.post(f'{URL_INSC}{self.insc5.id}/actualizar-dias/', {'dias': dias}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.assertEqual(r.data['resumen']['cuenta']['dias_a_favor'], 0)
