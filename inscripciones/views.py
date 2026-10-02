@@ -9,7 +9,7 @@ from dateutil.relativedelta import relativedelta
 from django.db import transaction
 from django.db.models import Count, Q, Sum
 from rest_framework import viewsets, filters, status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -51,6 +51,32 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         # solo cambiar el id en la URL — no solo la de su propio hijo.
         return filtrar_por_alcance(super().get_queryset(), self.request.user, 'nino')
     filterset_fields   = ['sucursal', 'sala', 'turno', 'modalidad_pago', 'tipo_ajuste', 'activa']
+
+    # Valores del filtro ?estado_pago= (solo aplica a inscripciones activas,
+    # que son las únicas con cuenta corriente).
+    FILTROS_ESTADO_PAGO = {
+        'al_dia':       ('al_dia',),
+        'deuda':        ('deuda',),
+        'sin_registro': ('sin_dias', 'sin_cobro'),   # aún sin días acordados / sin cobro generado
+    }
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if self.action != 'list':
+            return queryset
+        valor = self.request.query_params.get('estado_pago')
+        if not valor:
+            return queryset
+        niveles = self.FILTROS_ESTADO_PAGO.get(valor)
+        if niveles is None:
+            raise ValidationError({'estado_pago': 'Valor no válido (al_dia, deuda o sin_registro).'})
+        from .services import estado_pago
+        ids = []
+        for insc in queryset.filter(activa=True):
+            e = estado_pago(insc)
+            if e and e['nivel'] in niveles:
+                ids.append(insc.id)
+        return queryset.filter(id__in=ids)
 
     def get_serializer_class(self):
         if self.action == 'list':

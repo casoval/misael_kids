@@ -140,18 +140,27 @@
         </div>
         <div class="form-grupo" style="margin:0;min-width:140px">
           <label class="form-label">Modalidad</label>
-          <select id="f-modalidad" class="form-select">
+          <select id="f-modalidad" class="form-select" onchange="cargar()">
             <option value="">Todas</option>
             <option value="mensual">Mensual</option>
             <option value="diaria">Por día</option>
           </select>
         </div>
-        <div class="form-grupo" style="margin:0;min-width:130px">
+        <div class="form-grupo" style="margin:0;min-width:150px">
           <label class="form-label">Estado</label>
-          <select id="f-activa" class="form-select">
+          <select id="f-activa" class="form-select" onchange="cambioActiva()">
             <option value="true">Activas</option>
-            <option value="false">Inactivas</option>
+            <option value="false">Dadas de baja</option>
             <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-grupo" style="margin:0;min-width:170px">
+          <label class="form-label">Estado de pago</label>
+          <select id="f-estado-pago" class="form-select" onchange="cambioEstadoPago()">
+            <option value="">Todos</option>
+            <option value="deuda">⚠️ Con deuda</option>
+            <option value="al_dia">✅ Al día</option>
+            <option value="sin_registro">➖ Sin días / sin cobro</option>
           </select>
         </div>
         <div style="display:flex;align-items:flex-end;gap:6px">
@@ -781,12 +790,14 @@ async function cargar() {
   const sala     = document.getElementById('f-sala').value;
   const modalidad= document.getElementById('f-modalidad').value;
   const activa   = document.getElementById('f-activa').value;
+  const estadoPago = document.getElementById('f-estado-pago').value;
   let url = '/inscripciones/inscripciones/?page_size=100';
   if (buscar)   url += '&search='+encodeURIComponent(buscar);
   if (sucursal) url += '&sucursal='+sucursal;
   if (sala)     url += '&sala='+sala;
   if (modalidad)url += '&modalidad_pago='+modalidad;
   if (activa)   url += '&activa='+activa;
+  if (estadoPago) url += '&estado_pago='+estadoPago;
   tbody.innerHTML = '<tr><td colspan="10"><div class="loader"><div class="spinner"></div></div></td></tr>';
   try {
     const data  = await API.get(url);
@@ -821,7 +832,7 @@ async function cargar() {
         </td>
         <td>${i.tipo_ajuste!=='ninguno'?'<span class="chip chip-violeta">'+ajusteLabel[i.tipo_ajuste]+'</span>':'—'}</td>
         <td>${UI.fecha(i.fecha_inicio)}</td>
-        <td>${i.activa?'<span class="chip chip-verde">Activa</span>':'<span class="chip chip-coral">Inactiva</span>'}</td>
+        <td>${i.activa?'<span class="chip chip-verde">Activa</span>':'<span class="chip chip-coral">Dada de baja</span>'}</td>
         <td>${htmlEstadoPago(i)}</td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -842,9 +853,21 @@ async function cargar() {
   }
 }
 
+// El estado de pago solo existe en inscripciones activas: al filtrarlo se pasa
+// a "Activas" para que el resultado sea coherente con lo que se ve.
+function cambioActiva() {
+  if (document.getElementById('f-activa').value !== 'true') document.getElementById('f-estado-pago').value = '';
+  cargar();
+}
+
+function cambioEstadoPago() {
+  if (document.getElementById('f-estado-pago').value) document.getElementById('f-activa').value = 'true';
+  cargar();
+}
+
 function htmlEstadoPago(i) {
   const e = i.estado_pago;
-  if (!e) return '<span style="color:var(--texto-suave)">—</span>';
+  if (!e) return i.activa ? '<span style="color:var(--texto-suave)">—</span>' : '<span class="est-pago sin_dias" style="cursor:default">🚪 Dada de baja</span>';
   const abrir = `abrirPagos('${i.id}','${i.nino_nombre}','${i.sala_nombre} · ${i.turno_nombre}','${i.modalidad_pago}')`;
   const icono = { al_dia: '✅', deuda: '⚠️', sin_dias: '➖', sin_cobro: '➖' }[e.nivel] || '';
   const etiqueta = e.nivel === 'deuda' ? `Debe ${UI.moneda(e.falta_pagar)}` : e.titulo;
@@ -863,7 +886,7 @@ function htmlEstadoPago(i) {
 }
 
 function limpiarFiltros() {
-  ['f-buscar','f-sucursal','f-sala','f-modalidad'].forEach(id=>document.getElementById(id).value='');
+  ['f-buscar','f-sucursal','f-sala','f-modalidad','f-estado-pago'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-activa').value='true'; cargar();
 }
 
@@ -1442,8 +1465,19 @@ const PG_ESTADO_CHIP = {
 // Resumen de totales (pagado / condonado / devuelto) de los cobros que se
 // están mostrando en el modal de Pagos. Se recalcula cada vez que se pinta
 // el calendario (mensual o diario), así queda al día tras cada acción.
-function pgPintarResumen(cobros, saldoAFavor) {
+function pgPintarResumen(cobros, saldoAFavor, resumenDiario) {
   const el = document.getElementById('pg-resumen');
+  // Por día: la línea de arriba habla solo de los días ya consumidos (asistidos o
+  // falta sin aviso), de toda la inscripción. El dinero total pagado y lo que falta
+  // están en el resumen de la cuenta de abajo, así no se confunden.
+  if (resumenDiario && resumenDiario.cuenta) {
+    const c = resumenDiario.cuenta;
+    const descontado = Math.max(parseFloat(c.pagado_total) - parseFloat(c.saldo_a_favor), 0);
+    const n = c.dias_cobrados;
+    el.innerHTML = `<span>💵 Pagado por días ya asistidos o faltas sin aviso: <strong style="color:var(--texto)">${UI.moneda(descontado)}</strong>
+      <small>(${n} día${n === 1 ? '' : 's'} descontado${n === 1 ? '' : 's'} del dinero abonado)</small></span>`;
+    return;
+  }
   if (!cobros.length && !(parseFloat(saldoAFavor) > 0)) { el.innerHTML = ''; return; }
   const totalPagado    = cobros.reduce((s,co) => s + parseFloat(co.monto_pagado||0), 0);
   const totalCondonado = cobros.reduce((s,co) => s + parseFloat(co.monto_condonado||0), 0);
@@ -1577,7 +1611,7 @@ let pgResumenDiario = null;
 function pgPintarDiario(cal, r) {
   pgResumenDiario = r;
   pgSaldoActual = r ? parseFloat(r.saldo_a_favor) || 0 : 0;
-  pgPintarResumen(cal.dias.filter(d => d.cobro).map(d => d.cobro));
+  pgPintarResumen(cal.dias.filter(d => d.cobro).map(d => d.cobro), 0, r);
 
   // Política "pago por adelantado": el dinero pagado cubre, en orden, los días
   // acordados del calendario. Los primeros N días ya están pagados (aunque

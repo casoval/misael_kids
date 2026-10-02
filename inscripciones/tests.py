@@ -1439,3 +1439,58 @@ class EstadoDePagoTests(PorDiaBase):
         r = self.client.get(URL_INSC + '?page_size=100&activa=false')
         fila = [f for f in (r.data.get('results') or r.data) if f['id'] == str(insc.id)][0]
         self.assertIsNone(fila['estado_pago'])
+
+
+class FiltroEstadoPagoTests(PorDiaBase):
+    """?estado_pago= en la lista: al_dia, deuda, sin_registro (solo inscripciones activas)."""
+
+    def d(self, n):
+        return self.hoy + timedelta(days=n)
+
+    def setUp(self):
+        super().setUp()
+        iso = lambda *ns: [self.d(n).isoformat() for n in ns]
+        self.deudor = self._inscribir(self._otro_nino('Ana', 'Deuda'), dias_programados=iso(1, 2))
+        self.al_dia = self._inscribir(self._otro_nino('Beto', 'Pagado'), dias_programados=iso(1, 2))
+        self.abonar(self.al_dia, 80)
+        self.baja = self._inscribir(self._otro_nino('Caro', 'Baja'), dias_programados=iso(1, 2))
+        self.baja.activa = False
+        self.baja.save()
+
+    def ids(self, query):
+        r = self.client.get(URL_INSC + '?page_size=100' + query)
+        self.assertEqual(r.status_code, status.HTTP_200_OK, getattr(r, 'data', None))
+        filas = r.data['results'] if isinstance(r.data, dict) else r.data
+        return {f['id'] for f in filas}
+
+    def test_filtra_con_deuda(self):
+        ids = self.ids('&estado_pago=deuda')
+        self.assertIn(str(self.deudor.id), ids)
+        self.assertNotIn(str(self.al_dia.id), ids)
+        self.assertNotIn(str(self.baja.id), ids)
+
+    def test_filtra_al_dia(self):
+        self.assertEqual(self.ids('&estado_pago=al_dia'), {str(self.al_dia.id)})
+
+    def test_filtra_sin_registro(self):
+        sin = self._inscribir(self._otro_nino('Dani', 'Nuevo'))   # por día, sin calendario ni días acordados
+        ids = self.ids('&estado_pago=sin_registro')
+        self.assertIn(str(sin.id), ids)
+        self.assertNotIn(str(self.deudor.id), ids)
+        self.assertNotIn(str(self.al_dia.id), ids)
+
+    def test_las_dadas_de_baja_no_entran_en_ningun_estado_de_pago(self):
+        for v in ('deuda', 'al_dia', 'sin_registro'):
+            self.assertNotIn(str(self.baja.id), self.ids(f'&estado_pago={v}'))
+
+    def test_combina_con_otros_filtros(self):
+        self.assertEqual(self.ids('&estado_pago=deuda&modalidad_pago=mensual'), set())
+        self.assertIn(str(self.deudor.id), self.ids('&estado_pago=deuda&modalidad_pago=diaria'))
+
+    def test_valor_invalido_da_error(self):
+        r = self.client.get(URL_INSC + '?estado_pago=cualquiera')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_sin_filtro_trae_todas(self):
+        ids = self.ids('')
+        self.assertTrue({str(self.deudor.id), str(self.al_dia.id)} <= ids)
