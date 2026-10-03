@@ -12,8 +12,17 @@
    · Se sincroniza entre pestañas abiertas del mismo usuario.
    · Los valores de cada tema viven en css/themes.css.
 
+   Animaciones (capas de movimiento, ver css/base.css y css/themes.css):
+   · <html data-anim="on|off"> las enciende o apaga. Hay un interruptor en el
+     selector de tema; la elección se guarda por dispositivo ('mk_anim'),
+     porque depende de qué tan potente es la tablet, no de quién la use.
+   · Si el sistema pide "reducir movimiento", quedan apagadas y no se pueden encender.
+   · <html data-oculto> se pone mientras la pestaña no se ve: el CSS pausa todo.
+
    API:
      Tema.actual()                    → id del tema activo
+     Tema.animaciones()               → true si las animaciones están activas
+     Tema.fijarAnimaciones(true|false)
      Tema.aplicar('espacio')          → cambia y guarda el tema
      Tema.montar(elemento, {variante}) → dibuja el selector dentro de elemento
                                         variante: 'flotante' | 'sobre-color'
@@ -26,6 +35,33 @@ const Tema = (() => {
   const CLAVE_LOGIN     = 'mk_tema_login'; // pantalla de login (nadie identificado)
   const CLAVE_ANTIGUA   = 'mk_tema';       // versión previa: una sola para todo el navegador
   const POR_DEFECTO = 'jardin';
+  const CLAVE_ANIM    = 'mk_anim';       // 'on' | 'off' · por dispositivo
+
+  /* ── Animaciones: interruptor global ─────────────────────────── */
+  const mqReducir = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const sistemaReduceMovimiento = () => !!(mqReducir && mqReducir.matches);
+
+  function animacionesActivas() {
+    if (sistemaReduceMovimiento()) return false;
+    try { return localStorage.getItem(CLAVE_ANIM) !== 'off'; } catch (_) { return true; }
+  }
+
+  function pintarAnimaciones() {
+    const activas = animacionesActivas();
+    document.documentElement.setAttribute('data-anim', activas ? 'on' : 'off');
+    document.querySelectorAll('.tema-anim').forEach(b => {
+      b.setAttribute('aria-checked', String(activas));
+      b.toggleAttribute('disabled', sistemaReduceMovimiento());
+      const nota = b.querySelector('small');
+      if (nota) nota.textContent = sistemaReduceMovimiento()
+        ? 'Tu dispositivo pidió menos movimiento' : 'Ambiente y movimiento';
+    });
+  }
+
+  function fijarAnimaciones(activas) {
+    try { localStorage.setItem(CLAVE_ANIM, activas ? 'on' : 'off'); } catch (_) {}
+    pintarAnimaciones();
+  }
 
   /* Para agregar un tema: registrarlo acá y crear su bloque en themes.css */
   /* grupo: cómo se agrupan en el menú · oscuro: activa el bloque data-modo="oscuro" */
@@ -182,6 +218,80 @@ const Tema = (() => {
     return document.documentElement.getAttribute('data-tema') || POR_DEFECTO;
   }
 
+  /* Cambio de tema con transición: reveal circular desde el botón (View Transitions);
+     si el navegador no lo soporta, un fundido corto de colores. */
+  function cambiarConEfecto(id, origen) {
+    if (!animacionesActivas() || id === actual()) { aplicar(id); return; }
+    if (origen && typeof document.startViewTransition === 'function') {
+      const r = origen.getBoundingClientRect();
+      const x = r.left + r.width / 2, y = r.top + r.height / 2;
+      const radio = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+      const vt = document.startViewTransition(() => aplicar(id));
+      vt.ready.then(() => document.documentElement.animate(
+        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radio}px at ${x}px ${y}px)`] },
+        { duration: 600, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' }
+      )).catch(() => {});
+      return;
+    }
+    const html = document.documentElement;
+    html.classList.add('tema-fundiendo');
+    aplicar(id);
+    setTimeout(() => html.classList.remove('tema-fundiendo'), 500);
+  }
+
+  /* ── Números que suben desde 0 ────────────────────────────────
+     Las tarjetas de estadísticas (.stat-info .valor) cuentan hacia su valor
+     cada vez que la página les escribe un número. No toca el valor real:
+     al terminar deja exactamente el texto que puso la página. */
+  const ultimoEscrito = new WeakMap();   // texto que escribió el propio contador
+  const rafContador   = new WeakMap();
+
+  function formatearNumero(v, dec, sepMil, sepDec) {
+    const [ent, frac] = v.toFixed(dec).split('.');
+    const miles = sepMil ? ent.replace(/\B(?=(\d{3})+(?!\d))/g, sepMil) : ent;
+    return frac ? miles + sepDec + frac : miles;
+  }
+
+  function contarHasta(el) {
+    const texto = el.textContent;
+    if (ultimoEscrito.get(el) === texto) return;          // lo escribió el contador
+    cancelAnimationFrame(rafContador.get(el));
+    if (!animacionesActivas() || document.hidden) return;
+    const m = texto.trim().match(/^([^\d-]*)(\d[\d.,]*)(.*)$/);
+    if (!m) return;                                        // "—", "Cargando…", etc.
+    const [, pre, num, post] = m;
+    const d = num.match(/([.,])(\d{1,2})$/);
+    const dec = d ? d[2].length : 0;
+    const sepDec = d ? d[1] : '';
+    const parteEntera = d ? num.slice(0, -(dec + 1)) : num;
+    const sepMil = (parteEntera.match(/[.,]/) || [''])[0];
+    const destino = parseFloat(parteEntera.replace(/[.,]/g, '') + (dec ? '.' + d[2] : ''));
+    if (!isFinite(destino) || destino <= 0) return;
+
+    const t0 = performance.now(), dur = 800;
+    const escribir = valor => { ultimoEscrito.set(el, valor); el.textContent = valor; };
+    const paso = ahora => {
+      const k = Math.min(1, (ahora - t0) / dur);
+      if (k >= 1) { escribir(texto); return; }             // el texto original, intacto
+      const suave = 1 - Math.pow(1 - k, 3);                // frena al llegar
+      escribir(pre + formatearNumero(destino * suave, dec, sepMil, sepDec) + post);
+      rafContador.set(el, requestAnimationFrame(paso));
+    };
+    escribir(pre + formatearNumero(0, dec, sepMil, sepDec) + post);
+    rafContador.set(el, requestAnimationFrame(paso));
+  }
+
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(muts => {
+      const vistos = new Set();
+      for (const mu of muts) {
+        const nodo = mu.target.nodeType === 1 ? mu.target : mu.target.parentElement;
+        const el = nodo && nodo.closest && nodo.closest('.stat-info .valor');
+        if (el && !vistos.has(el)) { vistos.add(el); contarHasta(el); }
+      }
+    }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  }
+
   /* ── Selector ─────────────────────────────────────────────── */
   function cerrarTodos() {
     document.querySelectorAll('.tema-selector.abierto').forEach(sel => {
@@ -202,7 +312,8 @@ const Tema = (() => {
           <span class="tema-nombre"></span>
           <span class="tema-flecha" aria-hidden="true">▲</span>
         </button>
-        <div class="tema-menu" role="radiogroup" aria-label="Tema de la aplicación">
+        <div class="tema-menu">
+          <div role="radiogroup" aria-label="Tema de la aplicación">
           ${TEMAS.map((x, n) => (n === 0 || TEMAS[n - 1].grupo !== x.grupo
               ? `<div class="tema-menu-titulo" role="presentation">${x.grupo}</div>` : '') + `
             <button type="button" class="tema-op" role="radio" data-id="${x.id}" aria-checked="false">
@@ -211,6 +322,13 @@ const Tema = (() => {
               <span class="tema-txt">${x.nombre}<small>${x.desc}</small></span>
               <span class="tema-check" aria-hidden="true">✓</span>
             </button>`).join('')}
+          </div>
+          <div class="tema-menu-titulo" role="presentation">Movimiento</div>
+          <button type="button" class="tema-anim" role="switch" aria-checked="true">
+            <span class="tema-muestra tema-muestra-anim" aria-hidden="true">✨</span>
+            <span class="tema-txt">Animaciones<small>Ambiente y movimiento</small></span>
+            <span class="tema-switch" aria-hidden="true"><i></i></span>
+          </button>
         </div>
       </div>`;
 
@@ -228,14 +346,18 @@ const Tema = (() => {
 
     sel.querySelectorAll('.tema-op').forEach(op => {
       op.addEventListener('click', () => {
-        aplicar(op.dataset.id);
+        cambiarConEfecto(op.dataset.id, btn);
         cerrarTodos();
         btn.focus();
       });
     });
 
+    /* el interruptor no cierra el menú: así se ve el efecto al probarlo */
+    sel.querySelector('.tema-anim').addEventListener('click', () => fijarAnimaciones(!animacionesActivas()));
+
     marcarSelectores(t.id);
     actualizarLogos(t);
+    pintarAnimaciones();
   }
 
   /* cerrar al hacer clic fuera o con Escape */
@@ -245,14 +367,23 @@ const Tema = (() => {
   /* sincronizar con otras pestañas abiertas */
   window.addEventListener('storage', e => {
     if (e.key === claveActual() && porId(e.newValue)) aplicar(e.newValue, { guardarEleccion: false });
+    if (e.key === CLAVE_ANIM) pintarAnimaciones();
   });
+
+  /* pestaña no visible → el CSS pausa las animaciones (ahorra batería en las tablets) */
+  document.addEventListener('visibilitychange', () => {
+    document.documentElement.toggleAttribute('data-oculto', document.hidden);
+  });
+  if (mqReducir && mqReducir.addEventListener) mqReducir.addEventListener('change', pintarAnimaciones);
 
   /* La clave única de la versión anterior era compartida por todo el navegador:
      se descarta para que el tema de una persona no "herede" a la siguiente. */
   try { localStorage.removeItem(CLAVE_ANTIGUA); } catch (_) {}
 
   /* Aplicación inmediata (este script va en el <head>) */
+  pintarAnimaciones();
   aplicar(leer(), { guardarEleccion: false });
 
-  return { TEMAS, actual, aplicar, montar, alIniciarSesion };
+  return { TEMAS, actual, aplicar, montar, alIniciarSesion,
+           animaciones: animacionesActivas, fijarAnimaciones };
 })();

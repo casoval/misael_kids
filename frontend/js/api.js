@@ -212,7 +212,7 @@ const UI = {
       box-shadow:0 8px 24px rgba(0,0,0,.12);
       display:flex; align-items:center; gap:8px;
       transform:translateY(60px); opacity:0;
-      transition:all 300ms ease; max-width:360px;
+      transition:transform 420ms cubic-bezier(.34,1.56,.64,1), opacity 250ms ease; max-width:360px;
       border:1.5px solid ${c.color}30;
     `;
     t.innerHTML = `<span>${c.icono}</span><span>${mensaje}</span>`;

@@ -1,0 +1,690 @@
+From acd67004edb6fe1eae0a2a31033ccfcc1a7842c0 Mon Sep 17 00:00:00 2001
+From: Claude <claude@anthropic.com>
+Date: Sat, 3 Oct 2026 21:23:17 +0000
+Subject: [PATCH] =?UTF-8?q?Temas:=20animaciones=20(movimiento=20com=C3=BAn?=
+ =?UTF-8?q?,=20ambiente=20por=20tema=20e=20interruptor)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ frontend/README.md      |   7 +
+ frontend/css/base.css   |  88 +++++++++++
+ frontend/css/themes.css | 329 ++++++++++++++++++++++++++++++++++++++++
+ frontend/js/api.js      |   2 +-
+ frontend/js/tema.js     | 137 ++++++++++++++++-
+ 5 files changed, 559 insertions(+), 4 deletions(-)
+
+diff --git a/frontend/README.md b/frontend/README.md
+index be7a861..7f1af64 100644
+--- a/frontend/README.md
++++ b/frontend/README.md
+@@ -118,6 +118,13 @@ Rol:      Administrador (acceso total al panel interno)
+ - **Fredoka One** — Títulos, números grandes (`font-family: var(--font-display)`)
+ - **Nunito** — Texto, etiquetas, botones (`font-family: var(--font-body)`)
+ 
++### Temas y animaciones
++- Los temas viven en `css/themes.css` (colores) y `js/tema.js` (lista, selector y persistencia por usuario).
++- **Movimiento común** (entradas escalonadas, botones, modales con rebote, contadores): `base.css`, sección *Movimiento común*.
++- **Ambiente de cada tema** (mariposas, olas, estrellas…): `themes.css`, sección *Animaciones*. Son capas fijas hechas con `::before/::after` de `<html>` y `<body>`, detrás del contenido y sin HTML extra. Un tema sin bloque queda sin ambiente; Alto contraste no tiene a propósito.
++- **Interruptor "Animaciones"** en el selector de tema: pone `<html data-anim="off">` y apaga todo (cada regla cuelga de `:not([data-anim="off"])`). Se guarda por dispositivo (`mk_anim`). Con "reducir movimiento" en el sistema queda apagado y deshabilitado.
++- Reglas: solo `transform` y `opacity`; las entradas usan `animation-fill-mode: backwards` (para no pisar el `:hover`); el contenido nunca se anima en bucle; la pestaña oculta pausa todo (`data-oculto`).
++
+ ### Componentes disponibles (en `base.css`)
+ - `.card` + `.card-header` + `.card-titulo` — Tarjeta estándar
+ - `.stat-card` + `.stat-icon` + `.stat-info` — Tarjeta de estadística
+diff --git a/frontend/css/base.css b/frontend/css/base.css
+index 56b8055..132bca0 100644
+--- a/frontend/css/base.css
++++ b/frontend/css/base.css
+@@ -1104,3 +1104,91 @@ img, svg, video { max-width: 100%; height: auto; }
+ .flatpickr-day:hover { background: var(--turquesa-l); border-color: var(--turquesa-l); }
+ .flatpickr-monthSelect-month.selected { background: var(--turquesa-d); }
+ input.flatpickr-input[readonly] { cursor: pointer; }
++
++
++/* ══════════════════════════════════════════════════════════════
++   MOVIMIENTO COMÚN A TODOS LOS TEMAS
++   ──────────────────────────────────────────────────────────────
++   · Todo cuelga de  :root:not([data-anim="off"])  → el interruptor
++     "Animaciones" del selector de tema (js/tema.js) lo apaga entero.
++   · Solo transform y opacity: no fuerzan relayout ni gastan batería.
++   · Las entradas usan fill-mode "backwards": al terminar no dejan
++     ningún transform puesto, así el :hover de cada tarjeta sigue
++     funcionando.
++   · El ambiente propio de cada tema (mariposas, olas, estrellas…)
++     vive en css/themes.css.
++══════════════════════════════════════════════════════════════ */
++:root { --ease-rebote: cubic-bezier(.34, 1.56, .64, 1); --ease-suave: cubic-bezier(.22, 1, .36, 1); }
++
++@keyframes mk-entrar      { from { opacity: 0; transform: translateY(14px); } }
++@keyframes mk-entrar-fila { from { opacity: .25; transform: translateY(6px); } }
++@keyframes mk-aparecer    { from { opacity: 0; transform: scale(.6) rotate(-12deg); } }
++@keyframes mk-mecer       { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
++
++/* 1 · Entrada escalonada: tarjetas de estadística y de niños, una tras otra */
++:root:not([data-anim="off"]) .grid-stats > *,
++:root:not([data-anim="off"]) .grid-tarjetas > * {
++  animation: mk-entrar .55s var(--ease-suave) backwards;
++}
++:root:not([data-anim="off"]) .grid-stats > :nth-child(2),
++:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(2) { animation-delay: .06s; }
++:root:not([data-anim="off"]) .grid-stats > :nth-child(3),
++:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(3) { animation-delay: .12s; }
++:root:not([data-anim="off"]) .grid-stats > :nth-child(4),
++:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(4) { animation-delay: .18s; }
++:root:not([data-anim="off"]) .grid-stats > :nth-child(5),
++:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(5) { animation-delay: .24s; }
++:root:not([data-anim="off"]) .grid-stats > :nth-child(6),
++:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(6) { animation-delay: .30s; }
++:root:not([data-anim="off"]) .grid-stats > :nth-child(n+7),
++:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(n+7) { animation-delay: .36s; }
++
++/* Banner de bienvenida y tarjetas de contenido: una sola entrada */
++:root:not([data-anim="off"]) .bienvenida,
++:root:not([data-anim="off"]) .portal-header,
++:root:not([data-anim="off"]) .main-content .card {
++  animation: mk-entrar .6s var(--ease-suave) backwards;
++}
++:root:not([data-anim="off"]) .main-content .card { animation-delay: .1s; }
++
++/* Filas de tabla: cascada corta (solo las primeras, el resto aparece ya) */
++:root:not([data-anim="off"]) .tabla-wrap tbody tr { animation: mk-entrar-fila .35s ease-out backwards; }
++:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(2) { animation-delay: .03s; }
++:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(3) { animation-delay: .06s; }
++:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(4) { animation-delay: .09s; }
++:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(5) { animation-delay: .12s; }
++:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(6) { animation-delay: .15s; }
++:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(7) { animation-delay: .18s; }
++:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(8) { animation-delay: .21s; }
++:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(n+9) { animation-delay: .24s; }
++
++/* Logo del menú: aparece con un pequeño giro */
++:root:not([data-anim="off"]) .sidebar-logo .logo-icon { animation: mk-aparecer .6s var(--ease-rebote) .15s backwards; }
++
++/* Botones, chips y pestañas: se levantan al pasar el mouse y se hunden al presionar */
++:root:not([data-anim="off"]) .btn,
++:root:not([data-anim="off"]) button.chip,
++:root:not([data-anim="off"]) a.chip,
++:root:not([data-anim="off"]) .chip[onclick],
++:root:not([data-anim="off"]) .page-tab {
++  transition: transform .18s var(--ease-rebote), box-shadow var(--trans-fast),
++              background var(--trans-fast), border-color var(--trans-fast), color var(--trans-fast);
++}
++:root:not([data-anim="off"]) .btn-outline:hover:not(:disabled),
++:root:not([data-anim="off"]) .btn-amarillo:hover:not(:disabled),
++:root:not([data-anim="off"]) button.chip:hover, :root:not([data-anim="off"]) a.chip:hover,
++:root:not([data-anim="off"]) .chip[onclick]:hover { transform: translateY(-2px); }
++:root:not([data-anim="off"]) .btn:active:not(:disabled),
++:root:not([data-anim="off"]) button.chip:active, :root:not([data-anim="off"]) a.chip:active,
++:root:not([data-anim="off"]) .chip[onclick]:active { transform: translateY(1px) scale(.96); }
++
++/* Menú lateral: el icono da un saltito al pasar el mouse */
++:root:not([data-anim="off"]) .nav-item .nav-icon { transition: transform .25s var(--ease-rebote), background var(--trans-fast); }
++:root:not([data-anim="off"]) .nav-item:hover .nav-icon { transform: scale(1.18) rotate(-8deg); }
++:root:not([data-anim="off"]) .nav-item:hover { transform: translateX(3px); }
++:root:not([data-anim="off"]) .nav-item { transition: transform .2s var(--ease-suave), background var(--trans-fast), color var(--trans-fast); }
++
++/* Modales: se abren con un pequeño rebote (al cerrar, salida normal) */
++:root:not([data-anim="off"]) .modal-overlay.abierto .modal {
++  transition: transform .4s var(--ease-rebote);
++}
+diff --git a/frontend/css/themes.css b/frontend/css/themes.css
+index ff7677c..d98997f 100644
+--- a/frontend/css/themes.css
++++ b/frontend/css/themes.css
+@@ -499,3 +499,332 @@
+ @media (prefers-reduced-motion: reduce) {
+   .tema-selector.abierto .tema-menu { animation: none; }
+ }
++
++
++/* ═══════════════════════════════════════════════════════════════
++   ANIMACIONES — ambiente propio de cada tema
++   ───────────────────────────────────────────────────────────────
++   El movimiento común (entradas, botones, modales) está en base.css.
++   Acá vive lo que cambia de un tema a otro: una capa decorativa
++   DETRÁS del contenido, hecha con los 4 pseudo-elementos fijos de
++   <html> y <body> (::before / ::after). No hay HTML extra, no recibe
++   clics y no pasa por encima de tablas ni formularios.
++
++   · Todo cuelga de  :not([data-anim="off"])  (interruptor en el selector).
++   · Solo transform y opacity. Sin "reducir movimiento" del sistema
++     no se pinta nada (ver el final de esta sección).
++   · Para animar un tema nuevo: copiar un bloque, cambiar el id y los
++     emojis/colores. Un tema sin bloque queda sin ambiente.
++═══════════════════════════════════════════════════════════════ */
++
++/* base común de las capas (sin "content" no se genera nada) */
++:root::before, :root::after, body::before, body::after {
++  position: fixed; pointer-events: none; z-index: -1;
++  line-height: 1; will-change: transform, opacity;
++}
++/* el fondo animado del portal pasa detrás de las capas de ambiente */
++.bg-burbujas { z-index: -2; }
++
++/* pausa en segundo plano: si la pestaña no se ve, nada se mueve */
++:root[data-oculto] *, :root[data-oculto] *::before, :root[data-oculto] *::after,
++:root[data-oculto]::before, :root[data-oculto]::after { animation-play-state: paused !important; }
++
++/* ── recorridos reutilizables ─────────────────────────────────── */
++@keyframes mk-vuelo {            /* de izquierda a derecha, con vaivén (mariposas) */
++  0%   { transform: translate3d(-8vw, 0, 0) rotate(8deg); }
++  20%  { transform: translate3d(18vw, -5vh, 0) rotate(-6deg); }
++  40%  { transform: translate3d(42vw, 3vh, 0) rotate(10deg); }
++  60%  { transform: translate3d(66vw, -6vh, 0) rotate(-8deg); }
++  80%  { transform: translate3d(90vw, 2vh, 0) rotate(6deg); }
++  100% { transform: translate3d(112vw, -3vh, 0) rotate(0); }
++}
++@keyframes mk-nadar {            /* de izquierda a derecha, ondulando (peces) */
++  0%   { transform: translate3d(-10vw, 0, 0); }
++  25%  { transform: translate3d(22vw, -2vh, 0); }
++  50%  { transform: translate3d(50vw, 1.5vh, 0); }
++  75%  { transform: translate3d(78vw, -2vh, 0); }
++  100% { transform: translate3d(112vw, 0, 0); }
++}
++@keyframes mk-caer {             /* pétalos: caen girando */
++  0%   { transform: translate3d(0, -8vh, 0) rotate(0); opacity: 0; }
++  8%   { opacity: .7; }
++  50%  { transform: translate3d(-5vw, 50vh, 0) rotate(160deg); }
++  92%  { opacity: .7; }
++  100% { transform: translate3d(3vw, 112vh, 0) rotate(330deg); opacity: 0; }
++}
++@keyframes mk-globo {            /* suben con balanceo */
++  0%   { transform: translate3d(0, 0, 0) rotate(-4deg); opacity: 0; }
++  10%  { opacity: .85; }
++  35%  { transform: translate3d(3vw, -40vh, 0) rotate(4deg); }
++  65%  { transform: translate3d(-2vw, -80vh, 0) rotate(-4deg); }
++  90%  { opacity: .85; }
++  100% { transform: translate3d(2vw, -118vh, 0) rotate(3deg); opacity: 0; }
++}
++@keyframes mk-burbujas {         /* grupo de burbujas que sube y se desvanece */
++  0%   { transform: translate3d(0, 0, 0); opacity: 0; }
++  15%  { opacity: 1; }
++  85%  { opacity: 1; }
++  100% { transform: translate3d(1.5vw, -70vh, 0); opacity: 0; }
++}
++@keyframes mk-ola         { to   { transform: translate3d(-1200px, 0, 0); } }
++@keyframes mk-ola-inversa { from { transform: translate3d(-1200px, 0, 0); } to { transform: translate3d(0, 0, 0); } }
++@keyframes mk-titilar     { from { opacity: .12; } to { opacity: 1; } }
++@keyframes mk-pulso       { from { opacity: 0; } to { opacity: 1; } }
++@keyframes mk-nube        { from { transform: translate3d(-15vw, 0, 0); } to { transform: translate3d(115vw, 0, 0); } }
++@keyframes mk-hoja        { from { transform: rotate(-9deg); } to { transform: rotate(11deg); } }
++@keyframes mk-hoja-b      { from { transform: scaleX(-1) rotate(-10deg); } to { transform: scaleX(-1) rotate(9deg); } }
++@keyframes mk-luciernagas {      /* parpadean y derivan */
++  0%   { opacity: .1; transform: translate3d(0, 0, 0); }
++  30%  { opacity: 1; }
++  60%  { opacity: .25; transform: translate3d(2vw, -3vh, 0); }
++  100% { opacity: .9; transform: translate3d(-1.5vw, 2vh, 0); }
++}
++@keyframes mk-fugaz {            /* una estrella fugaz cada tanto (el resto del ciclo, quieta e invisible) */
++  0%   { transform: translate3d(0, 0, 0) rotate(143deg); opacity: 0; }
++  1%   { opacity: 1; }
++  7%   { transform: translate3d(-55vw, 41vh, 0) rotate(143deg); opacity: 0; }
++  100% { transform: translate3d(-55vw, 41vh, 0) rotate(143deg); opacity: 0; }
++}
++@keyframes mk-orbita {           /* elipse lenta: 8 puntos */
++  0%     { transform: translate3d(0, 0, 0); }
++  12.5%  { transform: translate3d(-2vw, 2.5vh, 0); }
++  25%    { transform: translate3d(-7vw, 3.5vh, 0); }
++  37.5%  { transform: translate3d(-12vw, 2.5vh, 0); }
++  50%    { transform: translate3d(-14vw, 0, 0); }
++  62.5%  { transform: translate3d(-12vw, -2.5vh, 0); }
++  75%    { transform: translate3d(-7vw, -3.5vh, 0); }
++  87.5%  { transform: translate3d(-2vw, -2.5vh, 0); }
++  100%   { transform: translate3d(0, 0, 0); }
++}
++@keyframes mk-arcoiris {         /* se asoma desde abajo y se esconde */
++  0%, 100% { transform: translate3d(0, 70%, 0); opacity: 0; }
++  18%, 62% { transform: translate3d(0, 8%, 0); opacity: .7; }
++  80%      { transform: translate3d(0, 70%, 0); opacity: 0; }
++}
++@keyframes mk-brillo {           /* destello que recorre la faja de aguayo */
++  0%       { transform: translate3d(-30vw, 0, 0); }
++  45%, 100%{ transform: translate3d(105vw, 0, 0); }
++}
++@keyframes mk-flotar-logo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
++
++
++/* ═══ 🌱 JARDÍN MÁGICO · mariposas y pétalos ══════════════════ */
++:root[data-tema="jardin"]:not([data-anim="off"])::before {          /* mariposa */
++  content: '🦋'; content: '🦋' / ''; top: 16vh; left: 0; font-size: 1.7rem; opacity: .55;
++  animation: mk-vuelo 70s linear infinite;
++}
++:root[data-tema="jardin"]:not([data-anim="off"])::after {           /* mariposa (vuelve en sentido contrario) */
++  content: '🦋'; content: '🦋' / ''; top: 64vh; left: 0; font-size: 1.3rem; opacity: .45;
++  animation: mk-vuelo 95s linear -40s infinite reverse;
++}
++:root[data-tema="jardin"]:not([data-anim="off"]) body::before {     /* pétalo */
++  content: '🌸'; content: '🌸' / ''; top: 0; left: 28%; font-size: 1.2rem;
++  animation: mk-caer 38s linear infinite;
++}
++:root[data-tema="jardin"]:not([data-anim="off"]) body::after {      /* pétalo */
++  content: '🌸'; content: '🌸' / ''; top: 0; left: 76%; font-size: .95rem;
++  animation: mk-caer 52s linear -22s infinite;
++}
++:root[data-tema="jardin"]:not([data-anim="off"]) .sidebar-logo .logo-icon {   /* el 🌱 se mece */
++  transform-origin: 50% 90%;
++  animation: mk-aparecer .6s var(--ease-rebote, ease) .15s backwards, mk-mecer 4s ease-in-out .8s infinite;
++}
++
++
++/* ═══ 🐠 OCÉANO · olas, burbujas y un pez ═════════════════════ */
++:root[data-tema="oceano"]:not([data-anim="off"]) body::before {     /* ola de atrás */
++  content: ''; left: 0; bottom: 0; width: calc(100% + 1200px); height: 90px; opacity: .22;
++  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath fill='%2338BDF8' d='M0 40Q300 0 600 40T1200 40V80H0Z'/%3E%3C/svg%3E") repeat-x;
++  background-size: 1200px 100%;
++  animation: mk-ola-inversa 26s linear infinite;
++}
++:root[data-tema="oceano"]:not([data-anim="off"]) body::after {      /* ola de adelante */
++  content: ''; left: 0; bottom: 0; width: calc(100% + 1200px); height: 62px; opacity: .3;
++  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath fill='%230EA5E9' d='M0 40Q300 0 600 40T1200 40V80H0Z'/%3E%3C/svg%3E") repeat-x;
++  background-size: 1200px 100%;
++  animation: mk-ola 17s linear infinite;
++}
++:root[data-tema="oceano"]:not([data-anim="off"])::before {          /* burbujas que suben */
++  content: ''; left: 8%; bottom: 8vh; width: 9px; height: 9px; border-radius: 50%;
++  background: rgba(186, 230, 253, .55);
++  box-shadow: 14vw -10vh 0 1px rgba(186,230,253,.5),  31vw  4vh 0 3px rgba(186,230,253,.45),
++              52vw -16vh 0 0   rgba(186,230,253,.55), 67vw  0   0 2px rgba(186,230,253,.45),
++              84vw -7vh  0 1px rgba(186,230,253,.5);
++  animation: mk-burbujas 15s ease-in infinite;
++}
++:root[data-tema="oceano"]:not([data-anim="off"])::after {           /* pez que cruza */
++  content: '🐟'; content: '🐟' / ''; top: 46vh; left: 0; font-size: 1.5rem; opacity: .5;
++  animation: mk-nadar 48s linear infinite;
++}
++:root[data-tema="oceano"]:not([data-anim="off"]) .sidebar-logo .logo-icon {
++  animation: mk-aparecer .6s var(--ease-rebote, ease) .15s backwards, mk-flotar-logo 3.2s ease-in-out .8s infinite;
++}
++
++
++/* ═══ 🌅 DULCE ATARDECER · globos, degradado y arcoíris ═══════ */
++:root[data-tema="atardecer"]:not([data-anim="off"]) body::before {  /* el degradado respira despacio */
++  content: ''; inset: 0;
++  background: linear-gradient(120deg, rgba(251,146,60,.22), rgba(217,70,239,.16) 50%, rgba(253,230,138,.24));
++  animation: mk-pulso 13s ease-in-out infinite alternate;
++}
++:root[data-tema="atardecer"]:not([data-anim="off"]) body::after {   /* arcoíris que se asoma */
++  content: '🌈'; content: '🌈' / ''; right: 3vw; bottom: 0; font-size: 5rem;
++  animation: mk-arcoiris 30s ease-in-out infinite;
++}
++:root[data-tema="atardecer"]:not([data-anim="off"])::before {       /* globo */
++  content: '🎈'; content: '🎈' / ''; left: 7%; bottom: 0; font-size: 2rem;
++  animation: mk-globo 34s linear infinite;
++}
++:root[data-tema="atardecer"]:not([data-anim="off"])::after {        /* globo */
++  content: '🎈'; content: '🎈' / ''; left: 90%; bottom: 0; font-size: 1.6rem;
++  animation: mk-globo 46s linear -17s infinite;
++}
++
++
++/* ═══ 🌳 SELVA · hojas en las esquinas y luciérnagas ══════════ */
++:root[data-tema="selva"]:not([data-anim="off"])::before {           /* hoja, esquina superior derecha */
++  content: '🌿'; content: '🌿' / ''; top: -.5rem; right: 1rem; font-size: 3.4rem; opacity: .5;
++  transform-origin: 85% 0; animation: mk-hoja 6s ease-in-out infinite alternate;
++}
++:root[data-tema="selva"]:not([data-anim="off"])::after {            /* hoja, esquina inferior derecha */
++  content: '🍃'; content: '🍃' / ''; bottom: -.3rem; right: 2.2rem; font-size: 3rem; opacity: .45;
++  transform-origin: 85% 100%; animation: mk-hoja-b 7s ease-in-out -3s infinite alternate;
++}
++:root[data-tema="selva"]:not([data-anim="off"]) body::before {      /* luciérnagas */
++  content: ''; top: 0; left: 0; width: 5px; height: 5px; border-radius: 50%; background: #FACC15;
++  box-shadow: 0 0 9px 3px rgba(250,204,21,.85),
++              24vw 62vh 9px 3px rgba(250,204,21,.85), 41vw 18vh 9px 3px rgba(250,204,21,.85),
++              63vw 74vh 9px 3px rgba(250,204,21,.85), 78vw 35vh 9px 3px rgba(250,204,21,.85),
++              92vw 80vh 9px 3px rgba(250,204,21,.85), 12vw 88vh 9px 3px rgba(250,204,21,.85);
++  transform: translate3d(8vw, 30vh, 0);
++  animation: mk-luciernagas 9s ease-in-out infinite alternate;
++}
++:root[data-tema="selva"]:not([data-anim="off"]) body::after {       /* más luciérnagas, otro compás */
++  content: ''; top: 0; left: 0; width: 4px; height: 4px; border-radius: 50%; background: #BEF264;
++  box-shadow: 0 0 8px 3px rgba(190,242,100,.85),
++              18vw 40vh 8px 3px rgba(190,242,100,.85), 36vw 80vh 8px 3px rgba(190,242,100,.85),
++              55vw 12vh 8px 3px rgba(190,242,100,.85), 71vw 58vh 8px 3px rgba(190,242,100,.85),
++              88vw 22vh 8px 3px rgba(190,242,100,.85);
++  transform: translate3d(5vw, 55vh, 0);
++  animation: mk-luciernagas 12s ease-in-out -5s infinite alternate;
++}
++
++
++/* ═══ 🦙 ALTIPLANO · faja de aguayo con brillo y nubes ════════ */
++:root[data-tema="altiplano"]:not([data-anim="off"]) body::before {  /* faja de aguayo */
++  content: ''; top: 0; left: 0; right: 0; height: 6px; opacity: .9;
++  background: repeating-linear-gradient(90deg, #B45309 0 28px, #F59E0B 28px 56px, #0369A1 56px 84px, #DC2626 84px 112px, #16A34A 112px 140px);
++}
++:root[data-tema="altiplano"]:not([data-anim="off"]) body::after {   /* brillo que la recorre */
++  content: ''; top: 0; left: 0; width: 26vw; max-width: 320px; height: 6px;
++  background: linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent);
++  animation: mk-brillo 8s ease-in-out infinite;
++}
++:root[data-tema="altiplano"]:not([data-anim="off"])::before {       /* nube */
++  content: '☁️'; content: '☁️' / ''; top: 11vh; left: 0; font-size: 3.2rem; opacity: .5;
++  animation: mk-nube 110s linear infinite;
++}
++:root[data-tema="altiplano"]:not([data-anim="off"])::after {        /* nube */
++  content: '☁️'; content: '☁️' / ''; top: 34vh; left: 0; font-size: 2rem; opacity: .4;
++  animation: mk-nube 150s linear -60s infinite;
++}
++
++
++/* ═══ 🚀 ESPACIO · estrellas que titilan, fugaz y planeta ═════ */
++:root[data-tema="espacio"]:not([data-anim="off"]) body::before {    /* estrellas blancas */
++  content: ''; top: 0; left: 0; width: 2px; height: 2px; border-radius: 50%; background: #fff;
++  box-shadow: 6vw 9vh #fff, 17vw 31vh #fff, 29vw 14vh #fff, 38vw 52vh #fff, 47vw 8vh #fff,
++              58vw 38vh #fff, 66vw 66vh #fff, 74vw 21vh #fff, 83vw 47vh #fff, 91vw 12vh #fff,
++              12vw 71vh #fff, 52vw 86vh #fff, 95vw 78vh #fff;
++  animation: mk-titilar 2.8s ease-in-out infinite alternate;
++}
++:root[data-tema="espacio"]:not([data-anim="off"]) body::after {     /* estrellas violeta y cian */
++  content: ''; top: 0; left: 0; width: 2px; height: 2px; border-radius: 50%; background: #C4B5FD;
++  box-shadow: 10vw 22vh #C4B5FD, 22vw 6vh #67E8F9, 33vw 41vh #C4B5FD, 44vw 27vh #67E8F9,
++              55vw 61vh #C4B5FD, 63vw 11vh #67E8F9, 77vw 34vh #C4B5FD, 86vw 69vh #67E8F9,
++              4vw 58vh #67E8F9, 26vw 83vh #C4B5FD, 69vw 90vh #67E8F9;
++  animation: mk-titilar 3.7s ease-in-out -1.6s infinite alternate;
++}
++:root[data-tema="espacio"]:not([data-anim="off"])::before {         /* estrella fugaz */
++  content: ''; top: 4vh; right: 4vw; width: 130px; height: 2px; border-radius: 2px;
++  background: linear-gradient(90deg, transparent, rgba(255,255,255,.95));
++  box-shadow: 0 0 6px rgba(167,139,250,.8);
++  animation: mk-fugaz 17s linear 3s infinite;
++}
++:root[data-tema="espacio"]:not([data-anim="off"])::after {          /* planeta en órbita lenta */
++  content: '🪐'; content: '🪐' / ''; top: 14vh; right: 9vw; font-size: 2.6rem; opacity: .75;
++  animation: mk-orbita 80s linear infinite;
++}
++:root[data-tema="espacio"]:not([data-anim="off"]) .sidebar-logo .logo-icon {
++  animation: mk-aparecer .6s var(--ease-rebote, ease) .15s backwards, mk-flotar-logo 3.6s ease-in-out .8s infinite;
++}
++
++
++/* ═══ 🌙 NOCHE SUAVE · solo un respirar de luz, sin objetos ═══ */
++:root[data-tema="noche"]:not([data-anim="off"]) body::before {
++  content: ''; inset: 0;
++  background: radial-gradient(70vmax 45vmax at 78% -5%, rgba(94,234,212,.11), transparent 70%),
++              radial-gradient(60vmax 40vmax at 8% 105%, rgba(99,102,241,.10), transparent 70%);
++  animation: mk-pulso 11s ease-in-out infinite alternate;
++}
++
++
++/* ═══ 📒 PAPEL · nada decorativo: subrayados que se dibujan ═══ */
++:root[data-tema="papel"]:not([data-anim="off"]) .main-content a:not(.btn):not(.chip):not(.nav-item) {
++  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1.5px no-repeat;
++  transition: background-size .28s ease;
++}
++:root[data-tema="papel"]:not([data-anim="off"]) .main-content a:not(.btn):not(.chip):not(.nav-item):hover {
++  background-size: 100% 1.5px;
++}
++:root[data-tema="papel"]:not([data-anim="off"]) .page-tab { position: relative; }
++
++/* ═══ 👁️ ALTO CONTRASTE · ninguna animación, a propósito ═════════
++   (sin bloque de ambiente; además su regla de arriba anula el movimiento común) */
++
++
++/* Sistema en "reducir movimiento": nada de capas decorativas */
++@media (prefers-reduced-motion: reduce) {
++  :root::before, :root::after, body::before, body::after { display: none !important; }
++}
++
++
++/* ═══ Cambio de tema: reveal circular desde el botón ══════════════
++   js/tema.js usa View Transitions; la animación del círculo la hace JS. */
++::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
++::view-transition-old(root) { z-index: 1; }
++::view-transition-new(root) { z-index: 2; }
++/* navegadores sin View Transitions: fundido corto de colores */
++:root.tema-fundiendo *, :root.tema-fundiendo *::before, :root.tema-fundiendo *::after {
++  transition: background-color .4s ease, color .4s ease, border-color .4s ease, box-shadow .4s ease !important;
++}
++
++
++/* ═══ Interruptor "Animaciones" del selector de tema ══════════════ */
++.tema-anim {
++  display: flex; align-items: center; gap: .65rem; width: 100%;
++  padding: .45rem .6rem; border: none; border-radius: var(--radio-md);
++  background: none; color: var(--texto); cursor: pointer; text-align: left;
++  font: 700 var(--text-sm) var(--font-body);
++}
++.tema-anim:hover:not(:disabled) { background: var(--gris-100); }
++.tema-anim:focus-visible { outline: 3px solid rgba(var(--primario-rgb), .45); outline-offset: 1px; }
++.tema-anim:disabled { opacity: .65; cursor: not-allowed; }
++.tema-anim .tema-txt { flex: 1; min-width: 0; line-height: 1.2; }
++.tema-anim .tema-txt small { display: block; font-weight: 600; font-size: var(--text-xs); color: var(--texto-suave); }
++.tema-anim .tema-muestra-anim {
++  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; background: var(--turquesa-l);
++  display: flex; align-items: center; justify-content: center; font-size: .95rem;
++}
++.tema-switch {
++  position: relative; flex-shrink: 0; width: 38px; height: 22px; border-radius: 999px;
++  background: var(--gris-300); transition: background .2s ease;
++}
++.tema-switch i {
++  position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
++  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35);
++  transition: transform .22s var(--ease-rebote, ease);
++}
++.tema-anim[aria-checked="true"] .tema-switch { background: var(--turquesa); }
++.tema-anim[aria-checked="true"] .tema-switch i { transform: translateX(16px); }
++:root[data-tema="altocontraste"] .tema-switch { border: 2px solid #000; }
+diff --git a/frontend/js/api.js b/frontend/js/api.js
+index 06c64a7..379187d 100644
+--- a/frontend/js/api.js
++++ b/frontend/js/api.js
+@@ -212,7 +212,7 @@ const UI = {
+       box-shadow:0 8px 24px rgba(0,0,0,.12);
+       display:flex; align-items:center; gap:8px;
+       transform:translateY(60px); opacity:0;
+-      transition:all 300ms ease; max-width:360px;
++      transition:transform 420ms cubic-bezier(.34,1.56,.64,1), opacity 250ms ease; max-width:360px;
+       border:1.5px solid ${c.color}30;
+     `;
+     t.innerHTML = `<span>${c.icono}</span><span>${mensaje}</span>`;
+diff --git a/frontend/js/tema.js b/frontend/js/tema.js
+index 32f40b9..b25cd96 100644
+--- a/frontend/js/tema.js
++++ b/frontend/js/tema.js
+@@ -12,8 +12,17 @@
+    · Se sincroniza entre pestañas abiertas del mismo usuario.
+    · Los valores de cada tema viven en css/themes.css.
+ 
++   Animaciones (capas de movimiento, ver css/base.css y css/themes.css):
++   · <html data-anim="on|off"> las enciende o apaga. Hay un interruptor en el
++     selector de tema; la elección se guarda por dispositivo ('mk_anim'),
++     porque depende de qué tan potente es la tablet, no de quién la use.
++   · Si el sistema pide "reducir movimiento", quedan apagadas y no se pueden encender.
++   · <html data-oculto> se pone mientras la pestaña no se ve: el CSS pausa todo.
++
+    API:
+      Tema.actual()                    → id del tema activo
++     Tema.animaciones()               → true si las animaciones están activas
++     Tema.fijarAnimaciones(true|false)
+      Tema.aplicar('espacio')          → cambia y guarda el tema
+      Tema.montar(elemento, {variante}) → dibuja el selector dentro de elemento
+                                         variante: 'flotante' | 'sobre-color'
+@@ -26,6 +35,33 @@ const Tema = (() => {
+   const CLAVE_LOGIN     = 'mk_tema_login'; // pantalla de login (nadie identificado)
+   const CLAVE_ANTIGUA   = 'mk_tema';       // versión previa: una sola para todo el navegador
+   const POR_DEFECTO = 'jardin';
++  const CLAVE_ANIM    = 'mk_anim';       // 'on' | 'off' · por dispositivo
++
++  /* ── Animaciones: interruptor global ─────────────────────────── */
++  const mqReducir = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
++  const sistemaReduceMovimiento = () => !!(mqReducir && mqReducir.matches);
++
++  function animacionesActivas() {
++    if (sistemaReduceMovimiento()) return false;
++    try { return localStorage.getItem(CLAVE_ANIM) !== 'off'; } catch (_) { return true; }
++  }
++
++  function pintarAnimaciones() {
++    const activas = animacionesActivas();
++    document.documentElement.setAttribute('data-anim', activas ? 'on' : 'off');
++    document.querySelectorAll('.tema-anim').forEach(b => {
++      b.setAttribute('aria-checked', String(activas));
++      b.toggleAttribute('disabled', sistemaReduceMovimiento());
++      const nota = b.querySelector('small');
++      if (nota) nota.textContent = sistemaReduceMovimiento()
++        ? 'Tu dispositivo pidió menos movimiento' : 'Ambiente y movimiento';
++    });
++  }
++
++  function fijarAnimaciones(activas) {
++    try { localStorage.setItem(CLAVE_ANIM, activas ? 'on' : 'off'); } catch (_) {}
++    pintarAnimaciones();
++  }
+ 
+   /* Para agregar un tema: registrarlo acá y crear su bloque en themes.css */
+   /* grupo: cómo se agrupan en el menú · oscuro: activa el bloque data-modo="oscuro" */
+@@ -182,6 +218,80 @@ const Tema = (() => {
+     return document.documentElement.getAttribute('data-tema') || POR_DEFECTO;
+   }
+ 
++  /* Cambio de tema con transición: reveal circular desde el botón (View Transitions);
++     si el navegador no lo soporta, un fundido corto de colores. */
++  function cambiarConEfecto(id, origen) {
++    if (!animacionesActivas() || id === actual()) { aplicar(id); return; }
++    if (origen && typeof document.startViewTransition === 'function') {
++      const r = origen.getBoundingClientRect();
++      const x = r.left + r.width / 2, y = r.top + r.height / 2;
++      const radio = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
++      const vt = document.startViewTransition(() => aplicar(id));
++      vt.ready.then(() => document.documentElement.animate(
++        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radio}px at ${x}px ${y}px)`] },
++        { duration: 600, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' }
++      )).catch(() => {});
++      return;
++    }
++    const html = document.documentElement;
++    html.classList.add('tema-fundiendo');
++    aplicar(id);
++    setTimeout(() => html.classList.remove('tema-fundiendo'), 500);
++  }
++
++  /* ── Números que suben desde 0 ────────────────────────────────
++     Las tarjetas de estadísticas (.stat-info .valor) cuentan hacia su valor
++     cada vez que la página les escribe un número. No toca el valor real:
++     al terminar deja exactamente el texto que puso la página. */
++  const ultimoEscrito = new WeakMap();   // texto que escribió el propio contador
++  const rafContador   = new WeakMap();
++
++  function formatearNumero(v, dec, sepMil, sepDec) {
++    const [ent, frac] = v.toFixed(dec).split('.');
++    const miles = sepMil ? ent.replace(/\B(?=(\d{3})+(?!\d))/g, sepMil) : ent;
++    return frac ? miles + sepDec + frac : miles;
++  }
++
++  function contarHasta(el) {
++    const texto = el.textContent;
++    if (ultimoEscrito.get(el) === texto) return;          // lo escribió el contador
++    cancelAnimationFrame(rafContador.get(el));
++    if (!animacionesActivas() || document.hidden) return;
++    const m = texto.trim().match(/^([^\d-]*)(\d[\d.,]*)(.*)$/);
++    if (!m) return;                                        // "—", "Cargando…", etc.
++    const [, pre, num, post] = m;
++    const d = num.match(/([.,])(\d{1,2})$/);
++    const dec = d ? d[2].length : 0;
++    const sepDec = d ? d[1] : '';
++    const parteEntera = d ? num.slice(0, -(dec + 1)) : num;
++    const sepMil = (parteEntera.match(/[.,]/) || [''])[0];
++    const destino = parseFloat(parteEntera.replace(/[.,]/g, '') + (dec ? '.' + d[2] : ''));
++    if (!isFinite(destino) || destino <= 0) return;
++
++    const t0 = performance.now(), dur = 800;
++    const escribir = valor => { ultimoEscrito.set(el, valor); el.textContent = valor; };
++    const paso = ahora => {
++      const k = Math.min(1, (ahora - t0) / dur);
++      if (k >= 1) { escribir(texto); return; }             // el texto original, intacto
++      const suave = 1 - Math.pow(1 - k, 3);                // frena al llegar
++      escribir(pre + formatearNumero(destino * suave, dec, sepMil, sepDec) + post);
++      rafContador.set(el, requestAnimationFrame(paso));
++    };
++    escribir(pre + formatearNumero(0, dec, sepMil, sepDec) + post);
++    rafContador.set(el, requestAnimationFrame(paso));
++  }
++
++  if (typeof MutationObserver !== 'undefined') {
++    new MutationObserver(muts => {
++      const vistos = new Set();
++      for (const mu of muts) {
++        const nodo = mu.target.nodeType === 1 ? mu.target : mu.target.parentElement;
++        const el = nodo && nodo.closest && nodo.closest('.stat-info .valor');
++        if (el && !vistos.has(el)) { vistos.add(el); contarHasta(el); }
++      }
++    }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
++  }
++
+   /* ── Selector ─────────────────────────────────────────────── */
+   function cerrarTodos() {
+     document.querySelectorAll('.tema-selector.abierto').forEach(sel => {
+@@ -202,7 +312,8 @@ const Tema = (() => {
+           <span class="tema-nombre"></span>
+           <span class="tema-flecha" aria-hidden="true">▲</span>
+         </button>
+-        <div class="tema-menu" role="radiogroup" aria-label="Tema de la aplicación">
++        <div class="tema-menu">
++          <div role="radiogroup" aria-label="Tema de la aplicación">
+           ${TEMAS.map((x, n) => (n === 0 || TEMAS[n - 1].grupo !== x.grupo
+               ? `<div class="tema-menu-titulo" role="presentation">${x.grupo}</div>` : '') + `
+             <button type="button" class="tema-op" role="radio" data-id="${x.id}" aria-checked="false">
+@@ -211,6 +322,13 @@ const Tema = (() => {
+               <span class="tema-txt">${x.nombre}<small>${x.desc}</small></span>
+               <span class="tema-check" aria-hidden="true">✓</span>
+             </button>`).join('')}
++          </div>
++          <div class="tema-menu-titulo" role="presentation">Movimiento</div>
++          <button type="button" class="tema-anim" role="switch" aria-checked="true">
++            <span class="tema-muestra tema-muestra-anim" aria-hidden="true">✨</span>
++            <span class="tema-txt">Animaciones<small>Ambiente y movimiento</small></span>
++            <span class="tema-switch" aria-hidden="true"><i></i></span>
++          </button>
+         </div>
+       </div>`;
+ 
+@@ -228,14 +346,18 @@ const Tema = (() => {
+ 
+     sel.querySelectorAll('.tema-op').forEach(op => {
+       op.addEventListener('click', () => {
+-        aplicar(op.dataset.id);
++        cambiarConEfecto(op.dataset.id, btn);
+         cerrarTodos();
+         btn.focus();
+       });
+     });
+ 
++    /* el interruptor no cierra el menú: así se ve el efecto al probarlo */
++    sel.querySelector('.tema-anim').addEventListener('click', () => fijarAnimaciones(!animacionesActivas()));
++
+     marcarSelectores(t.id);
+     actualizarLogos(t);
++    pintarAnimaciones();
+   }
+ 
+   /* cerrar al hacer clic fuera o con Escape */
+@@ -245,14 +367,23 @@ const Tema = (() => {
+   /* sincronizar con otras pestañas abiertas */
+   window.addEventListener('storage', e => {
+     if (e.key === claveActual() && porId(e.newValue)) aplicar(e.newValue, { guardarEleccion: false });
++    if (e.key === CLAVE_ANIM) pintarAnimaciones();
++  });
++
++  /* pestaña no visible → el CSS pausa las animaciones (ahorra batería en las tablets) */
++  document.addEventListener('visibilitychange', () => {
++    document.documentElement.toggleAttribute('data-oculto', document.hidden);
+   });
++  if (mqReducir && mqReducir.addEventListener) mqReducir.addEventListener('change', pintarAnimaciones);
+ 
+   /* La clave única de la versión anterior era compartida por todo el navegador:
+      se descarta para que el tema de una persona no "herede" a la siguiente. */
+   try { localStorage.removeItem(CLAVE_ANTIGUA); } catch (_) {}
+ 
+   /* Aplicación inmediata (este script va en el <head>) */
++  pintarAnimaciones();
+   aplicar(leer(), { guardarEleccion: false });
+ 
+-  return { TEMAS, actual, aplicar, montar, alIniciarSesion };
++  return { TEMAS, actual, aplicar, montar, alIniciarSesion,
++           animaciones: animacionesActivas, fijarAnimaciones };
+ })();
+-- 
+2.43.0
+

@@ -118,6 +118,13 @@ Rol:      Administrador (acceso total al panel interno)
 - **Fredoka One** — Títulos, números grandes (`font-family: var(--font-display)`)
 - **Nunito** — Texto, etiquetas, botones (`font-family: var(--font-body)`)
 
+### Temas y animaciones
+- Los temas viven en `css/themes.css` (colores) y `js/tema.js` (lista, selector y persistencia por usuario).
+- **Movimiento común** (entradas escalonadas, botones, modales con rebote, contadores): `base.css`, sección *Movimiento común*.
+- **Ambiente de cada tema** (mariposas, olas, estrellas…): `themes.css`, sección *Animaciones*. Son capas fijas hechas con `::before/::after` de `<html>` y `<body>`, detrás del contenido y sin HTML extra. Un tema sin bloque queda sin ambiente; Alto contraste no tiene a propósito.
+- **Interruptor "Animaciones"** en el selector de tema: pone `<html data-anim="off">` y apaga todo (cada regla cuelga de `:not([data-anim="off"])`). Se guarda por dispositivo (`mk_anim`). Con "reducir movimiento" en el sistema queda apagado y deshabilitado.
+- Reglas: solo `transform` y `opacity`; las entradas usan `animation-fill-mode: backwards` (para no pisar el `:hover`); el contenido nunca se anima en bucle; la pestaña oculta pausa todo (`data-oculto`).
+
 ### Componentes disponibles (en `base.css`)
 - `.card` + `.card-header` + `.card-titulo` — Tarjeta estándar
 - `.stat-card` + `.stat-icon` + `.stat-info` — Tarjeta de estadística

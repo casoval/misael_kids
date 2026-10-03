@@ -1104,3 +1104,91 @@ img, svg, video { max-width: 100%; height: auto; }
 .flatpickr-day:hover { background: var(--turquesa-l); border-color: var(--turquesa-l); }
 .flatpickr-monthSelect-month.selected { background: var(--turquesa-d); }
 input.flatpickr-input[readonly] { cursor: pointer; }
+
+
+/* ══════════════════════════════════════════════════════════════
+   MOVIMIENTO COMÚN A TODOS LOS TEMAS
+   ──────────────────────────────────────────────────────────────
+   · Todo cuelga de  :root:not([data-anim="off"])  → el interruptor
+     "Animaciones" del selector de tema (js/tema.js) lo apaga entero.
+   · Solo transform y opacity: no fuerzan relayout ni gastan batería.
+   · Las entradas usan fill-mode "backwards": al terminar no dejan
+     ningún transform puesto, así el :hover de cada tarjeta sigue
+     funcionando.
+   · El ambiente propio de cada tema (mariposas, olas, estrellas…)
+     vive en css/themes.css.
+══════════════════════════════════════════════════════════════ */
+:root { --ease-rebote: cubic-bezier(.34, 1.56, .64, 1); --ease-suave: cubic-bezier(.22, 1, .36, 1); }
+
+@keyframes mk-entrar      { from { opacity: 0; transform: translateY(14px); } }
+@keyframes mk-entrar-fila { from { opacity: .25; transform: translateY(6px); } }
+@keyframes mk-aparecer    { from { opacity: 0; transform: scale(.6) rotate(-12deg); } }
+@keyframes mk-mecer       { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+
+/* 1 · Entrada escalonada: tarjetas de estadística y de niños, una tras otra */
+:root:not([data-anim="off"]) .grid-stats > *,
+:root:not([data-anim="off"]) .grid-tarjetas > * {
+  animation: mk-entrar .55s var(--ease-suave) backwards;
+}
+:root:not([data-anim="off"]) .grid-stats > :nth-child(2),
+:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(2) { animation-delay: .06s; }
+:root:not([data-anim="off"]) .grid-stats > :nth-child(3),
+:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(3) { animation-delay: .12s; }
+:root:not([data-anim="off"]) .grid-stats > :nth-child(4),
+:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(4) { animation-delay: .18s; }
+:root:not([data-anim="off"]) .grid-stats > :nth-child(5),
+:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(5) { animation-delay: .24s; }
+:root:not([data-anim="off"]) .grid-stats > :nth-child(6),
+:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(6) { animation-delay: .30s; }
+:root:not([data-anim="off"]) .grid-stats > :nth-child(n+7),
+:root:not([data-anim="off"]) .grid-tarjetas > :nth-child(n+7) { animation-delay: .36s; }
+
+/* Banner de bienvenida y tarjetas de contenido: una sola entrada */
+:root:not([data-anim="off"]) .bienvenida,
+:root:not([data-anim="off"]) .portal-header,
+:root:not([data-anim="off"]) .main-content .card {
+  animation: mk-entrar .6s var(--ease-suave) backwards;
+}
+:root:not([data-anim="off"]) .main-content .card { animation-delay: .1s; }
+
+/* Filas de tabla: cascada corta (solo las primeras, el resto aparece ya) */
+:root:not([data-anim="off"]) .tabla-wrap tbody tr { animation: mk-entrar-fila .35s ease-out backwards; }
+:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(2) { animation-delay: .03s; }
+:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(3) { animation-delay: .06s; }
+:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(4) { animation-delay: .09s; }
+:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(5) { animation-delay: .12s; }
+:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(6) { animation-delay: .15s; }
+:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(7) { animation-delay: .18s; }
+:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(8) { animation-delay: .21s; }
+:root:not([data-anim="off"]) .tabla-wrap tbody tr:nth-child(n+9) { animation-delay: .24s; }
+
+/* Logo del menú: aparece con un pequeño giro */
+:root:not([data-anim="off"]) .sidebar-logo .logo-icon { animation: mk-aparecer .6s var(--ease-rebote) .15s backwards; }
+
+/* Botones, chips y pestañas: se levantan al pasar el mouse y se hunden al presionar */
+:root:not([data-anim="off"]) .btn,
+:root:not([data-anim="off"]) button.chip,
+:root:not([data-anim="off"]) a.chip,
+:root:not([data-anim="off"]) .chip[onclick],
+:root:not([data-anim="off"]) .page-tab {
+  transition: transform .18s var(--ease-rebote), box-shadow var(--trans-fast),
+              background var(--trans-fast), border-color var(--trans-fast), color var(--trans-fast);
+}
+:root:not([data-anim="off"]) .btn-outline:hover:not(:disabled),
+:root:not([data-anim="off"]) .btn-amarillo:hover:not(:disabled),
+:root:not([data-anim="off"]) button.chip:hover, :root:not([data-anim="off"]) a.chip:hover,
+:root:not([data-anim="off"]) .chip[onclick]:hover { transform: translateY(-2px); }
+:root:not([data-anim="off"]) .btn:active:not(:disabled),
+:root:not([data-anim="off"]) button.chip:active, :root:not([data-anim="off"]) a.chip:active,
+:root:not([data-anim="off"]) .chip[onclick]:active { transform: translateY(1px) scale(.96); }
+
+/* Menú lateral: el icono da un saltito al pasar el mouse */
+:root:not([data-anim="off"]) .nav-item .nav-icon { transition: transform .25s var(--ease-rebote), background var(--trans-fast); }
+:root:not([data-anim="off"]) .nav-item:hover .nav-icon { transform: scale(1.18) rotate(-8deg); }
+:root:not([data-anim="off"]) .nav-item:hover { transform: translateX(3px); }
+:root:not([data-anim="off"]) .nav-item { transition: transform .2s var(--ease-suave), background var(--trans-fast), color var(--trans-fast); }
+
+/* Modales: se abren con un pequeño rebote (al cerrar, salida normal) */
+:root:not([data-anim="off"]) .modal-overlay.abierto .modal {
+  transition: transform .4s var(--ease-rebote);
+}
