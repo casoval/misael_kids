@@ -58,6 +58,108 @@ const Validar = {
   },
 };
 
+/* ── Vista: avatar del niño + selector Filas/Tarjetas ─────────
+   Uso típico en una página:
+     <div id="vt-algo"></div>                      ← aquí va el selector
+     <div id="wrap-filas">…tabla…</div>
+     <div id="wrap-tarjetas" class="grid-tarjetas" style="display:none"></div>
+
+     Vista.montar('algo', { filas:'wrap-filas', tarjetas:'wrap-tarjetas',
+                            selector:'vt-algo', alCambiar: v => pintar() });
+     // al pintar los datos, rellenar las dos vistas (Vista.actual('algo')).
+─────────────────────────────────────────────────────────────── */
+const Vista = {
+  _cfg: {},
+
+  _esc(t) {
+    return String(t ?? '').replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  },
+
+  /* Avatar: foto si existe, si no iniciales con color según género.
+     `n` puede ser un registro de la API (nino_nombre / nino_foto /
+     nino_genero) o un objeto {nombre, foto, genero}. */
+  avatar(n, tam = 'md') {
+    const nombre = n.nino_nombre ?? n.nombre_completo ?? n.nombre ?? '';
+    const foto   = n.nino_foto   ?? n.foto   ?? null;
+    const genero = n.nino_genero ?? n.genero ?? '';
+    const ini = (typeof UI !== 'undefined' && UI.iniciales) ? UI.iniciales(nombre) : (nombre[0] || '?');
+    const img = foto
+      ? `<img src="${this._esc(foto)}" alt="" loading="lazy" onerror="this.remove()">`
+      : '';
+    return `<span class="av-nino av-${tam} ${genero === 'F' ? 'av-f' : ''}" title="${this._esc(nombre)}">${this._esc(ini) || '?'}${img}</span>`;
+  },
+
+  /* Celda de tabla: avatar + nombre (+ línea secundaria opcional). */
+  celdaNino(n, sub = '', tam = 'sm') {
+    const nombre = n.nino_nombre ?? n.nombre_completo ?? n.nombre ?? '—';
+    return `<div class="celda-nino">${this.avatar(n, tam)}
+      <div class="celda-nino-txt"><div class="celda-nino-nombre">${this._esc(nombre)}</div>
+      ${sub ? `<div class="celda-nino-sub">${sub}</div>` : ''}</div></div>`;
+  },
+
+  /* Un dato "etiqueta / valor" para el cuerpo de una tarjeta. */
+  dato(etiqueta, valorHTML, ancho = false) {
+    return `<div class="tn-dato ${ancho ? 'tn-ancho' : ''}"><div class="tn-dato-lbl">${etiqueta}</div>
+      <div class="tn-dato-val">${valorHTML}</div></div>`;
+  },
+
+  /* Tarjeta completa. opts: {clase, sub, badges, datos, acciones} (HTML ya armado). */
+  tarjeta(n, opts = {}) {
+    const nombre = n.nino_nombre ?? n.nombre_completo ?? n.nombre ?? '—';
+    return `<div class="tarjeta-nino ${opts.clase || ''}">
+      <div class="tn-cabecera">${this.avatar(n, 'md')}
+        <div class="tn-titulo"><div class="tn-nombre">${this._esc(nombre)}</div>
+        ${opts.sub ? `<div class="tn-sub">${opts.sub}</div>` : ''}</div></div>
+      ${opts.badges ? `<div class="tn-badges">${opts.badges}</div>` : ''}
+      ${opts.datos ? `<div class="tn-datos">${opts.datos}</div>` : ''}
+      ${opts.acciones ? `<div class="tn-acciones">${opts.acciones}</div>` : ''}
+    </div>`;
+  },
+
+  /* Vista elegida (se recuerda por pestaña/sección en este navegador). */
+  actual(clave) {
+    try {
+      const v = localStorage.getItem('mk_vista_' + clave);
+      if (v === 'filas' || v === 'tarjetas') return v;
+    } catch (e) { /* sin almacenamiento: vale el valor por defecto */ }
+    return 'filas';
+  },
+
+  /* Registra la sección y pinta el selector. */
+  montar(clave, cfg) {
+    this._cfg[clave] = cfg;
+    const cont = document.getElementById(cfg.selector);
+    if (cont) {
+      cont.innerHTML = `<div class="vista-toggle" role="tablist" data-vista="${clave}">
+        <button type="button" data-v="filas"    onclick="Vista.cambiar('${clave}','filas')">☰ Filas</button>
+        <button type="button" data-v="tarjetas" onclick="Vista.cambiar('${clave}','tarjetas')">▦ Tarjetas</button>
+      </div>`;
+    }
+    this.aplicar(clave);
+  },
+
+  /* Muestra/oculta los contenedores y marca el botón activo. */
+  aplicar(clave) {
+    const cfg = this._cfg[clave];
+    if (!cfg) return;
+    const v = this.actual(clave);
+    const f = document.getElementById(cfg.filas);
+    const t = document.getElementById(cfg.tarjetas);
+    if (f) f.style.display = v === 'filas' ? '' : 'none';
+    if (t) t.style.display = v === 'tarjetas' ? '' : 'none';
+    document.querySelectorAll(`.vista-toggle[data-vista="${clave}"] button`).forEach(b =>
+      b.classList.toggle('activo', b.dataset.v === v));
+  },
+
+  cambiar(clave, v) {
+    try { localStorage.setItem('mk_vista_' + clave, v); } catch (e) { /* ignorar */ }
+    this.aplicar(clave);
+    const cfg = this._cfg[clave];
+    if (cfg && cfg.alCambiar) cfg.alCambiar(v);
+  },
+};
+
 /* ── CRUD genérico ────────────────────────────────────────── */
 const CRUD = {
   async cargarTabla({ endpoint, tbody, columnas, acciones, filtros = {} }) {

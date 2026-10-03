@@ -91,6 +91,8 @@ class CobroSerializer(serializers.ModelSerializer):
     nino_nombre    = serializers.CharField(
         source='inscripcion.nino.nombre_completo', read_only=True
     )
+    nino_foto      = serializers.ImageField(source='inscripcion.nino.foto', read_only=True)
+    nino_genero    = serializers.CharField(source='inscripcion.nino.genero', read_only=True)
     monto_pagado     = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     saldo_pendiente  = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     pagos            = PagoSerializer(many=True, read_only=True)
@@ -99,7 +101,7 @@ class CobroSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Cobro
         fields = [
-            'id', 'inscripcion', 'nino_nombre',
+            'id', 'inscripcion', 'nino_nombre', 'nino_foto', 'nino_genero',
             'tipo', 'tipo_display', 'periodo', 'periodo_inicio', 'periodo_fin',
             'monto_base', 'monto_final', 'monto_pagado', 'saldo_pendiente',
             'fecha_emision', 'fecha_vencimiento',
@@ -133,6 +135,8 @@ class CobroSerializer(serializers.ModelSerializer):
 
 class InscripcionSerializer(serializers.ModelSerializer):
     nino_nombre       = serializers.CharField(source='nino.nombre_completo', read_only=True)
+    nino_foto         = serializers.ImageField(source='nino.foto', read_only=True)
+    nino_genero       = serializers.CharField(source='nino.genero', read_only=True)
     sucursal_nombre   = serializers.CharField(source='sucursal.nombre', read_only=True)
     sala_nombre       = serializers.CharField(source='sala.nombre', read_only=True)
     turno_nombre      = serializers.CharField(source='turno.nombre', read_only=True)
@@ -146,7 +150,7 @@ class InscripcionSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Inscripcion
         fields = [
-            'id', 'nino', 'nino_nombre',
+            'id', 'nino', 'nino_nombre', 'nino_foto', 'nino_genero',
             'sucursal', 'sucursal_nombre',
             'sala', 'sala_nombre',
             'turno', 'turno_nombre',
@@ -265,6 +269,8 @@ class InscripcionSerializer(serializers.ModelSerializer):
 class InscripcionResumenSerializer(serializers.ModelSerializer):
     """Versión compacta para listas."""
     nino_nombre         = serializers.CharField(source='nino.nombre_completo', read_only=True)
+    nino_foto           = serializers.ImageField(source='nino.foto', read_only=True)
+    nino_genero         = serializers.CharField(source='nino.genero', read_only=True)
     sucursal_nombre     = serializers.CharField(source='sucursal.nombre', read_only=True)
     sala_nombre         = serializers.CharField(source='sala.nombre', read_only=True)
     turno_nombre        = serializers.CharField(source='turno.nombre', read_only=True)
@@ -290,7 +296,7 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Inscripcion
         fields = [
-            'id', 'nino', 'nino_nombre',
+            'id', 'nino', 'nino_nombre', 'nino_foto', 'nino_genero',
             'sucursal_nombre', 'sala_nombre', 'turno_nombre',
             'modalidad_pago', 'modalidad_display', 'tipo_ajuste',
             'costo_mensual_final', 'costo_diario_final',

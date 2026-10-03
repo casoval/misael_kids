@@ -166,10 +166,11 @@
           <h3 class="card-titulo">Lista de cobros</h3>
           <div style="display:flex;gap:var(--gap-sm);align-items:center">
             <span id="total-cobros" style="font-size:var(--text-sm);font-weight:700;color:var(--texto-suave)"></span>
+            <div id="vt-cobros" class="vista-barra"></div>
             <button class="btn btn-outline btn-sm" onclick="exportarCSV()">📥 CSV</button>
           </div>
         </div>
-        <div class="tabla-wrap">
+        <div class="tabla-wrap" id="filas-cobros">
           <table>
             <thead>
               <tr>
@@ -188,6 +189,7 @@
             </tbody>
           </table>
         </div>
+        <div id="tarjetas-cobros" class="grid-tarjetas" style="display:none"></div>
         <div class="paginacion" id="paginacion-cobros"></div>
       </div>
 
@@ -257,9 +259,12 @@
       <div class="card">
         <div class="card-header">
           <h3 class="card-titulo">Movimiento de caja</h3>
-          <span id="total-movimientos" style="font-size:var(--text-sm);font-weight:700;color:var(--texto-suave)"></span>
+          <div style="display:flex;gap:var(--gap-sm);align-items:center">
+            <span id="total-movimientos" style="font-size:var(--text-sm);font-weight:700;color:var(--texto-suave)"></span>
+            <div id="vt-movimientos" class="vista-barra"></div>
+          </div>
         </div>
-        <div class="tabla-wrap">
+        <div class="tabla-wrap" id="filas-movimientos">
           <table>
             <thead>
               <tr>
@@ -278,6 +283,7 @@
             </tbody>
           </table>
         </div>
+        <div id="tarjetas-movimientos" class="grid-tarjetas" style="display:none"></div>
         <div class="paginacion" id="paginacion-movimientos"></div>
       </div>
 
@@ -570,7 +576,9 @@ function cambiarPagMov(p) { movPaginaActual = p; cargarMovimientos(); }
 
 async function cargarMovimientos() {
   const tbody = document.getElementById('tbody-movimientos');
+  const tarj  = document.getElementById('tarjetas-movimientos');
   tbody.innerHTML = '<tr><td colspan="8"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  tarj.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
 
   const desde   = document.getElementById('mov-desde').value;
   const hasta   = document.getElementById('mov-hasta').value;
@@ -602,16 +610,18 @@ async function cargarMovimientos() {
         <div class="loader"><div style="font-size:2rem">🧾</div>
         <p style="color:var(--texto-suave);font-weight:600">Sin movimientos con esos filtros</p></div>
       </td></tr>`;
+      tarj.innerHTML = '<div class="tn-vacio">🧾 Sin movimientos con esos filtros</div>';
       document.getElementById('paginacion-movimientos').innerHTML = '';
       return;
     }
 
+    tarj.innerHTML = data.results.map(tarjetaMovimiento).join('');
     tbody.innerHTML = data.results.map(m => {
       const esPago = m.tipo === 'pago';
       return `
         <tr>
           <td style="font-size:var(--text-sm);font-weight:600">${UI.fecha(m.fecha)}</td>
-          <td style="font-weight:700;font-size:var(--text-sm)">${m.nino_nombre}</td>
+          <td>${Vista.celdaNino(m)}</td>
           <td style="font-size:var(--text-sm)">
             ${m.concepto}
             ${m.detalle ? `<div style="font-size:var(--text-xs);color:var(--texto-suave)">${m.detalle}</div>` : ''}
@@ -627,9 +637,7 @@ async function cargarMovimientos() {
           <td><span class="chip chip-gris">${m.metodo_display}</span></td>
           <td style="font-size:var(--text-sm);color:var(--texto-suave)">${m.registrado_por || '—'}</td>
           <td>
-            ${m.numero_recibo
-              ? `<button class="btn btn-outline btn-sm" onclick="verRecibo('${m.es_abono ? 'abono' : m.tipo}','${m.id}')">Ver recibo</button>`
-              : '—'}
+            ${botonReciboMov(m) || '—'}
           </td>
         </tr>
       `;
@@ -649,7 +657,33 @@ async function cargarMovimientos() {
     tbody.innerHTML = `<tr><td colspan="8">
       <div class="loader"><p style="color:var(--coral);font-weight:700">Error: ${err.message}</p></div>
     </td></tr>`;
+    tarj.innerHTML = `<div class="tn-vacio" style="color:var(--coral);font-weight:700">Error: ${Vista._esc(err.message)}</div>`;
   }
+}
+
+function botonReciboMov(m) {
+  return m.numero_recibo
+    ? `<button class="btn btn-outline btn-sm" onclick="verRecibo('${m.es_abono ? 'abono' : m.tipo}','${m.id}')">Ver recibo</button>`
+    : '';
+}
+
+function tarjetaMovimiento(m) {
+  const esPago = m.tipo === 'pago';
+  const tipoTxt = m.es_abono ? '💵 Abono por día' : esPago ? '💵 Pago' : '↩️ Devolución';
+  const monto = `<span class="tn-monto ${esPago ? 'pos' : 'neg'}">${esPago ? '+' : '−'} ${UI.moneda(m.monto)}</span>`;
+  return Vista.tarjeta(m, {
+    clase: esPago ? 'tn-ok' : 'tn-alerta',
+    sub: UI.fecha(m.fecha),
+    badges: `<span class="chip ${esPago ? 'chip-verde' : 'chip-coral'}">${tipoTxt}</span>
+             <span class="chip chip-gris">${Vista._esc(m.metodo_display)}</span>`,
+    datos: Vista.dato('Monto', monto)
+         + Vista.dato('Fecha', UI.fecha(m.fecha))
+         + Vista.dato('Concepto', Vista._esc(m.concepto), true)
+         + (m.detalle ? Vista.dato('Detalle', Vista._esc(m.detalle), true) : '')
+         + Vista.dato('Método', Vista._esc(m.metodo_display))
+         + Vista.dato('Registrado por', Vista._esc(m.registrado_por || '—')),
+    acciones: botonReciboMov(m),
+  });
 }
 
 // ── Visor de recibo (PDF) ──
@@ -678,12 +712,14 @@ function reciboAbrirEnPestana() {
 
 async function cargarCobros() {
   const tbody  = document.getElementById('tbody-cobros');
+  const tarj   = document.getElementById('tarjetas-cobros');
   const buscar = document.getElementById('buscar-cobro').value.trim();
   const estado = document.getElementById('filtro-estado').value;
   const tipo   = document.getElementById('filtro-tipo').value;
   const suc    = document.getElementById('filtro-sucursal-cobro').value;
 
   tbody.innerHTML = '<tr><td colspan="8"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  tarj.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
 
   let url = `/inscripciones/cobros/?page=${paginaActual}&page_size=${POR_PAGINA}&ordering=-fecha_emision`;
   if (buscar) url += `&search=${encodeURIComponent(buscar)}`;
@@ -703,23 +739,18 @@ async function cargarCobros() {
         <div class="loader"><div style="font-size:2rem">💰</div>
         <p style="color:var(--texto-suave);font-weight:600">Sin cobros con esos filtros</p></div>
       </td></tr>`;
+      tarj.innerHTML = '<div class="tn-vacio">💰 Sin cobros con esos filtros</div>';
       document.getElementById('paginacion-cobros').innerHTML = '';
       return;
     }
 
+    tarj.innerHTML = lista.map(tarjetaCobro).join('');
     tbody.innerHTML = lista.map(c => {
-      const hoy      = new Date().toISOString().split('T')[0];
-      const vencido  = c.estado === 'pendiente' && c.fecha_vencimiento < hoy;
-      // Si el cobro se cerró con "Cerrar con lo pagado" y luego una
-      // devolución ajustó el condonado, monto_condonado_inicial (foto del
-      // momento del cierre) ya no coincide con monto_condonado (vigente).
-      const condonadoAjustado = c.monto_condonado_inicial != null
-        && parseFloat(c.monto_condonado_inicial) !== parseFloat(c.monto_condonado);
+      const vencido  = cobroVencido(c);
+      const condonadoAjustado = cobroCondonadoAjustado(c);
       return `
         <tr>
-          <td>
-            <div style="font-weight:700;font-size:var(--text-sm)">${c.nino_nombre}</div>
-          </td>
+          <td>${Vista.celdaNino(c)}</td>
           <td><span class="chip chip-turquesa">${c.tipo_display}</span></td>
           <td style="font-size:var(--text-sm);font-weight:600">${c.periodo || '—'}</td>
           <td>
@@ -755,15 +786,7 @@ async function cargarCobros() {
               : '—'}
           </td>
           <td>
-            <div class="acciones-cobro">
-              ${c.estado !== 'pagado' && c.estado !== 'anulado' ? `
-                <button class="btn btn-primary btn-sm" onclick="abrirModalPago(${JSON.stringify(c).replace(/"/g,'&quot;')})">
-                  💰 ${c.estado === 'parcial' ? 'Abonar' : 'Pagar'}
-                </button>` : ''}
-              ${c.estado !== 'anulado' && c.estado !== 'pagado' ? `
-                <button class="btn btn-outline btn-sm" onclick="anularCobro('${c.id}')"
-                  title="Anular cobro">🚫</button>` : ''}
-            </div>
+            <div class="acciones-cobro">${botonesCobro(c)}</div>
           </td>
         </tr>
       `;
@@ -784,7 +807,60 @@ async function cargarCobros() {
     tbody.innerHTML = `<tr><td colspan="8">
       <div class="loader"><p style="color:var(--coral);font-weight:700">Error: ${err.message}</p></div>
     </td></tr>`;
+    tarj.innerHTML = `<div class="tn-vacio" style="color:var(--coral);font-weight:700">Error: ${Vista._esc(err.message)}</div>`;
   }
+}
+
+// ── Auxiliares compartidos entre fila y tarjeta de cobro ──
+function cobroVencido(c) {
+  const hoy = new Date().toISOString().split('T')[0];
+  return c.estado === 'pendiente' && c.fecha_vencimiento < hoy;
+}
+
+// Si el cobro se cerró con "Cerrar con lo pagado" y luego una devolución
+// ajustó el condonado, monto_condonado_inicial ya no coincide con monto_condonado.
+function cobroCondonadoAjustado(c) {
+  return c.monto_condonado_inicial != null
+    && parseFloat(c.monto_condonado_inicial) !== parseFloat(c.monto_condonado);
+}
+
+function botonesCobro(c) {
+  return `
+    ${c.estado !== 'pagado' && c.estado !== 'anulado' ? `
+      <button class="btn btn-primary btn-sm" onclick="abrirModalPago(${JSON.stringify(c).replace(/"/g,'&quot;')})">
+        💰 ${c.estado === 'parcial' ? 'Abonar' : 'Pagar'}
+      </button>` : ''}
+    ${c.estado !== 'anulado' && c.estado !== 'pagado' ? `
+      <button class="btn btn-outline btn-sm" onclick="anularCobro('${c.id}')"
+        title="Anular cobro">🚫</button>` : ''}`;
+}
+
+function tarjetaCobro(c) {
+  const vencido = cobroVencido(c);
+  let clase = 'tn-aviso';
+  if (c.estado === 'pagado') clase = 'tn-ok';
+  else if (c.estado === 'anulado') clase = 'tn-neutro';
+  else if (c.estado === 'parcial') clase = 'tn-violeta';
+  else if (vencido || c.estado === 'vencido') clase = 'tn-alerta';
+  const metodo = c.metodo_pago
+    ? (c.metodo_pago==='efectivo' ? '💵 Efectivo' : c.metodo_pago==='transferencia' ? '🏦 Transfer.' : '📱 QR')
+    : '';
+  const saldo = c.saldo_pendiente ?? (c.estado === 'pagado' || c.estado === 'anulado' ? 0 : c.monto_final);
+  const venc = `${UI.fecha(c.fecha_vencimiento)}${vencido ? ' <span style="color:var(--coral);font-size:.7rem;font-weight:700">⚠️ VENCIDO</span>' : ''}`;
+  const condon = cobroCondonadoAjustado(c)
+    ? Vista.dato('Condonación', `🔄 Cierre ajustado: ahora se condona ${UI.moneda(c.monto_condonado)} (antes ${UI.moneda(c.monto_condonado_inicial)})`, true)
+    : (parseFloat(c.monto_condonado || 0) > 0 ? Vista.dato('Condonado', UI.moneda(c.monto_condonado)) : '');
+  return Vista.tarjeta(c, {
+    clase,
+    sub: `${Vista._esc(c.tipo_display)}${c.periodo ? ' · ' + Vista._esc(c.periodo) : ''}`,
+    badges: `${UI.chipEstadoCobro(c.estado)}${metodo ? ` <span class="chip chip-gris">${metodo}</span>` : ''}`,
+    datos: Vista.dato('Monto final', `<span class="tn-monto">${UI.moneda(c.monto_final)}</span>`)
+         + Vista.dato('Pagado', UI.moneda(c.monto_pagado || 0))
+         + Vista.dato('Saldo', UI.moneda(saldo))
+         + Vista.dato('Vence', venc)
+         + condon,
+    acciones: botonesCobro(c),
+  });
 }
 
 function cambiarPag(p) { paginaActual = p; cargarCobros(); window.scrollTo(0,0); }
@@ -807,8 +883,7 @@ function abrirModalPago(cobro) {
   document.getElementById('info-cobro-modal').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
       <div>
-        <div style="font-weight:700;color:var(--texto)">${cobro.nino_nombre}</div>
-        <div style="font-size:var(--text-sm);color:var(--texto-suave)">${cobro.tipo_display} ${cobro.periodo||''}</div>
+        ${Vista.celdaNino(cobro, `${Vista._esc(cobro.tipo_display)} ${Vista._esc(cobro.periodo||'')}`, 'md')}
       </div>
       <div style="text-align:right">
         <div style="font-size:var(--text-xs);color:var(--texto-suave)">Monto total: ${UI.moneda(cobro.monto_final)}</div>
@@ -910,8 +985,7 @@ function abrirModalCondonar(cobro) {
   document.getElementById('info-cobro-condonar').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
       <div>
-        <div style="font-weight:700">${cobro.nino_nombre}</div>
-        <div style="font-size:var(--text-sm);color:var(--texto-suave)">${cobro.tipo_display} ${cobro.periodo||''}</div>
+        ${Vista.celdaNino(cobro, `${Vista._esc(cobro.tipo_display)} ${Vista._esc(cobro.periodo||'')}`, 'md')}
       </div>
       <div style="text-align:right">
         <div style="font-size:var(--text-xs);color:var(--texto-suave)">Ya abonado: ${UI.moneda(cobro.monto_pagado||0)}</div>
@@ -1057,6 +1131,9 @@ function exportarCSV() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+Vista.montar('cobros', { filas:'filas-cobros', tarjetas:'tarjetas-cobros', selector:'vt-cobros' });
+Vista.montar('movimientos', { filas:'filas-movimientos', tarjetas:'tarjetas-movimientos', selector:'vt-movimientos' });
 
 inicializar();
 </script>

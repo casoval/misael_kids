@@ -5,6 +5,8 @@ from .models import IncidenteSalud
 class IncidenteSaludSerializer(serializers.ModelSerializer):
     tipo_display         = serializers.CharField(source="get_tipo_display", read_only=True)
     nino_nombre          = serializers.CharField(source="nino.nombre_completo", read_only=True)
+    nino_foto            = serializers.ImageField(source="nino.foto", read_only=True)
+    nino_genero          = serializers.CharField(source="nino.genero", read_only=True)
     sucursal_nombre      = serializers.CharField(source="sucursal.nombre", read_only=True)
     reportado_por_nombre = serializers.SerializerMethodField()
 
@@ -13,7 +15,7 @@ class IncidenteSaludSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = IncidenteSalud
-        fields = ["id","nino","nino_nombre","reportado_por","reportado_por_nombre","sucursal","sucursal_nombre","fecha","hora","tipo","tipo_display","descripcion","accion_tomada","notificado_tutor","hora_notificacion","requirio_atencion_medica","created_at","updated_at"]
+        fields = ["id","nino","nino_nombre","nino_foto","nino_genero","reportado_por","reportado_por_nombre","sucursal","sucursal_nombre","fecha","hora","tipo","tipo_display","descripcion","accion_tomada","notificado_tutor","hora_notificacion","requirio_atencion_medica","created_at","updated_at"]
         # reportado_por lo pone el servidor (no el formulario): antes el front enviaba
         # null y el guardado siempre fallaba con "este campo no puede ser nulo".
         read_only_fields = ["id","reportado_por","created_at","updated_at"]

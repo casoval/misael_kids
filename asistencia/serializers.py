@@ -4,6 +4,8 @@ from .models import Asistencia
 
 class AsistenciaSerializer(serializers.ModelSerializer):
     nino_nombre    = serializers.CharField(source='inscripcion.nino.nombre_completo', read_only=True)
+    nino_foto      = serializers.ImageField(source='inscripcion.nino.foto', read_only=True)
+    nino_genero    = serializers.CharField(source='inscripcion.nino.genero', read_only=True)
     sala_nombre    = serializers.CharField(source='inscripcion.sala.nombre', read_only=True)
     turno_nombre   = serializers.CharField(source='inscripcion.turno.nombre', read_only=True)
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
@@ -11,7 +13,7 @@ class AsistenciaSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Asistencia
         fields = [
-            'id', 'inscripcion', 'nino_nombre', 'sala_nombre', 'turno_nombre',
+            'id', 'inscripcion', 'nino_nombre', 'nino_foto', 'nino_genero', 'sala_nombre', 'turno_nombre',
             'fecha', 'estado', 'estado_display',
             'hora_entrada', 'hora_salida',
             'entregado_por', 'retirado_por', 'retiro_autorizado',

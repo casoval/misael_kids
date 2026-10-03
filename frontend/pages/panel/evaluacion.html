@@ -146,6 +146,7 @@
             </select>
           </div>
         </div>
+        <div id="vt-evaluaciones" class="vista-barra"></div>
         <div id="contenido-eval">
           <div style="text-align:center;padding:var(--gap-2xl);color:var(--texto-suave)">
             <div style="font-size:3rem;margin-bottom:var(--gap-md)">👶</div>
@@ -160,9 +161,11 @@
           ⚠️ Los siguientes niños tienen hitos marcados como alerta de rezago.
           Se recomienda derivación al Centro Misael para evaluación profesional.
         </div>
+        <div id="vt-alertas" class="vista-barra"></div>
         <div id="lista-alertas-rezago">
           <div class="loader"><div class="spinner"></div></div>
         </div>
+        <div id="tarjetas-alertas" class="grid-tarjetas" style="display:none"></div>
       </div>
 
       <!-- Panel: Catálogo de hitos -->
@@ -292,6 +295,10 @@ if (!PUEDE_EVALUAR) document.getElementById('btn-nueva-eval').style.display = 'n
 
 let ninosData = [];
 let hitosData = [];
+// Selectores Filas/Tarjetas independientes. Los contenedores de "evaluaciones" se
+// recrean en cada carga, por eso se vuelve a llamar Vista.aplicar tras pintar.
+Vista.montar('evaluaciones', { filas:'eval-filas', tarjetas:'eval-tarjetas', selector:'vt-evaluaciones' });
+Vista.montar('alertas',      { filas:'lista-alertas-rezago', tarjetas:'tarjetas-alertas', selector:'vt-alertas' });
 
 const AREAS_ORDEN = ['motricidad_gruesa','motricidad_fina','lenguaje','social','cognitivo','autonomia'];
 const areaIcons = {
@@ -390,10 +397,7 @@ async function cargarEvalNino() {
       html = `
       <div class="card mb-lg">
         <div style="display:flex;align-items:center;gap:var(--gap-md);margin-bottom:var(--gap-md)">
-          <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--turquesa),var(--verde));
-            display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:1.2rem">
-            ${esc(UI.iniciales(nino?.nombre_completo||''))}
-          </div>
+          ${Vista.avatar(nino || { nombre: '' }, 'lg')}
           <div>
             <div style="font-family:var(--font-display);font-size:var(--text-2xl)">${esc(nino?.nombre_completo)}</div>
             <div style="font-size:var(--text-sm);color:var(--texto-suave)">${nino?.edad_en_meses} meses · ${evals.length} hitos evaluados</div>
@@ -412,6 +416,7 @@ async function cargarEvalNino() {
         </div>
       </div>
 
+      <div id="eval-filas">
       ${Object.keys(porArea).sort((a,b)=>ordenArea(a)-ordenArea(b)).map(codigo => {
         const grupo = porArea[codigo];
         const log = grupo.filter(x=>x.ev.estado==='logrado').length;
@@ -442,6 +447,23 @@ async function cargarEvalNino() {
               </div>`).join('')}
           </div>`;
       }).join('')}
+      </div>
+      <div id="eval-tarjetas" class="grid-tarjetas" style="display:none">
+      ${evals.slice().sort((a,b)=>ordenArea(a.ev.hito_area_codigo)-ordenArea(b.ev.hito_area_codigo)).map(({ev,total}) => Vista.tarjeta(ev, {
+        clase: ev.alerta_rezago ? 'tn-alerta' : ev.estado==='logrado' ? 'tn-ok' : ev.estado==='en_proceso' ? 'tn-aviso' : 'tn-neutro',
+        sub: esc(ev.hito_nombre),
+        badges: `<span class="chip ${chipEstado(ev.estado)}">${esc(ev.estado_display)}</span>
+          ${ev.alerta_rezago ? '<span class="chip chip-coral" title="Alerta de rezago">⚠️ Rezago</span>' : ''}`,
+        datos: Vista.dato('Área', (areaIcons[ev.hito_area_codigo]||'🌱')+' '+esc(ev.hito_area))
+             + Vista.dato('Fecha', esc(UI.fecha(ev.fecha))+(total>1?' · '+total+' evaluaciones':''))
+             + (ev.educadora_nombre ? Vista.dato('Educadora', esc(ev.educadora_nombre)) : '')
+             + (ev.observacion ? Vista.dato('Observación', '<em>'+esc(ev.observacion)+'</em>', true) : ''),
+        acciones: PUEDE_EVALUAR ? `
+          <button class="btn btn-outline btn-sm" title="Editar" onclick="editarEval('${ev.id}')">✏️</button>
+          <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)" title="Eliminar"
+            onclick="eliminarEval('${ev.id}')">🗑️</button>` : '',
+      })).join('')}
+      </div>
       ${PUEDE_EVALUAR ? `<div style="margin-top:var(--gap-md)">
         <button class="btn btn-primary" onclick="abrirNuevaEval('${ninoId}')">➕ Agregar evaluación</button>
       </div>` : ''}`;
@@ -467,31 +489,48 @@ async function cargarEvalNino() {
       </div>`;
     }
     cont.innerHTML = html;
+    Vista.aplicar('evaluaciones');
   } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
 }
 
 // ── Alertas de rezago ───────────────────────────────────────────────
 async function cargarAlertasRezago() {
   const cont = document.getElementById('lista-alertas-rezago');
+  const tarj = document.getElementById('tarjetas-alertas');
   UI.mostrarLoader(cont,'Cargando alertas...');
   try {
     const data = await API.get('/evaluacion/evaluaciones/alertas-rezago/');
     const lista = data.results||data;
     const badge = document.getElementById('badge-alertas');
     badge.textContent = lista.length; badge.style.display = lista.length?'':'none';
-    if (!lista.length) { UI.vacio(cont,'¡Sin alertas de rezago!','✅'); return; }
+    if (!lista.length) {
+      UI.vacio(cont,'¡Sin alertas de rezago!','✅');
+      tarj.innerHTML = '<div class="tn-vacio">¡Sin alertas de rezago!</div>';
+      return;
+    }
     const porNino = {};
     lista.forEach(ev => {
-      if (!porNino[ev.nino]) porNino[ev.nino] = { nombre:ev.nino_nombre, evals:[] };
+      if (!porNino[ev.nino]) porNino[ev.nino] = { nombre:ev.nino_nombre, nino_nombre:ev.nino_nombre, nino_foto:ev.nino_foto, nino_genero:ev.nino_genero, evals:[] };
       porNino[ev.nino].evals.push(ev);
     });
+    tarj.innerHTML = Object.values(porNino).map(grupo => Vista.tarjeta(grupo, {
+      clase: 'tn-alerta',
+      sub: '⚠️ '+grupo.evals.length+' alerta(s) de rezago',
+      datos: grupo.evals.map(ev => Vista.dato(esc(ev.hito_area)+' · '+esc(UI.fecha(ev.fecha)),
+        esc(ev.hito_nombre)+' <span class="chip chip-coral" style="font-size:.65rem">'+esc(ev.estado_display)+'</span>'
+        +(ev.observacion ? '<div style="font-style:italic">'+esc(ev.observacion)+'</div>' : ''), true)).join(''),
+      acciones: '<a href="/panel/misael-link/" class="btn btn-coral btn-sm">🔗 Derivar al Centro Misael</a>',
+    })).join('');
     cont.innerHTML = Object.values(porNino).map(grupo => `
       <div class="card mb-md" style="border-color:var(--coral)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--gap-md)">
-          <div>
+          <div style="display:flex;gap:10px;align-items:center">
+            ${Vista.avatar(grupo,'md')}
+            <div>
             <div style="font-weight:800;font-size:var(--text-lg)">${esc(grupo.nombre)}</div>
             <div style="font-size:var(--text-sm);color:var(--coral-d);font-weight:700">
               ⚠️ ${grupo.evals.length} alerta(s) de rezago
+            </div>
             </div>
           </div>
           <a href="/panel/misael-link/" class="btn btn-coral btn-sm">🔗 Derivar al Centro Misael</a>

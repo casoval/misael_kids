@@ -86,9 +86,12 @@
       <div class="card">
         <div class="card-header">
           <h3 class="card-titulo">Registro de incidentes</h3>
-          <span id="total-incidentes" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
+          <div style="display:flex;align-items:center;gap:var(--gap-md);flex-wrap:wrap">
+            <div id="vt-salud" class="vista-barra"></div>
+            <span id="total-incidentes" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
+          </div>
         </div>
-        <div class="tabla-wrap">
+        <div class="tabla-wrap" id="wrap-salud">
           <table>
             <thead><tr>
               <th>Niño/a</th><th>Tipo</th><th>Fecha y hora</th>
@@ -98,6 +101,7 @@
             <tbody id="tbody-incidentes"></tbody>
           </table>
         </div>
+        <div id="tarjetas-salud" class="grid-tarjetas" style="display:none"></div>
       </div>
     </div>
   </main>
@@ -214,6 +218,7 @@ const ahora = new Date().toTimeString().slice(0,5);
 document.getElementById('inc-fecha').value = hoy;
 document.getElementById('inc-hora').value  = ahora;
 let editandoId = null;
+Vista.montar('salud', { filas:'wrap-salud', tarjetas:'tarjetas-salud', selector:'vt-salud' });
 
 // Toggle hora notificación
 document.getElementById('inc-notificado').addEventListener('change', function() {
@@ -257,6 +262,7 @@ async function cargarStats() {
 
 async function cargar() {
   const tbody  = document.getElementById('tbody-incidentes');
+  const tarj   = document.getElementById('tarjetas-salud');
   const buscar = document.getElementById('f-buscar').value.trim();
   const tipo   = document.getElementById('f-tipo').value;
   const desde  = document.getElementById('f-desde').value;
@@ -273,13 +279,29 @@ async function cargar() {
     document.getElementById('total-incidentes').textContent = lista.length+' incidente(s)';
     if (!lista.length) {
       tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin incidentes registrados</td></tr>';
+      tarj.innerHTML = '<div class="tn-vacio">Sin incidentes registrados</div>';
       return;
     }
     const tipoIcons = { accidente:'🤕', enfermedad:'🤒', sintoma:'😟', medicacion:'💊' };
     const tipoColors = { accidente:'chip-coral', enfermedad:'chip-amarillo', sintoma:'chip-turquesa', medicacion:'chip-violeta' };
+    const accionesInc = inc => `
+            <button class="btn btn-outline btn-sm" onclick="verDetalle('${inc.id}')">👁 Ver</button>
+            <button class="btn btn-outline btn-sm" onclick="editar('${inc.id}')">✏️</button>
+            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="eliminar('${inc.id}','incidente de ${inc.nino_nombre}')">🗑️</button>`;
+    tarj.innerHTML = lista.map(inc => Vista.tarjeta(inc, {
+      clase: inc.requirio_atencion_medica ? 'tn-alerta' : 'tn-aviso',
+      sub: Vista._esc(UI.fecha(inc.fecha)+' · '+(inc.hora?.slice(0,5)||'—')),
+      badges: `<span class="chip ${tipoColors[inc.tipo]||'chip-gris'}">${tipoIcons[inc.tipo]||''} ${Vista._esc(inc.tipo_display)}</span>
+        ${inc.notificado_tutor ? '<span class="chip chip-verde">✅ Tutor notif.</span>' : '<span class="chip chip-coral">❌ Sin notificar</span>'}
+        ${inc.requirio_atencion_medica ? '<span class="chip chip-violeta">🏥 Atención médica</span>' : ''}`,
+      datos: Vista.dato('Descripción', Vista._esc(inc.descripcion?.slice(0,80)||'—')+(inc.descripcion?.length>80?'...':''), true)
+           + Vista.dato('Acción tomada', Vista._esc(inc.accion_tomada?.slice(0,60)||'—')+(inc.accion_tomada?.length>60?'...':''), true),
+      acciones: accionesInc(inc),
+    })).join('');
     tbody.innerHTML = lista.map(inc => `
       <tr>
-        <td style="font-weight:700">${inc.nino_nombre}</td>
+        <td>${Vista.celdaNino(inc)}</td>
         <td><span class="chip ${tipoColors[inc.tipo]||'chip-gris'}">${tipoIcons[inc.tipo]||''} ${inc.tipo_display}</span></td>
         <td>
           <div style="font-weight:700">${UI.fecha(inc.fecha)}</div>
@@ -298,11 +320,7 @@ async function cargar() {
           ? '<span class="chip chip-violeta">🏥 Sí</span>'
           : '<span class="chip chip-gris">No</span>'}</td>
         <td>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-outline btn-sm" onclick="verDetalle('${inc.id}')">👁 Ver</button>
-            <button class="btn btn-outline btn-sm" onclick="editar('${inc.id}')">✏️</button>
-            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
-              onclick="eliminar('${inc.id}','incidente de ${inc.nino_nombre}')">🗑️</button>
+          <div style="display:flex;gap:6px">${accionesInc(inc)}
           </div>
         </td>
       </tr>`).join('');
@@ -364,9 +382,12 @@ async function verDetalle(id) {
     cont.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;
         background:var(--coral-l);padding:var(--gap-md);border-radius:var(--radio-lg);margin-bottom:var(--gap-md)">
-        <div>
+        <div style="display:flex;gap:10px;align-items:center">
+          ${Vista.avatar(inc,'md')}
+          <div>
           <div style="font-family:var(--font-display);font-size:var(--text-xl)">${inc.nino_nombre}</div>
           <div style="font-size:var(--text-sm);color:var(--coral-d);font-weight:600">${tipoIcons[inc.tipo]||''} ${inc.tipo_display}</div>
+          </div>
         </div>
         <div style="text-align:right">
           <div style="font-weight:700">${UI.fecha(inc.fecha)}</div>

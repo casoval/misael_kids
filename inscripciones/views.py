@@ -16,6 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
 from accounts.permissions import PermisoFinanzas, filtrar_por_alcance
+from core.fotos import url_foto
 from .models import Inscripcion, Cobro, Pago, Devolucion, AbonoDiario, DiasContratados
 from .serializers import (
     InscripcionSerializer, InscripcionResumenSerializer, CobroSerializer,
@@ -988,6 +989,8 @@ class CobroViewSet(viewsets.ModelViewSet):
                 'fecha':          fecha.isoformat(),
                 'monto':          x.monto,
                 'nino_nombre':    insc.nino.nombre_completo,
+                'nino_foto':      url_foto(request, insc.nino.foto),
+                'nino_genero':    insc.nino.genero,
                 'concepto':       ('Abono por adelantado (por día)' if es_abono
                                    else f'{cobro_x.get_tipo_display()} {cobro_x.periodo}'.strip() if cobro_x
                                    else 'Devolución del saldo a favor'),

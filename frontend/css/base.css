@@ -685,3 +685,140 @@ tbody tr:hover { background: var(--gris-50); }
 .estado-activo   { background:var(--verde-l);   color:var(--verde-d);   }
 .estado-inactivo { background:var(--coral-l);   color:var(--coral-d);   }
 .estado-beca     { background:var(--violeta-l); color:var(--violeta-d); }
+
+/* ══════════════════════════════════════
+   AVATAR DEL NIÑO (foto o iniciales)
+   Se usa con Vista.avatar(...) de components.js
+══════════════════════════════════════ */
+
+.av-nino {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--turquesa), var(--violeta));
+  box-shadow: 0 0 0 2px var(--blanco), 0 1px 4px rgba(0,0,0,.15);
+  vertical-align: middle;
+}
+.av-nino.av-f { background: linear-gradient(135deg, var(--coral), var(--naranja)); }
+.av-nino img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.av-nino.av-xs { width: 28px;  height: 28px;  font-size: .7rem; }
+.av-nino.av-sm { width: 38px;  height: 38px;  font-size: .85rem; }
+.av-nino.av-md { width: 46px;  height: 46px;  font-size: 1rem; }
+.av-nino.av-lg { width: 72px;  height: 72px;  font-size: 1.5rem; }
+
+/* Nombre + avatar en una celda de tabla */
+.celda-nino { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.celda-nino .celda-nino-txt { min-width: 0; }
+.celda-nino .celda-nino-nombre { font-weight: 700; color: var(--texto); }
+.celda-nino .celda-nino-sub { font-size: var(--text-xs); color: var(--texto-suave); font-weight: 600; }
+
+/* ══════════════════════════════════════
+   SELECTOR DE VISTA: Filas | Tarjetas
+══════════════════════════════════════ */
+
+.vista-toggle {
+  display: inline-flex;
+  background: var(--gris-100);
+  border-radius: var(--radio-full);
+  padding: 3px;
+  gap: 2px;
+}
+.vista-toggle button {
+  border: none; background: transparent;
+  font-family: var(--font-body); font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--texto-suave);
+  padding: .4rem .9rem;
+  border-radius: var(--radio-full);
+  cursor: pointer;
+  transition: all var(--trans-fast);
+  white-space: nowrap;
+}
+.vista-toggle button:hover { color: var(--turquesa-d); }
+.vista-toggle button.activo {
+  background: var(--blanco);
+  color: var(--turquesa-d);
+  box-shadow: var(--sombra-sm);
+}
+.vista-barra {
+  display: flex; align-items: center; justify-content: flex-end;
+  margin-bottom: var(--gap-md);
+}
+
+/* ══════════════════════════════════════
+   TARJETAS DE NIÑO (vista alternativa a las filas)
+══════════════════════════════════════ */
+
+.grid-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: var(--gap-md);
+}
+.tarjeta-nino {
+  background: var(--blanco);
+  border: 1.5px solid var(--gris-100);
+  border-left: 5px solid var(--turquesa);
+  border-radius: var(--radio-xl);
+  box-shadow: var(--sombra-md);
+  padding: var(--gap-md);
+  display: flex; flex-direction: column; gap: var(--gap-sm);
+  transition: transform var(--trans-fast), box-shadow var(--trans-fast);
+}
+.tarjeta-nino:hover { transform: translateY(-2px); box-shadow: var(--sombra-lg); }
+.tarjeta-nino.tn-alerta { border-left-color: var(--coral); background: #FFF8F8; }
+.tarjeta-nino.tn-aviso  { border-left-color: var(--naranja); }
+.tarjeta-nino.tn-ok     { border-left-color: var(--verde, #22C55E); }
+.tarjeta-nino.tn-violeta{ border-left-color: var(--violeta); }
+.tarjeta-nino.tn-neutro { border-left-color: var(--gris-200, #E2E8F0); }
+
+.tn-cabecera { display: flex; align-items: center; gap: .75rem; }
+.tn-cabecera .tn-titulo { min-width: 0; flex: 1; }
+.tn-nombre {
+  font-family: var(--font-display);
+  font-size: var(--text-base, 1rem);
+  color: var(--texto);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.tn-sub { font-size: var(--text-xs); color: var(--texto-suave); font-weight: 600; margin-top: 2px; }
+.tn-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.tn-datos {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .45rem .75rem;
+  padding-top: var(--gap-sm);
+  border-top: 2px dashed var(--gris-100);
+}
+.tn-dato .tn-dato-lbl {
+  font-size: .65rem; text-transform: uppercase; letter-spacing: .06em;
+  font-weight: 700; color: var(--texto-suave);
+}
+.tn-dato .tn-dato-val { font-size: var(--text-sm); font-weight: 700; color: var(--texto); overflow-wrap: anywhere; }
+.tn-dato.tn-ancho { grid-column: 1 / -1; }
+.tn-monto { font-family: var(--font-display); font-size: var(--text-lg, 1.15rem); color: var(--texto); }
+.tn-monto.neg { color: var(--coral-d); }
+.tn-monto.pos { color: var(--verde-d, #15803D); }
+.tn-acciones {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding-top: var(--gap-sm);
+  border-top: 2px dashed var(--gris-100);
+  margin-top: auto;
+}
+.tn-vacio {
+  grid-column: 1 / -1; text-align: center; padding: 2rem;
+  color: var(--texto-suave); font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .grid-tarjetas { grid-template-columns: 1fr; }
+}

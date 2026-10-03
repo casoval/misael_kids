@@ -34,6 +34,8 @@ class HitoDesarrolloSerializer(serializers.ModelSerializer):
 
 class EvaluacionNinoSerializer(serializers.ModelSerializer):
     nino_nombre      = serializers.CharField(source="nino.nombre_completo", read_only=True)
+    nino_foto        = serializers.ImageField(source="nino.foto", read_only=True)
+    nino_genero      = serializers.CharField(source="nino.genero", read_only=True)
     hito_nombre      = serializers.CharField(source="hito.nombre", read_only=True)
     hito_area        = serializers.CharField(source="hito.get_area_display", read_only=True)
     # Código del área (p. ej. "lenguaje"): `hito_area` es el texto para mostrar, y el
@@ -44,7 +46,7 @@ class EvaluacionNinoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = EvaluacionNino
-        fields = ["id", "nino", "nino_nombre", "educadora", "educadora_nombre", "hito", "hito_nombre",
+        fields = ["id", "nino", "nino_nombre", "nino_foto", "nino_genero", "educadora", "educadora_nombre", "hito", "hito_nombre",
                   "hito_area", "hito_area_codigo", "fecha", "estado", "estado_display", "observacion",
                   "alerta_rezago", "created_at", "updated_at"]
         # La educadora NUNCA la decide el cliente: la pone el servidor según quién inicia sesión.

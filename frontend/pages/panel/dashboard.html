@@ -440,8 +440,8 @@ async function cargarAsistenciaHoy() {
     const visibles = data.slice(0, 8);
     cont.innerHTML = visibles.map(a => `
       <div class="nino-fila">
-        <div class="nino-avatar">${UI.iniciales(a.nino_nombre)}</div>
-        <div style="flex:1">
+        ${Vista.avatar(a, 'md')}
+        <div style="flex:1;min-width:0">
           <div class="nino-nombre">${a.nino_nombre}</div>
           <div class="nino-sala">${a.sala_nombre} · ${a.turno_nombre}</div>
         </div>

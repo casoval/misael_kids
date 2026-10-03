@@ -235,9 +235,10 @@
         <div class="card-header">
           <h3 class="card-titulo">Lista de inscripciones</h3>
           <span id="total-insc" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
+          <div id="vt-insc" class="vista-barra"></div>
         </div>
         <div id="alerta-deudas" style="margin-bottom:var(--gap-md)"></div>
-        <div class="tabla-wrap">
+        <div id="wrap-insc-filas" class="tabla-wrap">
           <table>
             <thead><tr>
               <th>Niño/a</th><th>Sucursal</th><th>Sala / Turno</th>
@@ -247,6 +248,7 @@
             <tbody id="tbody-insc"></tbody>
           </table>
         </div>
+        <div id="tarjetas-insc" class="grid-tarjetas" style="display:none"></div>
       </div>
     </div>
   </main>
@@ -798,6 +800,8 @@ let editandoConCalendario = false;   // editando una inscripción por día que y
 let calInsc = null;                  // calendario del modal de inscripción
 let ninosData  = [];
 
+Vista.montar('insc', { filas:'wrap-insc-filas', tarjetas:'tarjetas-insc', selector:'vt-insc' });
+
 async function inicializar() {
   await Promise.all([cargar(), cargarSelectoresInsc()]);
   cargarStats();
@@ -835,6 +839,7 @@ async function cargarStats() {
 
 async function cargar() {
   const tbody    = document.getElementById('tbody-insc');
+  const tarjetas = document.getElementById('tarjetas-insc');
   const buscar   = document.getElementById('f-buscar').value.trim();
   const sucursal = document.getElementById('f-sucursal').value;
   const sala     = document.getElementById('f-sala').value;
@@ -849,6 +854,7 @@ async function cargar() {
   if (activa)   url += '&activa='+activa;
   if (estadoPago) url += '&estado_pago='+estadoPago;
   tbody.innerHTML = '<tr><td colspan="10"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  tarjetas.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
     const data  = await API.get(url);
     const lista = data.results||data;
@@ -856,38 +862,61 @@ async function cargar() {
     document.getElementById('total-insc').textContent = (data.count||lista.length)+' inscripción(es)';
     if (!lista.length) {
       tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin inscripciones</td></tr>';
+      tarjetas.innerHTML = '<div class="tn-vacio">Sin inscripciones</div>';
       return;
     }
-    const ajusteLabel = { ninguno:'—', descuento_porcentaje:'% Desc.', descuento_monto:'$ Desc.', beca:'🎓 Beca' };
     const conDeuda = lista.filter(i => i.estado_pago && i.estado_pago.nivel === 'deuda');
     document.getElementById('alerta-deudas').innerHTML = conDeuda.length
       ? `<div class="alerta alerta-peligro" style="font-weight:700">⚠️ ${conDeuda.length} inscripción(es) con deuda pendiente — recuerda que el jardín cobra por adelantado:
           <ul style="margin:6px 0 0 18px;font-weight:600">${conDeuda.map(i =>
             `<li>${i.nino_nombre}: debe ${UI.moneda(i.estado_pago.deuda_total != null ? i.estado_pago.deuda_total : i.estado_pago.falta_pagar)}${parseFloat(i.estado_pago.deuda_anterior) > 0 ? ' <small>(incluye Bs. ' + parseFloat(i.estado_pago.deuda_anterior).toFixed(2) + ' de una inscripción anterior)</small>' : ''}</li>`).join('')}</ul></div>`
       : '';
+    tarjetas.innerHTML = lista.map(htmlTarjetaInsc).join('');
     tbody.innerHTML = lista.map(i => `
       <tr class="${(i.estado_pago && i.estado_pago.nivel === 'deuda') || (!i.activa && parseFloat(i.deuda_cerrada) > 0) ? 'fila-deuda' : ''}">
-        <td style="font-weight:700">${i.nino_nombre}</td>
+        <td style="font-weight:700">${Vista.celdaNino(i)}</td>
         <td style="font-size:var(--text-xs)">${i.sucursal_nombre}</td>
         <td>
           <div style="font-weight:700;font-size:var(--text-sm)">${i.sala_nombre}</div>
           <div style="font-size:var(--text-xs);color:var(--texto-suave)">${i.turno_nombre}</div>
         </td>
         <td><span class="chip ${i.modalidad_pago==='mensual'?'chip-turquesa':'chip-amarillo'}">${i.modalidad_display}</span></td>
-        <td>
-          ${i.modalidad_pago==='diaria'
-            ? `<div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_diario_final)} <span style="font-size:var(--text-xs);color:var(--texto-suave)">/ día</span></div>
-               <div style="font-size:var(--text-xs);color:var(--texto-suave)">${i.dias_semana_display}</div>`
-            : `<div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_mensual_final)}</div>
-               ${i.tipo_ajuste!=='ninguno'?'<div style="font-size:var(--text-xs);text-decoration:line-through;color:var(--texto-suave)">'+UI.moneda(i.costo_mensual)+'</div>':''}`}
-        </td>
-        <td>${i.tipo_ajuste!=='ninguno'?'<span class="chip chip-violeta">'+ajusteLabel[i.tipo_ajuste]+'</span>':'—'}</td>
+        <td>${htmlCostoInsc(i)}</td>
+        <td>${htmlAjusteInsc(i)}</td>
         <td>${UI.fecha(i.fecha_inicio)}</td>
-        <td>${i.activa?'<span class="chip chip-verde">Activa</span>':'<span class="chip chip-coral">Dada de baja</span>'}</td>
+        <td>${htmlEstadoInsc(i)}</td>
         <td>${htmlEstadoPago(i)}</td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn btn-outline btn-sm" onclick="editar('${i.id}')">Editar</button>
+            ${htmlAccionesInsc(i)}
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="10"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+  }
+}
+
+const AJUSTE_LABEL = { ninguno:'—', descuento_porcentaje:'% Desc.', descuento_monto:'$ Desc.', beca:'🎓 Beca' };
+
+function htmlCostoInsc(i) {
+  return i.modalidad_pago==='diaria'
+    ? `<div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_diario_final)} <span style="font-size:var(--text-xs);color:var(--texto-suave)">/ día</span></div>
+       <div style="font-size:var(--text-xs);color:var(--texto-suave)">${i.dias_semana_display}</div>`
+    : `<div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_mensual_final)}</div>
+       ${i.tipo_ajuste!=='ninguno'?'<div style="font-size:var(--text-xs);text-decoration:line-through;color:var(--texto-suave)">'+UI.moneda(i.costo_mensual)+'</div>':''}`;
+}
+
+function htmlAjusteInsc(i) {
+  return i.tipo_ajuste!=='ninguno'?'<span class="chip chip-violeta">'+AJUSTE_LABEL[i.tipo_ajuste]+'</span>':'—';
+}
+
+function htmlEstadoInsc(i) {
+  return i.activa?'<span class="chip chip-verde">Activa</span>':'<span class="chip chip-coral">Dada de baja</span>';
+}
+
+function htmlAccionesInsc(i) {
+  return `<button class="btn btn-outline btn-sm" onclick="editar('${i.id}')">Editar</button>
             <button class="btn btn-sm" style="background:var(--amarillo-l);color:var(--amarillo-d);border:1.5px solid var(--amarillo)"
               onclick="abrirPagos('${i.id}','${i.nino_nombre}','${i.sala_nombre} · ${i.turno_nombre}','${i.modalidad_pago}')">💳 Pagos</button>
             <button class="btn btn-outline btn-sm" title="Todo el historial de cobros y pagos del niño, aunque cambie de modalidad" onclick="abrirHistorial('${i.id}')">📚 Historial</button>
@@ -896,13 +925,21 @@ async function cargar() {
             <button class="btn btn-sm" style="background:var(--violeta-l);color:var(--violeta-d);border:1.5px solid var(--violeta-d)"
               onclick="abrirCambiarModalidad('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')">${i.modalidad_pago==='diaria'?'📅 Pasar a mensual':'📅 Pasar a por día'}</button>` : ''}
             ${i.activa ? `<button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
-              onclick="abrirBaja('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')">Dar de baja</button>` : ''}
-          </div>
-        </td>
-      </tr>`).join('');
-  } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="10"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
-  }
+              onclick="abrirBaja('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')">Dar de baja</button>` : ''}`;
+}
+
+function htmlTarjetaInsc(i) {
+  const e = i.estado_pago;
+  const deuda = (e && e.nivel === 'deuda') || (!i.activa && parseFloat(i.deuda_cerrada) > 0);
+  const clase = deuda ? 'tn-alerta' : (e && e.nivel === 'por_iniciar') ? 'tn-aviso' : (e && e.nivel === 'al_dia') ? 'tn-ok' : '';
+  const badges = `<span class="chip ${i.modalidad_pago==='mensual'?'chip-turquesa':'chip-amarillo'}">${i.modalidad_display}</span> ${htmlEstadoInsc(i)}`
+    + (i.tipo_ajuste!=='ninguno' ? ' ' + htmlAjusteInsc(i) : '');
+  const datos = Vista.dato('Sucursal', i.sucursal_nombre)
+    + Vista.dato('Sala / Turno', `${i.sala_nombre}<br><small>${i.turno_nombre}</small>`)
+    + Vista.dato('Costo mensual', htmlCostoInsc(i))
+    + Vista.dato('Inicio', UI.fecha(i.fecha_inicio))
+    + Vista.dato('Estado de pago', htmlEstadoPago(i), true);
+  return Vista.tarjeta(i, { clase, sub: `${i.sala_nombre} · ${i.turno_nombre}`, badges, datos, acciones: htmlAccionesInsc(i) });
 }
 
 // El estado de pago solo existe en inscripciones activas: al filtrarlo se pasa
@@ -1494,7 +1531,8 @@ async function abrirPagos(id, ninoNombre, salaTurno, modalidad) {
   pgRefrescarLista = false;
   const hoy = new Date();
   pgAnio = hoy.getFullYear(); pgMes = hoy.getMonth() + 1;
-  document.getElementById('pg-nombre').textContent = ninoNombre;
+  const insc = (window.inscCache || {})[id] || { nino_nombre: ninoNombre };
+  document.getElementById('pg-nombre').innerHTML = Vista.celdaNino({ ...insc, nino_nombre: ninoNombre }, '', 'md');
   document.getElementById('pg-sala').textContent = salaTurno;
   document.getElementById('pg-resumen').innerHTML = '';
   document.getElementById('pg-contenido').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
@@ -2153,10 +2191,11 @@ async function pgConfirmarCondonar() {
 
 let reciboBlobUrlActual = null;
 
-let hcData = null, hcFiltro = 'todo';
+let hcData = null, hcFiltro = 'todo', hcInsc = null;
 
 async function abrirHistorial(id) {
   hcFiltro = 'todo';
+  hcInsc = (window.inscCache || {})[id] || null;
   document.getElementById('hc-contenido').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   UI.abrirModal('modal-historial');
   try {
@@ -2215,7 +2254,7 @@ function hcPintar() {
     </div>`;
   }).join('') : '<p style="color:var(--texto-suave);font-size:var(--text-sm)">No hay movimientos en esta categoría.</p>';
   document.getElementById('hc-contenido').innerHTML = `
-    <div style="font-weight:800;font-size:var(--text-lg)">${h.nino}</div>
+    <div style="font-weight:800;font-size:var(--text-lg)">${Vista.celdaNino({ nino_nombre: h.nino, nino_foto: h.nino_foto || (hcInsc && hcInsc.nino_foto) || null, nino_genero: h.nino_genero || (hcInsc && hcInsc.nino_genero) || '' }, '', 'md')}</div>
     <div class="pg-nota">Aquí está todo lo económico del niño, aunque haya cambiado de modalidad, sala o turno. Verde = dinero recibido, rojo = dinero devuelto, ámbar = cobro generado.</div>
     ${tot}
     <details open><summary style="cursor:pointer;font-weight:700;font-size:var(--text-sm);margin-bottom:6px">Inscripciones (${h.inscripciones.length})</summary>${inscs}</details>
