@@ -1986,3 +1986,156 @@ class ReinscripcionConDeudaTests(PorDiaBase):
         self.assertIn('administrador de Django', str(r.data))
         self.assertTrue(Inscripcion.objects.filter(pk=m.pk).exists())
 
+
+
+# ═══════════════════════════════════════════════════════════════════
+class EditarPrecioMensualTests(PorDiaBase):
+    """Editar el precio de una inscripción mensual no puede dejar su cobro abierto con el precio viejo."""
+
+    def _mensual(self):
+        r = self.client.post(URL_INSC, {
+            'nino': str(self._otro_nino().id), 'sucursal': str(self.sucursal.id), 'sala': str(self.sala.id),
+            'turno': str(self.turno.id), 'modalidad_pago': 'mensual', 'fecha_inicio': self.hoy.isoformat(),
+            'costo_mensual': '650.00', 'costo_diario': '40.00', 'tipo_ajuste': 'ninguno', 'activa': True,
+        }, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        return Inscripcion.objects.get(pk=r.data['id'])
+
+    def test_cobro_sin_pagos_sigue_el_precio_editado(self):
+        insc = self._mensual()
+        cobro = Cobro.objects.get(inscripcion=insc)
+        self.assertEqual(cobro.monto_final, dec(650))
+        r = self.client.patch(f'{URL_INSC}{insc.id}/', {'costo_mensual': '700.00'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        cobro.refresh_from_db()
+        self.assertEqual((cobro.monto_base, cobro.monto_final), (dec(700), dec(700)))
+
+    def test_cobro_con_pagos_no_se_toca(self):
+        insc = self._mensual()
+        cobro = Cobro.objects.get(inscripcion=insc)
+        Pago.objects.create(cobro=cobro, monto=dec(650), metodo_pago='efectivo',
+                            fecha_pago=self.hoy, registrado_por=self.staff)
+        cobro.refresh_from_db()
+        cobro.recalcular_estado()      # la API lo hace al registrar el pago; aquí se crea directo
+        self.assertEqual(cobro.estado, Cobro.ESTADO_PAGADO)
+        self.client.patch(f'{URL_INSC}{insc.id}/', {'costo_mensual': '750.00'}, format='json')
+        cobro.refresh_from_db()
+        self.assertEqual(cobro.monto_final, dec(650))
+        self.assertEqual(cobro.estado, Cobro.ESTADO_PAGADO)
+
+    def test_editar_otro_campo_no_cambia_cobros(self):
+        insc = self._mensual()
+        cobro = Cobro.objects.get(inscripcion=insc)
+        self.client.patch(f'{URL_INSC}{insc.id}/', {'motivo_ajuste': 'nota'}, format='json')
+        cobro.refresh_from_db()
+        self.assertEqual(cobro.monto_final, dec(650))
+
+    def test_lista_trae_precio_de_la_inscripcion_y_del_turno(self):
+        insc = self._mensual()
+        Inscripcion.objects.filter(pk=insc.pk).update(costo_mensual=dec(750))
+        r = self.client.get(URL_INSC, {'page_size': 50})
+        fila = next(x for x in r.data['results'] if x['id'] == str(insc.id))
+        self.assertEqual(dec(fila['costo_mensual']), dec(750))
+        self.assertEqual(dec(fila['turno_costo_mensual']), dec(650))
+
+
+# ═══════════════════════════════════════════════════════════════════
+class AjustarMontoCobroTests(PorDiaBase):
+    """Poner un monto nuevo a un cobro (precio escrito a mano, cambio de tarifa...)."""
+
+    def setUp(self):
+        super().setUp()
+        self.ins = self._inscribir(self._otro_nino(), modalidad=Inscripcion.MODALIDAD_MENSUAL, fecha_inicio=self.hoy)
+        self.ins.costo_mensual = dec(750)                       # alguien lo escribió a mano
+        self.ins.save()
+        self.cobro = generar_ciclo_mensual(self.ins, ciclo_num=0, usuario=self.staff)
+        self.url = f'{URL_COBROS}{self.cobro.id}/ajustar-monto/'
+
+    def pagar(self, monto):
+        r = self.client.post(f'{URL_COBROS}{self.cobro.id}/registrar-pago/',
+                             {'monto': str(monto), 'metodo_pago': 'efectivo'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.cobro.refresh_from_db()
+
+    def test_sin_pagos_baja_el_monto_y_deja_nota(self):
+        r = self.client.post(self.url, {'nuevo_monto': '650', 'motivo': 'Precio mal escrito'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.cobro.refresh_from_db()
+        self.assertEqual((self.cobro.monto_base, self.cobro.monto_final), (dec(650), dec(650)))
+        self.assertIn('Precio mal escrito', self.cobro.observacion)
+        self.assertIn('750', self.cobro.observacion)
+
+    def test_cobro_pagado_con_precio_de_mas_pasa_el_sobrante_a_la_cuenta(self):
+        self.pagar(750)
+        self.assertEqual(self.cobro.estado, Cobro.ESTADO_PAGADO)
+        r = self.client.post(self.url, {'nuevo_monto': '650', 'motivo': 'Era 650'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.cobro.refresh_from_db()
+        self.assertEqual(self.cobro.monto_final, dec(650))
+        self.assertEqual(self.cobro.estado, Cobro.ESTADO_PAGADO)
+        self.assertEqual(dec(r.data['ajuste']['a_favor']), dec(100))
+        self.assertEqual(saldo_a_favor(self.ins), dec(100))     # los 100 quedan a favor del niño, sin tocar la caja
+
+    def test_cobro_pagado_con_precio_de_menos_queda_parcial(self):
+        self.ins.costo_mensual = dec(650); self.ins.save()
+        c = Cobro.objects.get(pk=self.cobro.pk); c.monto_base = c.monto_final = dec(650); c.save()
+        self.pagar(650)
+        r = self.client.post(self.url, {'nuevo_monto': '750', 'motivo': 'Era 750'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.cobro.refresh_from_db()
+        self.assertEqual(self.cobro.estado, Cobro.ESTADO_PARCIAL)
+        self.assertEqual(dec(r.data['ajuste']['por_cobrar']), dec(100))
+
+    def test_actualizar_plan_cambia_el_precio_de_la_inscripcion(self):
+        r = self.client.post(self.url, {'nuevo_monto': '650', 'motivo': 'x', 'actualizar_plan': True}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        self.ins.refresh_from_db()
+        self.assertEqual(self.ins.costo_mensual, dec(650))
+
+    def test_sin_actualizar_plan_la_inscripcion_no_cambia(self):
+        self.client.post(self.url, {'nuevo_monto': '650', 'motivo': 'x'}, format='json')
+        self.ins.refresh_from_db()
+        self.assertEqual(self.ins.costo_mensual, dec(750))
+
+    def test_con_beca_no_deja_actualizar_el_plan(self):
+        self.ins.tipo_ajuste = Inscripcion.AJUSTE_DESCUENTO_MONTO; self.ins.monto_ajuste = dec(50); self.ins.save()
+        r = self.client.post(self.url, {'nuevo_monto': '650', 'motivo': 'x', 'actualizar_plan': True}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_validaciones(self):
+        for datos in ({'motivo': 'x'}, {'nuevo_monto': 'abc', 'motivo': 'x'}, {'nuevo_monto': '-5', 'motivo': 'x'},
+                      {'nuevo_monto': '650'}, {'nuevo_monto': '750', 'motivo': 'x'}):      # sin monto / inválido / negativo / sin motivo / igual
+            r = self.client.post(self.url, datos, format='json')
+            self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST, datos)
+
+    def test_cobro_cerrado_con_lo_pagado_o_anulado_no_se_ajusta(self):
+        self.pagar(300)
+        self.client.post(f'{URL_COBROS}{self.cobro.id}/cerrar-con-lo-pagado/', {'motivo': 'acuerdo'}, format='json')
+        r = self.client.post(self.url, {'nuevo_monto': '650', 'motivo': 'x'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        Cobro.objects.filter(pk=self.cobro.pk).update(estado=Cobro.ESTADO_ANULADO, monto_condonado_inicial=None)
+        r = self.client.post(self.url, {'nuevo_monto': '650', 'motivo': 'x'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cobro_diario_no_se_ajusta_y_tutor_no_puede(self):
+        diario = Cobro.objects.create(inscripcion=self.insc, tipo=Cobro.TIPO_DIARIO, periodo=self.hoy.isoformat(),
+                                      monto_base='40', monto_final='40', fecha_vencimiento=self.hoy)
+        r = self.client.post(f'{URL_COBROS}{diario.id}/ajustar-monto/', {'nuevo_monto': '30', 'motivo': 'x'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.client.force_authenticate(self.usuario_tutor)
+        r = self.client.post(self.url, {'nuevo_monto': '650', 'motivo': 'x'}, format='json')
+        self.assertIn(r.status_code, (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND))
+
+    def test_avisos_de_monto_distinto_en_cobro_y_en_la_lista(self):
+        # plan 750 y cobro 750: sin aviso
+        self.assertFalse(self.client.get(f'{URL_COBROS}{self.cobro.id}/').data['difiere_del_plan'])
+        # el plan pasa a 650 sin tocar el cobro (p. ej. se editó con un pago ya hecho): aviso
+        self.pagar(750)
+        self.client.patch(f'{URL_INSC}{self.ins.id}/', {'costo_mensual': '650'}, format='json')
+        d = self.client.get(f'{URL_COBROS}{self.cobro.id}/').data
+        self.assertTrue(d['difiere_del_plan'])
+        self.assertEqual(dec(d['precio_plan']), dec(650))
+        fila = next(x for x in self.client.get(URL_INSC, {'page_size': 50}).data['results'] if x['id'] == str(self.ins.id))
+        self.assertTrue(fila['cobro_vigente']['difiere'])
+        self.assertEqual(dec(fila['cobro_vigente']['monto']), dec(750))
+        self.assertEqual(fila['cobro_vigente']['id'], str(self.cobro.id))

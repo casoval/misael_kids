@@ -19,7 +19,7 @@ from accounts.permissions import (
 
 
 class NinoViewSet(viewsets.ModelViewSet):
-    queryset = Nino.objects.prefetch_related(
+    queryset = Nino.objects.select_related('vinculo_centro_misael').prefetch_related(
         'tutores__tutor', 'autorizados', 'documentos'
     ).all()
     permission_classes = [PermisoFichaNino]

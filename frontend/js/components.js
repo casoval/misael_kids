@@ -405,7 +405,7 @@ const Sucursal = {
   },
   getNombre() {
     const id = this.getId();
-    const s = this.lista.find(s => s.id === id);
+    const s = this.lista.find(s => String(s.id) === String(id));
     return s ? s.nombre : 'Todas las sucursales';
   },
   // true si hay una sucursal específica seleccionada (no "todas")
@@ -417,11 +417,22 @@ const Sucursal = {
     try {
       const data = await API.get('/core/sucursales/?activa=true&page_size=50');
       this.lista = data.results || data;
+      // La sucursal guardada en el navegador puede ya no existir (base recreada,
+      // sucursal desactivada, otro entorno con el mismo dominio…). Si se deja, el
+      // selector queda en blanco y TODAS las pantallas filtran por un id fantasma
+      // (reportes en 0, listas vacías) mientras la etiqueta dice "Todas".
+      const guardado = this.getId();
+      if (guardado && !this.lista.some(s => String(s.id) === String(guardado))) {
+        localStorage.setItem(this.KEY, '');
+      }
       // Si solo hay una sucursal y no hay selección, la seleccionamos por defecto
       if (!this.getId() && this.lista.length === 1) {
         localStorage.setItem(this.KEY, this.lista[0].id);
       }
-    } catch { this.lista = []; }
+    } catch {
+      // Sin respuesta de la API no podemos validar nada: se conserva lo guardado.
+      this.lista = [];
+    }
   },
 
   renderSelector() {
@@ -444,6 +455,9 @@ const Sucursal = {
     });
     sel.innerHTML = opciones || '<option value="">Sin sucursales</option>';
     sel.value = this.getId();
+    // Si el valor guardado no coincide con ninguna opción el <select> se ve vacío:
+    // mejor mostrar la primera opción real que un recuadro en blanco.
+    if (sel.selectedIndex < 0 || (this.getId() && sel.value !== this.getId())) sel.selectedIndex = 0;
 
     if (this.lista.length <= 1) sel.disabled = true; // listo para el futuro, sin uso aún
 

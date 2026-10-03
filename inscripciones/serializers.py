@@ -2,6 +2,7 @@
 inscripciones/serializers.py
 """
 from datetime import date
+from decimal import Decimal
 from rest_framework import serializers
 from .models import Inscripcion, Cobro, Pago, Devolucion, AbonoDiario
 
@@ -97,13 +98,27 @@ class CobroSerializer(serializers.ModelSerializer):
     saldo_pendiente  = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     pagos            = PagoSerializer(many=True, read_only=True)
     devoluciones     = DevolucionSerializer(many=True, read_only=True)
+    # Precio actual del plan de la inscripción y si este cobro quedó con otro monto
+    # (precio escrito a mano, cambio de tarifa...). Solo mensualidades de inscripciones
+    # activas; la pantalla lo avisa y ofrece "Ajustar monto".
+    precio_plan      = serializers.SerializerMethodField()
+    difiere_del_plan = serializers.SerializerMethodField()
+
+    def get_precio_plan(self, obj):
+        if obj.tipo != Cobro.TIPO_MENSUALIDAD or obj.estado == Cobro.ESTADO_ANULADO or not obj.inscripcion.activa:
+            return None
+        return obj.inscripcion.costo_mensual_final
+
+    def get_difiere_del_plan(self, obj):
+        precio = self.get_precio_plan(obj)
+        return precio is not None and Decimal(str(precio)) != obj.monto_final
 
     class Meta:
         model  = Cobro
         fields = [
             'id', 'inscripcion', 'nino_nombre', 'nino_foto', 'nino_genero',
             'tipo', 'tipo_display', 'periodo', 'periodo_inicio', 'periodo_fin',
-            'monto_base', 'monto_final', 'monto_pagado', 'saldo_pendiente',
+            'monto_base', 'monto_final', 'precio_plan', 'difiere_del_plan', 'monto_pagado', 'saldo_pendiente',
             'fecha_emision', 'fecha_vencimiento',
             'estado', 'estado_display',
             'fecha_pago', 'metodo_pago', 'comprobante',
@@ -277,9 +292,34 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
     modalidad_display   = serializers.CharField(source='get_modalidad_pago_display', read_only=True)
     costo_mensual_final = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     costo_diario_final  = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
+    # Precio de lista vigente del turno: la lista lo compara con el precio de la
+    # inscripción (que es una copia editable) para avisar cuando se desvían.
+    turno_costo_mensual = serializers.DecimalField(source='turno.costo_mensual', max_digits=8, decimal_places=2, read_only=True)
+    turno_costo_diario  = serializers.DecimalField(source='turno.costo_diario', max_digits=7, decimal_places=2, read_only=True)
+    costo_mensual       = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     dias_semana_display = serializers.CharField(read_only=True)
     estado_pago         = serializers.SerializerMethodField()
     deuda_cerrada       = serializers.SerializerMethodField()
+    cobro_vigente       = serializers.SerializerMethodField()
+
+    def get_cobro_vigente(self, obj):
+        """
+        Mensualidad en curso (o la próxima si aún no empieza) de una inscripción mensual
+        activa, con el aviso `difiere` si su monto no coincide con el precio del plan.
+        Usa los cobros ya cargados (prefetch) para no hacer una consulta por fila.
+        """
+        if not obj.activa or obj.modalidad_pago != Inscripcion.MODALIDAD_MENSUAL:
+            return None
+        hoy = date.today()
+        ciclos = sorted((c for c in obj.cobros.all()
+                         if c.tipo == Cobro.TIPO_MENSUALIDAD and c.estado != Cobro.ESTADO_ANULADO and c.periodo_inicio),
+                        key=lambda c: c.periodo_inicio)
+        if not ciclos:
+            return None
+        vigente = next((c for c in reversed(ciclos) if c.periodo_inicio <= hoy), ciclos[0])
+        return {'id': str(vigente.id), 'monto': vigente.monto_final, 'estado': vigente.estado,
+                'periodo_inicio': vigente.periodo_inicio,
+                'difiere': Decimal(str(obj.costo_mensual_final)) != vigente.monto_final}
 
     def get_estado_pago(self, obj):
         # Import local: services importa los modelos y evita ciclos al cargar.
@@ -299,7 +339,8 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
             'id', 'nino', 'nino_nombre', 'nino_foto', 'nino_genero',
             'sucursal_nombre', 'sala_nombre', 'turno_nombre',
             'modalidad_pago', 'modalidad_display', 'tipo_ajuste',
-            'costo_mensual_final', 'costo_diario_final',
+            'costo_mensual', 'costo_mensual_final', 'costo_diario_final',
+            'turno_costo_mensual', 'turno_costo_diario',
             'dias_semana', 'dias_semana_display', 'dias_programados',
-            'activa', 'fecha_inicio', 'estado_pago', 'deuda_cerrada',
+            'activa', 'fecha_inicio', 'estado_pago', 'deuda_cerrada', 'cobro_vigente',
         ]

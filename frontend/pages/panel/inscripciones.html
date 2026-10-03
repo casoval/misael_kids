@@ -915,12 +915,34 @@ async function cargar() {
 
 const AJUSTE_LABEL = { ninguno:'—', descuento_porcentaje:'% Desc.', descuento_monto:'$ Desc.', beca:'🎓 Beca' };
 
+// El precio de la inscripción es una copia editable del precio del turno. Si se
+// desvía (el turno cambió de precio o se editó a mano), se avisa en la lista para
+// que no parezca un error de cálculo: "Plan Bs. 750" vs. turno Bs. 650.
+function avisoPrecioDistinto(i) {
+  if (i.tipo_ajuste !== 'ninguno') return '';          // con descuento/beca la diferencia es esperada
+  const mensual = i.modalidad_pago !== 'diaria';
+  const plan  = parseFloat(mensual ? i.costo_mensual_final : i.costo_diario_final);
+  const lista = parseFloat(mensual ? i.turno_costo_mensual : i.turno_costo_diario);
+  if (isNaN(plan) || isNaN(lista) || Math.abs(plan - lista) < 0.005) return '';
+  return `<div class="chip chip-amarillo" style="margin-top:4px;font-size:var(--text-xs)" title="El precio de esta inscripción es distinto al precio actual del turno. Edítala para igualarlo si fue un error.">⚠️ Turno: ${UI.moneda(lista)}</div>`;
+}
+
+// La mensualidad en curso quedó con un monto distinto al del plan (p. ej. plan 750 y cobro 650):
+// se avisa y se enlaza al cobro para poner el monto correcto.
+function avisoCobroDistinto(i) {
+  const cv = i.cobro_vigente;
+  if (!cv || !cv.difiere) return '';
+  return `<div><a class="chip chip-amarillo" style="margin-top:4px;font-size:var(--text-xs);text-decoration:none"
+    href="/panel/cobros/?ajustar=${encodeURIComponent(cv.id)}"
+    title="La mensualidad en curso tiene un monto distinto al precio del plan. Toca para poner el monto correcto.">⚠️ Cobro actual: ${UI.moneda(cv.monto)} · Ajustar</a></div>`;
+}
+
 function htmlCostoInsc(i) {
   return i.modalidad_pago==='diaria'
     ? `<div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_diario_final)} <span style="font-size:var(--text-xs);color:var(--texto-suave)">/ día</span></div>
-       <div style="font-size:var(--text-xs);color:var(--texto-suave)">${i.dias_semana_display}</div>`
+       <div style="font-size:var(--text-xs);color:var(--texto-suave)">${i.dias_semana_display}</div>${avisoPrecioDistinto(i)}`
     : `<div style="font-family:var(--font-display);font-size:var(--text-lg)">${UI.moneda(i.costo_mensual_final)}</div>
-       ${i.tipo_ajuste!=='ninguno'?'<div style="font-size:var(--text-xs);text-decoration:line-through;color:var(--texto-suave)">'+UI.moneda(i.costo_mensual)+'</div>':''}`;
+       ${i.tipo_ajuste!=='ninguno'?'<div style="font-size:var(--text-xs);text-decoration:line-through;color:var(--texto-suave)">'+UI.moneda(i.costo_mensual)+'</div>':''}${avisoPrecioDistinto(i)}${avisoCobroDistinto(i)}`;
 }
 
 // Plan: modalidad + costo + ajuste + fecha de inicio en una sola celda.

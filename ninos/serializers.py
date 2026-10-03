@@ -1,6 +1,7 @@
 """
 ninos/serializers.py
 """
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 from .models import Nino, Tutor, NinoTutor, PersonaAutorizada, Documento
 
@@ -76,6 +77,14 @@ class NinoTutorSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+def _vinculo_misael(nino):
+    """VinculoCentroMisael del niño o None (sin consulta extra si la vista hizo select_related)."""
+    try:
+        return nino.vinculo_centro_misael
+    except ObjectDoesNotExist:
+        return None
+
+
 class NinoSerializer(serializers.ModelSerializer):
     edad_en_meses      = serializers.IntegerField(read_only=True)
     nombre_completo    = serializers.CharField(read_only=True)
@@ -83,6 +92,20 @@ class NinoSerializer(serializers.ModelSerializer):
     tutores            = NinoTutorSerializer(many=True, read_only=True)
     autorizados        = PersonaAutorizadaSerializer(many=True, read_only=True)
     documentos         = DocumentoSerializer(many=True, read_only=True)
+    # Vínculo REAL con Centro Misael (VinculoCentroMisael). `tiene_plan_misael` es solo
+    # una casilla manual y puede no coincidir; el distintivo de la pantalla usa esto.
+    vinculado_centro_misael = serializers.SerializerMethodField()
+    centro_misael           = serializers.SerializerMethodField()
+
+    def get_vinculado_centro_misael(self, obj):
+        return _vinculo_misael(obj) is not None
+
+    def get_centro_misael(self, obj):
+        v = _vinculo_misael(obj)
+        if v is None:
+            return None
+        return {'paciente_centro_id': v.paciente_centro_id, 'nombre_paciente': v.nombre_paciente_centro,
+                'estado_centro': v.estado_centro_cache, 'fecha_vinculacion': v.fecha_vinculacion}
 
     class Meta:
         model  = Nino
@@ -91,7 +114,7 @@ class NinoSerializer(serializers.ModelSerializer):
             'fecha_nacimiento', 'edad_en_meses',
             'genero', 'genero_display', 'foto',
             'alergias', 'condiciones_medicas', 'medicacion_habitual',
-            'tiene_plan_misael', 'observaciones', 'activo',
+            'tiene_plan_misael', 'vinculado_centro_misael', 'centro_misael', 'observaciones', 'activo',
             'tutores', 'autorizados', 'documentos',
             'created_at', 'updated_at',
         ]
@@ -107,13 +130,17 @@ class NinoResumenSerializer(serializers.ModelSerializer):
     nombre_completo = serializers.CharField(read_only=True)
     genero_display  = serializers.CharField(source='get_genero_display', read_only=True)
     tutores_resumen = serializers.SerializerMethodField()
+    vinculado_centro_misael = serializers.SerializerMethodField()
+
+    def get_vinculado_centro_misael(self, obj):
+        return _vinculo_misael(obj) is not None
 
     class Meta:
         model  = Nino
         fields = [
             'id', 'nombre_completo', 'fecha_nacimiento',
             'edad_en_meses', 'genero', 'genero_display', 'foto',
-            'alergias', 'tiene_plan_misael', 'activo', 'tutores_resumen',
+            'alergias', 'tiene_plan_misael', 'vinculado_centro_misael', 'activo', 'tutores_resumen',
         ]
 
     def get_tutores_resumen(self, obj):
