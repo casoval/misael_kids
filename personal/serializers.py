@@ -119,6 +119,7 @@ class PersonalSerializer(serializers.ModelSerializer):
 
 class AsignacionPersonalSerializer(serializers.ModelSerializer):
     personal_nombre = serializers.CharField(source='personal.nombre_completo', read_only=True)
+    personal_foto   = serializers.ImageField(source='personal.foto', read_only=True)
     sucursal_nombre = serializers.CharField(source='sucursal.nombre', read_only=True)
     sala_nombre     = serializers.CharField(source='sala.nombre', read_only=True)
     turno_nombre    = serializers.CharField(source='turno.nombre', read_only=True)
@@ -126,7 +127,7 @@ class AsignacionPersonalSerializer(serializers.ModelSerializer):
     class Meta:
         model  = AsignacionPersonal
         fields = [
-            'id', 'personal', 'personal_nombre',
+            'id', 'personal', 'personal_nombre', 'personal_foto',
             'sucursal', 'sucursal_nombre',
             'sala', 'sala_nombre',
             'turno', 'turno_nombre',

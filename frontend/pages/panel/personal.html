@@ -304,7 +304,7 @@ async function cargarAsignaciones() {
     const lista = data.results||data;
     if (!lista.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--texto-suave);font-weight:600">Sin asignaciones</td></tr>'; return; }
     tbody.innerHTML = lista.map(a => `<tr>
-      <td style="font-weight:700">${a.personal_nombre}</td>
+      <td style="font-weight:700">${Vista.celdaNino({nombre:a.personal_nombre, foto:a.personal_foto})}</td>
       <td>${a.sucursal_nombre}</td><td>${a.sala_nombre}</td><td>${a.turno_nombre}</td>
       <td>${a.es_titular?'<span class="chip chip-turquesa">Titular</span>':'<span class="chip chip-gris">Apoyo</span>'}</td>
       <td>${UI.fecha(a.fecha_inicio)}</td>

@@ -132,6 +132,22 @@
     .pg-cifra small { display:block;font-size:var(--text-xs);color:var(--texto-suave); }
     .pg-cifra strong { display:block;font-family:var(--font-display);font-size:var(--text-lg); }
   </style>
+
+<style>
+  .acc-grupo { display:flex; gap:6px; flex-wrap:nowrap; align-items:center; white-space:nowrap; }
+  .btn-pagos { background:var(--amarillo-l); color:var(--amarillo-d); border:1.5px solid var(--amarillo); }
+  .acc-mas.abierto { background:var(--turquesa-l); border-color:var(--turquesa); color:var(--turquesa-d); }
+  .tn-acciones .acc-grupo { flex-wrap:wrap; }
+  .menu-acc { position:fixed; z-index:9999; min-width:230px; background:var(--blanco); border:1.5px solid var(--gris-100);
+    border-radius:var(--radio-lg, 14px); box-shadow:var(--sombra-lg); padding:6px; display:flex; flex-direction:column; }
+  .menu-acc-item { display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:none; background:transparent;
+    font-family:var(--font-body); font-weight:700; font-size:var(--text-sm); color:var(--texto); padding:.55rem .7rem;
+    border-radius:10px; cursor:pointer; }
+  .menu-acc-item:hover, .menu-acc-item:focus-visible { background:var(--turquesa-l); color:var(--turquesa-d); outline:none; }
+  .menu-acc-item.peligro { color:var(--coral-d); }
+  .menu-acc-item.peligro:hover { background:var(--coral-l); }
+  .menu-acc-sep { height:1px; background:var(--gris-100); margin:4px 6px; }
+</style>
 </head>
 <body>
 <div class="app-layout">
@@ -887,9 +903,7 @@ async function cargar() {
         <td>${htmlEstadoInsc(i)}</td>
         <td>${htmlEstadoPago(i)}</td>
         <td>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            ${htmlAccionesInsc(i)}
-          </div>
+          ${htmlAccionesInsc(i)}
         </td>
       </tr>`).join('');
   } catch (err) {
@@ -915,18 +929,68 @@ function htmlEstadoInsc(i) {
   return i.activa?'<span class="chip chip-verde">Activa</span>':'<span class="chip chip-coral">Dada de baja</span>';
 }
 
+// Acciones compactas: las dos más usadas a la vista y el resto en un menú "⋯ Más".
 function htmlAccionesInsc(i) {
-  return `<button class="btn btn-outline btn-sm" onclick="editar('${i.id}')">Editar</button>
-            <button class="btn btn-sm" style="background:var(--amarillo-l);color:var(--amarillo-d);border:1.5px solid var(--amarillo)"
-              onclick="abrirPagos('${i.id}','${i.nino_nombre}','${i.sala_nombre} · ${i.turno_nombre}','${i.modalidad_pago}')">💳 Pagos</button>
-            <button class="btn btn-outline btn-sm" title="Todo el historial de cobros y pagos del niño, aunque cambie de modalidad" onclick="abrirHistorial('${i.id}')">📚 Historial</button>
-            ${i.activa ? `<button class="btn btn-sm" style="background:var(--turquesa-l);color:var(--turquesa-d);border:1.5px solid var(--turquesa)"
-              onclick="abrirTransferir('${i.id}','${i.nino_nombre}','${i.sucursal_nombre}')">🔁 Transferir</button>
-            <button class="btn btn-sm" style="background:var(--violeta-l);color:var(--violeta-d);border:1.5px solid var(--violeta-d)"
-              onclick="abrirCambiarModalidad('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')">${i.modalidad_pago==='diaria'?'📅 Pasar a mensual':'📅 Pasar a por día'}</button>` : ''}
-            ${i.activa ? `<button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
-              onclick="abrirBaja('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')">Dar de baja</button>` : ''}`;
+  return `<div class="acc-grupo">
+    <button class="btn btn-sm btn-pagos" onclick="accionInsc('${i.id}','pagos')">💳 Pagos</button>
+    <button class="btn btn-outline btn-sm" onclick="accionInsc('${i.id}','editar')">Editar</button>
+    <button type="button" class="btn btn-outline btn-sm acc-mas" aria-haspopup="menu" aria-label="Más acciones"
+      onclick="menuInsc(event,'${i.id}')">⋯ Más</button>
+  </div>`;
 }
+
+function accionInsc(id, tipo) {
+  cerrarMenuAcc();
+  const i = (window.inscCache || {})[id];
+  if (!i) return;
+  const sala = `${i.sala_nombre} · ${i.turno_nombre}`;
+  if (tipo === 'pagos')          abrirPagos(i.id, i.nino_nombre, sala, i.modalidad_pago);
+  else if (tipo === 'editar')    editar(i.id);
+  else if (tipo === 'historial') abrirHistorial(i.id);
+  else if (tipo === 'transferir')abrirTransferir(i.id, i.nino_nombre, i.sucursal_nombre);
+  else if (tipo === 'modalidad') abrirCambiarModalidad(i.id, i.nino_nombre, i.modalidad_pago);
+  else if (tipo === 'baja')      abrirBaja(i.id, i.nino_nombre, i.modalidad_pago);
+}
+
+function cerrarMenuAcc() {
+  const m = document.getElementById('menu-acc');
+  if (m) m.remove();
+  document.querySelectorAll('.acc-mas.abierto').forEach(b => { b.classList.remove('abierto'); b.setAttribute('aria-expanded','false'); });
+}
+
+function menuInsc(ev, id) {
+  ev.stopPropagation();
+  const btn = ev.currentTarget;
+  const yaAbierto = btn.classList.contains('abierto');
+  cerrarMenuAcc();
+  if (yaAbierto) return;
+  const i = (window.inscCache || {})[id];
+  if (!i) return;
+  const item = (tipo, ico, txt, cls = '') =>
+    `<button type="button" role="menuitem" class="menu-acc-item ${cls}" onclick="accionInsc('${id}','${tipo}')"><span>${ico}</span>${txt}</button>`;
+  let html = item('historial', '📚', 'Historial de cobros y pagos');
+  if (i.activa) {
+    html += item('transferir', '🔁', 'Transferir de sucursal')
+         +  item('modalidad', '📅', i.modalidad_pago === 'diaria' ? 'Pasar a mensual' : 'Pasar a por día')
+         +  '<div class="menu-acc-sep"></div>'
+         +  item('baja', '🚪', 'Dar de baja', 'peligro');
+  }
+  const menu = document.createElement('div');
+  menu.id = 'menu-acc'; menu.className = 'menu-acc'; menu.setAttribute('role', 'menu');
+  menu.innerHTML = html;
+  document.body.appendChild(menu);
+  btn.classList.add('abierto'); btn.setAttribute('aria-expanded', 'true');
+  // Posición fija junto al botón; si no cabe abajo, se abre hacia arriba.
+  const r = btn.getBoundingClientRect(), mw = menu.offsetWidth, mh = menu.offsetHeight;
+  let top = r.bottom + 6;
+  if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+  let left = Math.min(Math.max(8, r.right - mw), window.innerWidth - mw - 8);
+  menu.style.top = top + 'px'; menu.style.left = left + 'px';
+}
+document.addEventListener('click', e => { if (!e.target.closest('#menu-acc')) cerrarMenuAcc(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMenuAcc(); });
+window.addEventListener('resize', cerrarMenuAcc);
+window.addEventListener('scroll', cerrarMenuAcc, true);
 
 function htmlTarjetaInsc(i) {
   const e = i.estado_pago;
