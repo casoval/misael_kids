@@ -243,7 +243,7 @@ async function cargarSelectores() {
       API.get('/core/sucursales/?activa=true'),
     ]);
     UI.llenarSelect(document.getElementById('inc-nino'),
-      ninos.results||ninos, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)');
+      ninos.results||ninos, 'id', n => n.nombre_completo+' · '+UI.edad(n.edad_en_meses, true));
     UI.llenarSelect(document.getElementById('inc-sucursal'),
       sucursales.results||sucursales, 'id', 'nombre');
   } catch {}

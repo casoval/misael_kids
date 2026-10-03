@@ -354,9 +354,9 @@ async function cargarSelectores() {
     // primero en la pestaña de vinculación.
     const ninosVinculados = listaNinos.filter(n => ninosVinculadosIds.has(n.id));
     UI.llenarSelect(document.getElementById('der-nino'), ninosVinculados, 'id',
-      n => n.nombre_completo+' ('+n.edad_en_meses+'m)');
+      n => n.nombre_completo+' · '+UI.edad(n.edad_en_meses, true));
     UI.llenarSelect(document.getElementById('pm-filtro-nino'), ninosVinculados, 'id',
-      n => n.nombre_completo+' ('+n.edad_en_meses+'m)');
+      n => n.nombre_completo+' · '+UI.edad(n.edad_en_meses, true));
   } catch {}
 }
 

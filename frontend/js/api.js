@@ -286,6 +286,21 @@ const UI = {
     });
   },
 
+  // Edad en meses con su equivalente en años entre paréntesis.
+  //   UI.edad(14)       -> "14 meses (1 año y 2 meses)"
+  //   UI.edad(14, true) -> "14m (1a 2m)"        (versión corta para chips y listas)
+  //   UI.edad(8)        -> "8 meses (menos de 1 año)"
+  edad(meses, corta = false) {
+    const m = parseInt(meses, 10);
+    if (isNaN(m) || m < 0) return '—';
+    const a = Math.floor(m / 12), r = m % 12;
+    if (corta) return `${m}m (${a ? a + 'a' + (r ? ' ' + r + 'm' : '') : '<1a'})`;
+    const anios = a === 1 ? '1 año' : `${a} años`;
+    const resto = r === 1 ? '1 mes' : `${r} meses`;
+    const enAnios = a === 0 ? 'menos de 1 año' : (r ? `${anios} y ${resto}` : anios);
+    return `${m} ${m === 1 ? 'mes' : 'meses'} (${enAnios})`;
+  },
+
   // Formatear moneda boliviana
   moneda(valor) {
     if (valor == null) return '—';

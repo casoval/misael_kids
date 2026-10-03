@@ -838,7 +838,7 @@ async function cargarSelectoresInsc() {
     ]);
     ninosData = ninos.results||ninos;
     UI.llenarSelect(document.getElementById('i-nino'), ninosData, 'id',
-      n => n.nombre_completo + ' (' + n.edad_en_meses + ' meses)');
+      n => n.nombre_completo + ' — ' + UI.edad(n.edad_en_meses));
     const suc = sucursales.results||sucursales;
     UI.llenarSelect(document.getElementById('i-sucursal'), suc, 'id', 'nombre');
     UI.llenarSelect(document.getElementById('f-sucursal'), suc, 'id', 'nombre');
@@ -1131,7 +1131,7 @@ async function verificarEdad() {
   const nino = ninosData.find(n => n.id === ninoId);
   if (nino) {
     aviso.style.display = '';
-    aviso.textContent = '🎂 Edad: '+nino.edad_en_meses+' meses — La sala debe coincidir con este rango.';
+    aviso.textContent = '🎂 Edad: '+UI.edad(nino.edad_en_meses)+' — La sala debe coincidir con este rango.';
   }
 }
 

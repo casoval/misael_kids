@@ -339,7 +339,7 @@ async function cargarSelectores() {
     ninosData = ninos.results||ninos;
     hitosData = hitos.results||hitos;
     [document.getElementById('f-nino-eval'), document.getElementById('eval-nino')].forEach(sel =>
-      UI.llenarSelect(sel, ninosData, 'id', n => n.nombre_completo+' ('+n.edad_en_meses+'m)'));
+      UI.llenarSelect(sel, ninosData, 'id', n => n.nombre_completo+' · '+UI.edad(n.edad_en_meses, true)));
   } catch (err) { UI.toast('No se pudieron cargar los niños y hitos: '+err.message, 'error'); }
 }
 
@@ -406,7 +406,7 @@ async function cargarEvalNino() {
           ${Vista.avatar(nino || { nombre: '' }, 'lg')}
           <div>
             <div style="font-family:var(--font-display);font-size:var(--text-2xl)">${esc(nino?.nombre_completo)}</div>
-            <div style="font-size:var(--text-sm);color:var(--texto-suave)">${nino?.edad_en_meses} meses · ${evals.length} hitos evaluados</div>
+            <div style="font-size:var(--text-sm);color:var(--texto-suave)">${nino ? UI.edad(nino.edad_en_meses) : '—'} · ${evals.length} hitos evaluados</div>
           </div>
           <div style="margin-left:auto;text-align:right">
             <div style="font-family:var(--font-display);font-size:var(--text-3xl);color:var(--verde-d)">${pctGeneral}%</div>

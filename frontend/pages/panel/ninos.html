@@ -460,7 +460,7 @@ async function cargar() {
             </div>
           </div>
         </td>
-        <td><span class="chip chip-turquesa">🎂 ${n.edad_en_meses}m</span></td>
+        <td><span class="chip chip-turquesa">🎂 ${UI.edad(n.edad_en_meses, true)}</span></td>
         <td>${n.genero==='M'?'👦 Masc.':n.genero==='F'?'👧 Fem.':'⚧️ Otro'}</td>
         <td onclick="event.stopPropagation()">
           ${(n.tutores_resumen||[]).length
@@ -523,13 +523,13 @@ async function verPerfil(id) {
     const n = await API.get('/ninos/ninos/'+id+'/');
     document.getElementById('perf-avatar').textContent = n.genero==='F'?'👧':'👦';
     document.getElementById('perf-nombre').textContent = n.nombre_completo;
-    document.getElementById('perf-meta').textContent   = '🎂 '+n.edad_en_meses+' meses · '+UI.fecha(n.fecha_nacimiento);
+    document.getElementById('perf-meta').textContent   = '🎂 '+UI.edad(n.edad_en_meses)+' · '+UI.fecha(n.fecha_nacimiento);
     const body = document.getElementById('perf-body');
     body.innerHTML = `
       <div class="perfil-seccion">
         <h4>📋 Datos personales</h4>
         <div class="dato-fila"><span class="clave">Nacimiento</span><span class="valor">${UI.fecha(n.fecha_nacimiento)}</span></div>
-        <div class="dato-fila"><span class="clave">Edad</span><span class="valor">${n.edad_en_meses} meses</span></div>
+        <div class="dato-fila"><span class="clave">Edad</span><span class="valor">${UI.edad(n.edad_en_meses)}</span></div>
         <div class="dato-fila"><span class="clave">Género</span><span class="valor">${n.genero==='M'?'👦 Masculino':n.genero==='F'?'👧 Femenino':'⚧️ Otro'}</span></div>
         <div class="dato-fila"><span class="clave">Plan Misael</span><span class="valor">${n.tiene_plan_misael?'🧠 Sí':'No'}</span></div>
         <div class="dato-fila"><span class="clave">Estado</span><span class="valor">${n.activo?'✅ Activo':'❌ Inactivo'}</span></div>

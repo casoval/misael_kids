@@ -25,6 +25,15 @@ CERO = Decimal('0')
 # ══════════════════════════════════════════════════════════════════
 #  RESUMEN (tarjetas y gráficos)
 # ══════════════════════════════════════════════════════════════════
+def _edad_anios(meses):
+    """Edad en años y meses para los reportes: 14 -> '1 año y 2 meses'."""
+    a, r = divmod(meses, 12)
+    if a == 0:
+        return 'menos de 1 año'
+    anios = '1 año' if a == 1 else f'{a} años'
+    return anios if not r else f'{anios} y {r} mes' + ('' if r == 1 else 'es')
+
+
 def _pct(parte, total):
     return round(parte * 100 / total, 1) if total else None
 
@@ -196,7 +205,7 @@ def export_ninos(anio, mes, sucursal=None):
     if sucursal:
         qs = qs.filter(sucursal=sucursal)
     qs = qs.order_by('sucursal__nombre', 'sala__nombre', 'nino__apellidos', 'nino__nombres')
-    cabecera = ['Nombres', 'Apellidos', 'Fecha de nacimiento', 'Edad (meses)', 'Género', 'Sucursal', 'Sala',
+    cabecera = ['Nombres', 'Apellidos', 'Fecha de nacimiento', 'Edad (meses)', 'Edad (años)', 'Género', 'Sucursal', 'Sala',
                 'Turno', 'Modalidad de pago', 'Alergias', 'Plan Misael', 'Tutores (nombre · parentesco · teléfono)']
 
     def filas():
@@ -205,7 +214,7 @@ def export_ninos(anio, mes, sucursal=None):
             tutores = ' | '.join(
                 f'{t.tutor.nombres} {t.tutor.apellidos} · {t.tutor.get_parentesco_display()} · {t.tutor.telefono}'
                 for t in sorted(n.tutores.all(), key=lambda x: not x.es_principal))
-            yield [n.nombres, n.apellidos, n.fecha_nacimiento, n.edad_en_meses, n.get_genero_display(),
+            yield [n.nombres, n.apellidos, n.fecha_nacimiento, n.edad_en_meses, _edad_anios(n.edad_en_meses), n.get_genero_display(),
                    i.sucursal.nombre, i.sala.nombre, i.turno.nombre, i.get_modalidad_pago_display(),
                    n.alergias, n.tiene_plan_misael, tutores]
     return f'ninos_{date.today():%Y-%m-%d}.csv', cabecera, filas()

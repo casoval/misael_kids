@@ -532,7 +532,7 @@ async function cargarNinosSelect() {
     ]);
     let lista = data.results || data;
     if (ids) lista = lista.filter(n => ids.has(n.id));
-    UI.llenarSelect($('pi-nino'), lista, 'id', n => n.nombre_completo + ' (' + n.edad_en_meses + 'm)');
+    UI.llenarSelect($('pi-nino'), lista, 'id', n => n.nombre_completo + ' · ' + UI.edad(n.edad_en_meses, true));
   } catch {}
 }
 

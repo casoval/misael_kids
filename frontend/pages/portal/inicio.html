@@ -571,7 +571,7 @@ async function inicializar() {
         <button class="btn btn-outline" onclick="seleccionarHijo('${h.id}')">
           <span style="font-size:1.3rem">${h.genero==='F'?'👧':'👦'}</span>
           ${h.nombre_completo}
-          <span class="chip chip-turquesa" style="font-size:.65rem">${h.edad_en_meses}m</span>
+          <span class="chip chip-turquesa" style="font-size:.65rem">${UI.edad(h.edad_en_meses, true)}</span>
         </button>
       `).join('');
     }
@@ -602,7 +602,7 @@ async function seleccionarHijo(id) {
 
     const chips = document.getElementById('hijo-chips');
     chips.innerHTML = [
-      `<span class="chip chip-turquesa">🎂 ${n.edad_en_meses} meses</span>`,
+      `<span class="chip chip-turquesa">🎂 ${UI.edad(n.edad_en_meses)}</span>`,
       inscripcionActiva ? `<span class="chip chip-verde">📍 ${inscripcionActiva.sala_nombre} · ${inscripcionActiva.turno_nombre}</span>` : '',
       n.tiene_plan_misael ? `<span class="chip chip-violeta">🧠 Plan Misael</span>` : '',
     ].join('');
