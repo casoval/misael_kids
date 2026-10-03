@@ -102,6 +102,30 @@ class InscripcionViewSet(viewsets.ModelViewSet):
             return InscripcionResumenSerializer
         return InscripcionSerializer
 
+    def perform_update(self, serializer):
+        """
+        Al editar el precio de una inscripción mensual, las mensualidades que
+        todavía NO tienen ningún pago (ni condonación) pasan al precio nuevo.
+        Antes la inscripción mostraba un precio y su cobro abierto seguía con
+        el viejo (p. ej. plan Bs. 750 y cobro Bs. 650). Las mensualidades con
+        pagos, o cerradas con "cerrar con lo pagado", no se tocan: son
+        historial; para corregir una ya pagada existe el cambio de turno/precio.
+        """
+        antes = serializer.instance
+        precio_antes = (antes.costo_mensual, antes.costo_mensual_final)
+        inscripcion = serializer.save()
+        if (inscripcion.activa and inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL
+                and (inscripcion.costo_mensual, inscripcion.costo_mensual_final) != precio_antes):
+            sin_pagos = Cobro.objects.filter(
+                inscripcion=inscripcion, tipo=Cobro.TIPO_MENSUALIDAD,
+                estado__in=ESTADOS_ABIERTOS, pagos__isnull=True, monto_condonado_inicial__isnull=True,
+            ).distinct()
+            for cobro in sin_pagos:
+                cobro.monto_base = inscripcion.costo_mensual
+                cobro.monto_final = inscripcion.costo_mensual_final
+                cobro.save(update_fields=['monto_base', 'monto_final'])
+                cobro.recalcular_estado()
+
     def perform_create(self, serializer):
         """
         Al crear una inscripción con modalidad mensual, se genera de una

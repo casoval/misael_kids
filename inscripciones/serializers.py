@@ -277,6 +277,11 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
     modalidad_display   = serializers.CharField(source='get_modalidad_pago_display', read_only=True)
     costo_mensual_final = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     costo_diario_final  = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
+    # Precio de lista vigente del turno: la lista lo compara con el precio de la
+    # inscripción (que es una copia editable) para avisar cuando se desvían.
+    turno_costo_mensual = serializers.DecimalField(source='turno.costo_mensual', max_digits=8, decimal_places=2, read_only=True)
+    turno_costo_diario  = serializers.DecimalField(source='turno.costo_diario', max_digits=7, decimal_places=2, read_only=True)
+    costo_mensual       = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     dias_semana_display = serializers.CharField(read_only=True)
     estado_pago         = serializers.SerializerMethodField()
     deuda_cerrada       = serializers.SerializerMethodField()
@@ -299,7 +304,8 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
             'id', 'nino', 'nino_nombre', 'nino_foto', 'nino_genero',
             'sucursal_nombre', 'sala_nombre', 'turno_nombre',
             'modalidad_pago', 'modalidad_display', 'tipo_ajuste',
-            'costo_mensual_final', 'costo_diario_final',
+            'costo_mensual', 'costo_mensual_final', 'costo_diario_final',
+            'turno_costo_mensual', 'turno_costo_diario',
             'dias_semana', 'dias_semana_display', 'dias_programados',
             'activa', 'fecha_inicio', 'estado_pago', 'deuda_cerrada',
         ]

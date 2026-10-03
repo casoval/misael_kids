@@ -1986,3 +1986,54 @@ class ReinscripcionConDeudaTests(PorDiaBase):
         self.assertIn('administrador de Django', str(r.data))
         self.assertTrue(Inscripcion.objects.filter(pk=m.pk).exists())
 
+
+
+# ═══════════════════════════════════════════════════════════════════
+class EditarPrecioMensualTests(PorDiaBase):
+    """Editar el precio de una inscripción mensual no puede dejar su cobro abierto con el precio viejo."""
+
+    def _mensual(self):
+        r = self.client.post(URL_INSC, {
+            'nino': str(self._otro_nino().id), 'sucursal': str(self.sucursal.id), 'sala': str(self.sala.id),
+            'turno': str(self.turno.id), 'modalidad_pago': 'mensual', 'fecha_inicio': self.hoy.isoformat(),
+            'costo_mensual': '650.00', 'costo_diario': '40.00', 'tipo_ajuste': 'ninguno', 'activa': True,
+        }, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+        return Inscripcion.objects.get(pk=r.data['id'])
+
+    def test_cobro_sin_pagos_sigue_el_precio_editado(self):
+        insc = self._mensual()
+        cobro = Cobro.objects.get(inscripcion=insc)
+        self.assertEqual(cobro.monto_final, dec(650))
+        r = self.client.patch(f'{URL_INSC}{insc.id}/', {'costo_mensual': '700.00'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        cobro.refresh_from_db()
+        self.assertEqual((cobro.monto_base, cobro.monto_final), (dec(700), dec(700)))
+
+    def test_cobro_con_pagos_no_se_toca(self):
+        insc = self._mensual()
+        cobro = Cobro.objects.get(inscripcion=insc)
+        Pago.objects.create(cobro=cobro, monto=dec(650), metodo_pago='efectivo',
+                            fecha_pago=self.hoy, registrado_por=self.staff)
+        cobro.refresh_from_db()
+        cobro.recalcular_estado()      # la API lo hace al registrar el pago; aquí se crea directo
+        self.assertEqual(cobro.estado, Cobro.ESTADO_PAGADO)
+        self.client.patch(f'{URL_INSC}{insc.id}/', {'costo_mensual': '750.00'}, format='json')
+        cobro.refresh_from_db()
+        self.assertEqual(cobro.monto_final, dec(650))
+        self.assertEqual(cobro.estado, Cobro.ESTADO_PAGADO)
+
+    def test_editar_otro_campo_no_cambia_cobros(self):
+        insc = self._mensual()
+        cobro = Cobro.objects.get(inscripcion=insc)
+        self.client.patch(f'{URL_INSC}{insc.id}/', {'motivo_ajuste': 'nota'}, format='json')
+        cobro.refresh_from_db()
+        self.assertEqual(cobro.monto_final, dec(650))
+
+    def test_lista_trae_precio_de_la_inscripcion_y_del_turno(self):
+        insc = self._mensual()
+        Inscripcion.objects.filter(pk=insc.pk).update(costo_mensual=dec(750))
+        r = self.client.get(URL_INSC, {'page_size': 50})
+        fila = next(x for x in r.data['results'] if x['id'] == str(insc.id))
+        self.assertEqual(dec(fila['costo_mensual']), dec(750))
+        self.assertEqual(dec(fila['turno_costo_mensual']), dec(650))
