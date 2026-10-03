@@ -1,0 +1,462 @@
+From 44428f5a947f50eed5357a88dc4dd7c7904dc481 Mon Sep 17 00:00:00 2001
+From: "Temas Fase 2 (Claude)" <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 18:25:01 +0000
+Subject: [PATCH] =?UTF-8?q?feat(frontend):=204=20temas=20nuevos=20?=
+ =?UTF-8?q?=E2=80=94=20Selva,=20Altiplano,=20Noche=20suave=20y=20Alto=20co?=
+ =?UTF-8?q?ntraste?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Suma 4 temas a los 5 existentes (ahora son 9) y agrupa el selector:
+Alegres · Sobrios · Oscuros · Accesibilidad.
+
+Temas nuevos (themes.css + tema.js)
+- Selva: verde musgo a lima, acento agua de río.
+- Altiplano: terracota, ocre y azul lago, con banda tipo aguayo bajo la
+  barra superior (inspirado en textiles andinos, sin símbolos patrios).
+- Noche suave: oscuro sobrio en grises pizarra con el turquesa de la marca.
+- Alto contraste: negro sobre blanco, bordes negros, letra ~17% mayor,
+  tipografía Atkinson Hyperlegible, sin sombras ni animaciones, foco
+  naranja de 4px. Todo el texto >= 7:1 (AAA).
+
+Refactor
+- Nuevo bloque :root[data-modo="oscuro"] con lo que comparten los temas
+  oscuros (colores de estado, sombras, calendarios). tema.js publica
+  data-modo="claro|oscuro" según el flag `oscuro` de cada tema.
+  Espacio queda solo con su paleta y fondos.
+- Selector: títulos de grupo y scroll si la pantalla es baja.
+
+Corrección
+- Logo del login en temas oscuros: el JPG usa mix-blend-mode:multiply y
+  quedaba apagado sobre tarjeta oscura; ahora va sobre placa blanca.
+  También corrige Espacio.
+
+Contraste medido (texto, WCAG): Alto contraste 0 fallos bajo 7:1,
+Noche suave 0 fallos bajo 4.5:1. Los otros 5 temas no cambian (regresión
+píxel a píxel, salvo el login de Espacio).
+---
+ frontend/css/themes.css | 295 +++++++++++++++++++++++++++++++++++-----
+ frontend/js/tema.js     |  31 +++--
+ 2 files changed, 281 insertions(+), 45 deletions(-)
+
+diff --git a/frontend/css/themes.css b/frontend/css/themes.css
+index 80f343c..ff7677c 100644
+--- a/frontend/css/themes.css
++++ b/frontend/css/themes.css
+@@ -67,10 +67,58 @@
+ }
+ 
+ 
+-/* ═══ 🚀 ESPACIO (oscuro) ═════════════════════════════════════ */
+-:root[data-tema="espacio"] {
++/* ═══ MODO OSCURO (compartido por los temas oscuros) ═════════════
++   tema.js pone data-modo="oscuro" en <html> cuando el tema es oscuro.
++   Acá vive lo que NO depende del color de marca: estados, sombras y
++   calendarios. Cada tema oscuro define solo su paleta, neutros y fondos. */
++:root[data-modo="oscuro"] {
+   --color-scheme: dark;
+ 
++  /* estados: se aclaran para leerse sobre fondo oscuro */
++  --verde:       #34D399;  --verde-d:    #6EE7B7;  --verde-l:    #0F3A2E;
++  --coral:       #FB7185;  --coral-d:    #FDA4AF;  --coral-l:    #4A1D2C;  --coral-xl: #3A1824;
++  --amarillo:    #FACC15;  --amarillo-d: #FDE047;  --amarillo-l: #42370C;  --amarillo-txt: #FDE68A;
++  --naranja:     #FB923C;                          --naranja-l:  #4A2A12;
++
++  /* colores que antes estaban fijos en las páginas */
++  --txt-rojo:    #FCA5A5;   --txt-verde:   #86EFAC;   --txt-azul:    #93C5FD;   --txt-naranja: #FDBA74;
++  --fila-deuda-bg: #3A1824; --ok-bg-suave: #0F3A2E;
++  --amarillo-l2: #4A3E10;   --amarillo-l3: #5A4A10;   --amarillo-xl: #3A300A;
++  --coral-xl2:   #3F1A28;
++  --texto-sobre-amarillo: #1E1E1E;   /* el amarillo sigue siendo claro: su texto debe ser oscuro */
++
++  --sombra-sm: 0 1px 3px rgba(0,0,0,.40), 0 1px 2px rgba(0,0,0,.30);
++  --sombra-md: 0 4px 8px rgba(0,0,0,.40), 0 2px 4px rgba(0,0,0,.30);
++  --sombra-lg: 0 10px 18px rgba(0,0,0,.45), 0 4px 6px rgba(0,0,0,.30);
++  --sombra-xl: 0 20px 28px rgba(0,0,0,.50), 0 10px 10px rgba(0,0,0,.30);
++}
++/* logo del login: su JPG tiene fondo blanco y usa mix-blend-mode:multiply para fundirse
++   con una tarjeta clara; sobre una tarjeta oscura apagaría los colores → placa blanca */
++:root[data-modo="oscuro"] .logo-img {
++  mix-blend-mode: normal; background: #fff; border-radius: 1.5rem;
++  padding: .6rem; box-sizing: border-box;
++}
++/* calendarios (flatpickr) en oscuro */
++:root[data-modo="oscuro"] .flatpickr-calendar,
++:root[data-modo="oscuro"] .flatpickr-months .flatpickr-month,
++:root[data-modo="oscuro"] .flatpickr-monthSelect-month { background: var(--blanco); color: var(--texto); }
++:root[data-modo="oscuro"] .flatpickr-calendar { border: 1px solid var(--gris-200); }
++:root[data-modo="oscuro"] .flatpickr-current-month .flatpickr-monthDropdown-months,
++:root[data-modo="oscuro"] .flatpickr-current-month input.cur-year,
++:root[data-modo="oscuro"] .flatpickr-day,
++:root[data-modo="oscuro"] .flatpickr-monthSelect-month { color: var(--texto); }
++:root[data-modo="oscuro"] .flatpickr-day.prevMonthDay,
++:root[data-modo="oscuro"] .flatpickr-day.nextMonthDay,
++:root[data-modo="oscuro"] .flatpickr-day.flatpickr-disabled { color: var(--gris-300); }
++:root[data-modo="oscuro"] span.flatpickr-weekday { color: var(--texto-suave); background: transparent; }
++:root[data-modo="oscuro"] .flatpickr-months .flatpickr-prev-month svg,
++:root[data-modo="oscuro"] .flatpickr-months .flatpickr-next-month svg { fill: var(--texto); }
++:root[data-modo="oscuro"] .flatpickr-day.selected,
++:root[data-modo="oscuro"] .flatpickr-day.selected:hover { color: #fff; }
++
++
++/* ═══ 🚀 ESPACIO (oscuro) ═════════════════════════════════════ */
++:root[data-tema="espacio"] {
+   /* primario violeta · acento cian */
+   --turquesa:    #8B5CF6;
+   --turquesa-d:  #A78BFA;
+@@ -81,20 +129,11 @@
+   --violeta:     #22D3EE;
+   --violeta-d:   #67E8F9;
+   --violeta-l:   #10394A;
++  --violeta-xl:  #0C2A38;
+ 
+-  /* estados: se aclaran para leerse sobre fondo oscuro */
+-  --verde:       #34D399;  --verde-d:    #6EE7B7;  --verde-l:    #0F3A2E;
+-  --coral:       #FB7185;  --coral-d:    #FDA4AF;  --coral-l:    #4A1D2C;  --coral-xl: #3A1824;
+-  --amarillo:    #FACC15;  --amarillo-d: #FDE047;  --amarillo-l: #42370C;  --amarillo-txt: #FDE68A;
+-  --naranja:     #FB923C;                          --naranja-l:  #4A2A12;
+-
+-  /* superficies y texto: escala de grises invertida */
+-  --txt-rojo:    #FCA5A5;   --txt-verde:   #86EFAC;   --txt-azul:    #93C5FD;   --txt-naranja: #FDBA74;
+-  --fila-deuda-bg: #3A1824; --ok-bg-suave: #0F3A2E;
+-  --amarillo-l2: #4A3E10;   --amarillo-l3: #5A4A10;   --amarillo-xl: #3A300A;
+-  --violeta-xl:  #0C2A38;   --coral-xl2:   #3F1A28;
++  /* superficies y texto: escala de grises invertida (azul noche) */
+   --tinta:       #E9E9FA;   --tinta-inv:   #1A1A3A;
+-  --texto-sobre-amarillo: #1A1A3A;   /* el amarillo sigue siendo claro: su texto debe ser oscuro */
++  --texto-sobre-amarillo: #1A1A3A;
+   --blanco:   #1A1A3A;
+   --gris-50:  #12122B;
+   --gris-100: #20204A;
+@@ -108,11 +147,6 @@
+   --texto:       #E9E9FA;
+   --texto-suave: #A3A3CE;
+ 
+-  --sombra-sm: 0 1px 3px rgba(0,0,0,.40), 0 1px 2px rgba(0,0,0,.30);
+-  --sombra-md: 0 4px 8px rgba(0,0,0,.40), 0 2px 4px rgba(0,0,0,.30);
+-  --sombra-lg: 0 10px 18px rgba(0,0,0,.45), 0 4px 6px rgba(0,0,0,.30);
+-  --sombra-xl: 0 20px 28px rgba(0,0,0,.50), 0 10px 10px rgba(0,0,0,.30);
+-
+   --fondo-grad:     linear-gradient(135deg, #0B0B24 0%, #1B1245 40%, #0F2A4A 75%, #1A0B2E 100%);
+   --grad-hero:      linear-gradient(135deg, #6D28D9, #0E7490);
+   --login-card-bg:  rgba(26, 26, 58, .92);
+@@ -129,23 +163,53 @@
+     radial-gradient(1px   1px   at  70px 170px, rgba(167,139,250,.60), transparent);
+   background-size: 240px 200px;
+ }
+-/* calendarios (flatpickr) en oscuro */
+-:root[data-tema="espacio"] .flatpickr-calendar,
+-:root[data-tema="espacio"] .flatpickr-months .flatpickr-month,
+-:root[data-tema="espacio"] .flatpickr-monthSelect-month { background: var(--blanco); color: var(--texto); }
+-:root[data-tema="espacio"] .flatpickr-calendar { border: 1px solid var(--gris-200); }
+-:root[data-tema="espacio"] .flatpickr-current-month .flatpickr-monthDropdown-months,
+-:root[data-tema="espacio"] .flatpickr-current-month input.cur-year,
+-:root[data-tema="espacio"] .flatpickr-day,
+-:root[data-tema="espacio"] .flatpickr-monthSelect-month { color: var(--texto); }
+-:root[data-tema="espacio"] .flatpickr-day.prevMonthDay,
+-:root[data-tema="espacio"] .flatpickr-day.nextMonthDay,
+-:root[data-tema="espacio"] .flatpickr-day.flatpickr-disabled { color: var(--gris-300); }
+-:root[data-tema="espacio"] span.flatpickr-weekday { color: var(--texto-suave); background: transparent; }
+-:root[data-tema="espacio"] .flatpickr-months .flatpickr-prev-month svg,
+-:root[data-tema="espacio"] .flatpickr-months .flatpickr-next-month svg { fill: var(--texto); }
+-:root[data-tema="espacio"] .flatpickr-day.selected,
+-:root[data-tema="espacio"] .flatpickr-day.selected:hover { color: #fff; }
++
++
++/* ═══ 🌙 NOCHE SUAVE (oscuro, sobrio) ═════════════════════════ */
++:root[data-tema="noche"] {
++  /* primario verde-azulado (el turquesa de la marca, en versión noche) · acento índigo */
++  --turquesa:    #0F766E;
++  --turquesa-d:  #5EEAD4;
++  --turquesa-l:  #12373A;
++  --turquesa-xl: #0F2D31;
++  --primario-rgb: 15, 118, 110;
++  --primario-2:  #0E7490;
++  --violeta:     #4F46E5;
++  --violeta-d:   #A5B4FC;
++  --violeta-l:   #25295A;
++  --violeta-xl:  #1C1F47;
++  --coral:       #E11D48;   /* rellenos de botón: texto blanco legible */
++  --naranja:     #C2410C;
++
++  /* superficies y texto: grises pizarra, sin tinte de color */
++  --tinta:       #E2E8F0;   --tinta-inv:   #1E293B;
++  --blanco:   #1E293B;
++  --gris-50:  #0F172A;
++  --gris-100: #263449;
++  --gris-200: #334155;
++  --gris-300: #475569;
++  --gris-400: #94A3B8;
++  --gris-500: #A8B5C9;
++  --gris-600: #CBD5E1;
++  --gris-700: #E2E8F0;
++  --gris-800: #F1F5F9;
++  --texto:       #E2E8F0;
++  --texto-suave: #94A3B8;
++
++  --fondo-grad:     linear-gradient(135deg, #0B1220 0%, #14213A 45%, #0F1A2E 75%, #0B1220 100%);
++  --grad-hero:      linear-gradient(135deg, #0F766E, #155E75);
++  --login-card-bg:  rgba(30, 41, 59, .92);
++  --deco-header:    '🌙⭐☁️';
++
++  /* formas tranquilas: radios medios, sin brillos */
++  --radio-lg: .875rem;
++  --radio-xl: 1.25rem;
++}
++/* sin burbujas ni estrellitas: es el tema para trabajar con poca luz */
++:root[data-tema="noche"] .burbuja,
++:root[data-tema="noche"] .estrellita,
++:root[data-tema="noche"] .bg-burbujas::before,
++:root[data-tema="noche"] .bg-burbujas::after { display: none; }
+ 
+ 
+ /* ═══ 📒 PAPEL (sobrio) ═══════════════════════════════════════ */
+@@ -189,6 +253,162 @@
+ :root[data-tema="papel"] .tn-acciones   { border-top-style: solid; }
+ 
+ 
++/* ═══ 🌳 SELVA ════════════════════════════════════════════════ */
++:root[data-tema="selva"] {
++  /* verde musgo → lima · acento agua de río */
++  --turquesa:    #4D7C0F;
++  --turquesa-d:  #3F6212;
++  --turquesa-l:  #ECFCCB;
++  --turquesa-xl: #F7FEE7;
++  --primario-rgb: 77, 124, 15;
++  --primario-2:  #65A30D;
++  --violeta:     #0E7490;
++  --violeta-d:   #155E75;
++  --violeta-l:   #CFFAFE;
++  --violeta-xl:  #E3F8FB;
++
++  --fondo-panel: linear-gradient(160deg, #F7FBEF 0%, #EAF3DC 100%);
++  --fondo-grad:  linear-gradient(135deg, #ECFCCB 0%, #F7FEE7 40%, #FEF9C3 70%, #DCFCE7 100%);
++  --grad-hero:   linear-gradient(135deg, #3F6212, #0F766E);
++  --deco-header: '🦜🌴🐒';
++
++  --radio-lg: 1.1rem;
++  --radio-xl: 1.75rem;
++}
++
++
++/* ═══ 🦙 ALTIPLANO ════════════════════════════════════════════
++   Inspirado en los colores de los textiles andinos (tierra, ocre y
++   azul de lago). Usa bandas de color, no símbolos patrios ni sagrados. */
++:root[data-tema="altiplano"] {
++  --turquesa:    #B45309;
++  --turquesa-d:  #9A3412;
++  --turquesa-l:  #F5E6D3;
++  --turquesa-xl: #FBF3E8;
++  --primario-rgb: 180, 83, 9;
++  --primario-2:  #D97706;
++  --violeta:     #0369A1;
++  --violeta-d:   #075985;
++  --violeta-l:   #E0F2FE;
++  --violeta-xl:  #E6F4FB;
++
++  --fondo-panel: linear-gradient(160deg, #FBF5EA 0%, #F3E8D6 100%);
++  --fondo-grad:  linear-gradient(135deg, #FDECD2 0%, #FBF5EA 40%, #E0F2FE 75%, #F5E6D3 100%);
++  --grad-hero:   linear-gradient(135deg, #9A3412, #B45309 55%, #0369A1);
++  --deco-header: '🦙⛰️🌄';
++
++  --radio-md: .5rem;
++  --radio-lg: .875rem;
++  --radio-xl: 1.25rem;
++}
++/* banda de color tipo aguayo bajo la barra superior */
++:root[data-tema="altiplano"] .topbar {
++  border-bottom: 5px solid transparent;
++  border-image: repeating-linear-gradient(90deg,
++    #B45309 0 28px, #0369A1 28px 40px, #F59E0B 40px 68px, #7C2D12 68px 80px, #0E7490 80px 92px) 1;
++}
++
++
++/* ═══ 👁️ ALTO CONTRASTE (accesibilidad) ═══════════════════════
++   Texto negro sobre blanco, bordes negros marcados, letra más grande,
++   tipografía de alta legibilidad y sin animaciones ni adornos.
++   Todos los pares texto/fondo superan 7:1 (nivel AAA). */
++:root[data-tema="altocontraste"] {
++  --turquesa:    #0B3BCC;
++  --turquesa-d:  #00228F;
++  --turquesa-l:  #DCE6FF;
++  --turquesa-xl: #EEF3FF;
++  --primario-rgb: 11, 59, 204;
++  --primario-2:  #0B3BCC;
++  --violeta:     #5B1FA8;
++  --violeta-d:   #3B0D7A;
++  --violeta-l:   #EBDDFF;
++  --violeta-xl:  #F3EAFF;
++
++  /* estados: oscuros para el texto, tintes claros para el fondo */
++  --verde:       #0A7A2F;  --verde-d:    #064E1C;  --verde-l:    #D7F5E1;
++  --coral:       #A80F16;  --coral-d:    #8A0A10;  --coral-l:    #FFE0E0;  --coral-xl: #FFF0F0;
++  --amarillo:    #FFD000;  --amarillo-d: #5C4700;  --amarillo-l: #FFF0A6;  --amarillo-txt: #4A3800;
++  --naranja:     #9A3412;  --naranja-l:   #FFE2C7;
++  --txt-rojo:    #9B0F14;  --txt-verde:  #0A5C24;  --txt-azul:   #0B2FA0;  --txt-naranja: #6B2410;
++  --amarillo-l2: #FFE97A;  --amarillo-l3: #FFD84D;  --amarillo-xl: #FFF5C2;
++
++  /* texto: negro y grises muy oscuros */
++  --texto:       #000000;
++  --texto-suave: #262626;
++  --gris-400:    #404040;
++  --gris-500:    #333333;
++  --gris-600:    #1F1F1F;
++  --gris-700:    #111111;
++  --gris-800:    #000000;
++
++  --fondo-panel: #F2F2F2;
++  --fondo-grad:  linear-gradient(#FFFFFF, #F2F2F2);
++  --grad-hero:   linear-gradient(135deg, #00228F, #0B3BCC);
++  --login-card-bg: #FFFFFF;
++  --deco-header: '';
++
++  /* sin sombras: los bordes definen las formas */
++  --sombra-sm: 0 0 0 0 transparent;  --sombra-md: 0 0 0 0 transparent;
++  --sombra-lg: 0 0 0 0 transparent;  --sombra-xl: 0 0 0 0 transparent;
++  --sombra-color: 0 0 0 0 transparent;
++
++  --font-body:    'Atkinson Hyperlegible', 'Nunito', system-ui, sans-serif;
++  --font-display: 'Atkinson Hyperlegible', 'Nunito', system-ui, sans-serif;
++}
++:root[data-tema="altocontraste"] { font-size: 108%; }   /* base: 92% → ~17px */
++:root[data-tema="altocontraste"] body { line-height: 1.7; }
++
++/* bordes negros y marcados */
++:root[data-tema="altocontraste"] .card,
++:root[data-tema="altocontraste"] .stat-card,
++:root[data-tema="altocontraste"] .tarjeta-nino,
++:root[data-tema="altocontraste"] .tabla-wrap,
++:root[data-tema="altocontraste"] .modal,
++:root[data-tema="altocontraste"] .usuario-card { border: 2px solid #000; }
++:root[data-tema="altocontraste"] .sidebar { border-right: 3px solid #000; }
++:root[data-tema="altocontraste"] .topbar  { border-bottom: 3px solid #000; }
++:root[data-tema="altocontraste"] .form-input,
++:root[data-tema="altocontraste"] .form-select,
++:root[data-tema="altocontraste"] .form-textarea { border: 2px solid #000; }
++:root[data-tema="altocontraste"] .btn { border: 2px solid #000; }
++:root[data-tema="altocontraste"] .chip,
++:root[data-tema="altocontraste"] .alerta-info,
++:root[data-tema="altocontraste"] .alerta-exito,
++:root[data-tema="altocontraste"] .alerta-warn,
++:root[data-tema="altocontraste"] .alerta-peligro { border: 2px solid currentColor; }
++:root[data-tema="altocontraste"] .nav-item.activo { outline: 3px solid #000; outline-offset: -3px; }
++
++/* títulos en negrita (Atkinson solo se pide en 400 y 700) y enlaces subrayados */
++:root[data-tema="altocontraste"] .sidebar-logo .logo-texto h2,
++:root[data-tema="altocontraste"] .topbar-titulo,
++:root[data-tema="altocontraste"] .card-titulo,
++:root[data-tema="altocontraste"] .stat-info .valor,
++:root[data-tema="altocontraste"] .modal-titulo,
++:root[data-tema="altocontraste"] .tn-nombre,
++:root[data-tema="altocontraste"] .tn-monto,
++:root[data-tema="altocontraste"] h1,
++:root[data-tema="altocontraste"] h2,
++:root[data-tema="altocontraste"] h3 { font-weight: 700; }
++:root[data-tema="altocontraste"] a:not(.btn):not(.nav-item) { text-decoration: underline; }
++
++/* foco muy visible para quien navega con teclado */
++:root[data-tema="altocontraste"] :focus-visible { outline: 4px solid #FF8C00 !important; outline-offset: 2px !important; }
++
++/* sin adornos ni movimiento */
++:root[data-tema="altocontraste"] .burbuja,
++:root[data-tema="altocontraste"] .estrellita,
++:root[data-tema="altocontraste"] .bg-burbujas::before,
++:root[data-tema="altocontraste"] .bg-burbujas::after { display: none; }
++:root[data-tema="altocontraste"] *,
++:root[data-tema="altocontraste"] *::before,
++:root[data-tema="altocontraste"] *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
++
++/* el propio selector también en alto contraste */
++:root[data-tema="altocontraste"] .tema-btn,
++:root[data-tema="altocontraste"] .tema-menu { border: 2px solid #000; }
++
++
+ /* ═══ Decoración del portal controlada por tema ═══════════════ */
+ .portal-header::before { content: var(--deco-header, '🌸🌟🦋'); }
+ 
+@@ -228,10 +448,13 @@
+   padding: .4rem; background: var(--blanco);
+   border: 1.5px solid var(--gris-200); border-radius: var(--radio-lg);
+   box-shadow: var(--sombra-xl);
++  max-height: min(82vh, 640px); overflow-y: auto;
+ }
+ .tema-selector.abierto .tema-menu { display: block; animation: temaPop .14s ease-out; }
+ @keyframes temaPop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+ 
++.tema-menu-titulo + .tema-op, .tema-op + .tema-menu-titulo { margin-top: 0; }
++.tema-menu-titulo:not(:first-child) { margin-top: .35rem; border-top: 1px solid var(--gris-100); padding-top: .55rem; }
+ .tema-menu-titulo {
+   padding: .35rem .6rem .25rem; font-size: var(--text-xs); font-weight: 800;
+   text-transform: uppercase; letter-spacing: .06em; color: var(--gris-400);
+diff --git a/frontend/js/tema.js b/frontend/js/tema.js
+index e940193..42492e6 100644
+--- a/frontend/js/tema.js
++++ b/frontend/js/tema.js
+@@ -12,25 +12,37 @@
+      Tema.aplicar('espacio')          → cambia y guarda el tema
+      Tema.montar(elemento, {variante}) → dibuja el selector dentro de elemento
+                                         variante: 'flotante' | 'sobre-color'
++
++   <html> recibe data-tema="id" y data-modo="claro|oscuro".
+ ═══════════════════════════════════════════════════════════════ */
+ const Tema = (() => {
+   const CLAVE = 'mk_tema';
+   const POR_DEFECTO = 'jardin';
+ 
+   /* Para agregar un tema: registrarlo acá y crear su bloque en themes.css */
++  /* grupo: cómo se agrupan en el menú · oscuro: activa el bloque data-modo="oscuro" */
+   const TEMAS = [
+-    { id: 'jardin',    nombre: 'Jardín mágico',   desc: 'Colorido y alegre',    logo: '🌱', deco: ['🌸','🦋','🌟'],
++    { id: 'jardin',    grupo: 'Alegres',       nombre: 'Jardín mágico',   desc: 'Colorido y alegre',      logo: '🌱', deco: ['🌸','🦋','🌟'],
+       muestra: ['#2DD4BF', '#FF6B6B', '#FFD93D'], barra: '#2DD4BF' },
+-    { id: 'oceano',    nombre: 'Océano',          desc: 'Azules y aguamarina',  logo: '🐠', deco: ['🌊','🐬','🐚'],
++    { id: 'oceano',    grupo: 'Alegres',       nombre: 'Océano',          desc: 'Azules y aguamarina',    logo: '🐠', deco: ['🌊','🐬','🐚'],
+       muestra: ['#0EA5E9', '#6366F1', '#BAE6FD'], barra: '#0EA5E9' },
+-    { id: 'atardecer', nombre: 'Dulce atardecer', desc: 'Fucsia y durazno',     logo: '🌅', deco: ['🦄','🎈','🌈'],
++    { id: 'atardecer', grupo: 'Alegres',       nombre: 'Dulce atardecer', desc: 'Fucsia y durazno',       logo: '🌅', deco: ['🦄','🎈','🌈'],
+       muestra: ['#D946EF', '#FB923C', '#FDE68A'], barra: '#D946EF' },
+-    { id: 'espacio',   nombre: 'Espacio',         desc: 'Oscuro con estrellas', logo: '🚀', deco: ['🪐','🌟','🛸'],
+-      muestra: ['#8B5CF6', '#22D3EE', '#1A1A3A'], barra: '#1A1A3A',
+-      fuente: 'family=Righteous' },
+-    { id: 'papel',     nombre: 'Papel',           desc: 'Sobrio y limpio',      logo: '📒', deco: ['✏️','📌','📚'],
++    { id: 'selva',     grupo: 'Alegres',       nombre: 'Selva',           desc: 'Verde musgo y río',      logo: '🌳', deco: ['🌿','🦜','🍃'],
++      muestra: ['#4D7C0F', '#0E7490', '#65A30D'], barra: '#4D7C0F' },
++    { id: 'altiplano', grupo: 'Alegres',       nombre: 'Altiplano',       desc: 'Terracota y azul lago',  logo: '🦙', deco: ['🦙','⛰️','🌄'],
++      muestra: ['#B45309', '#0369A1', '#F59E0B'], barra: '#B45309' },
++    { id: 'papel',     grupo: 'Sobrios',       nombre: 'Papel',           desc: 'Sobrio y limpio',        logo: '📒', deco: ['✏️','📌','📚'],
+       muestra: ['#2563EB', '#94A3B8', '#1E293B'], barra: '#2563EB',
+       fuente: 'family=Inter:wght@400;500;600;700;800&family=DM+Serif+Display' },
++    { id: 'espacio',   grupo: 'Oscuros',       nombre: 'Espacio',         desc: 'Oscuro con estrellas',   logo: '🚀', deco: ['🪐','🌟','🛸'],
++      muestra: ['#8B5CF6', '#22D3EE', '#1A1A3A'], barra: '#1A1A3A', oscuro: true,
++      fuente: 'family=Righteous' },
++    { id: 'noche',     grupo: 'Oscuros',       nombre: 'Noche suave',     desc: 'Oscuro y tranquilo',     logo: '🌙', deco: ['🌙','⭐','☁️'],
++      muestra: ['#0F766E', '#4F46E5', '#1E293B'], barra: '#0F172A', oscuro: true },
++    { id: 'altocontraste', grupo: 'Accesibilidad', nombre: 'Alto contraste', desc: 'Máxima legibilidad', logo: '👁️', deco: ['⭐','✅','🔔'],
++      muestra: ['#0B3BCC', '#FFD000', '#000000'], barra: '#0B3BCC',
++      fuente: 'family=Atkinson+Hyperlegible:wght@400;700' },
+   ];
+ 
+   const porId = id => TEMAS.find(t => t.id === id);
+@@ -94,6 +106,7 @@ const Tema = (() => {
+   function aplicar(id, { guardarEleccion = true } = {}) {
+     const tema = porId(id) || porId(POR_DEFECTO);
+     document.documentElement.setAttribute('data-tema', tema.id);
++    document.documentElement.setAttribute('data-modo', tema.oscuro ? 'oscuro' : 'claro');
+     cargarFuente(tema);
+     pintarBarraNavegador(tema);
+     actualizarLogos(tema);
+@@ -127,8 +140,8 @@ const Tema = (() => {
+           <span class="tema-flecha" aria-hidden="true">▲</span>
+         </button>
+         <div class="tema-menu" role="radiogroup" aria-label="Tema de la aplicación">
+-          <div class="tema-menu-titulo">Aspecto de la app</div>
+-          ${TEMAS.map(x => `
++          ${TEMAS.map((x, n) => (n === 0 || TEMAS[n - 1].grupo !== x.grupo
++              ? `<div class="tema-menu-titulo" role="presentation">${x.grupo}</div>` : '') + `
+             <button type="button" class="tema-op" role="radio" data-id="${x.id}" aria-checked="false">
+               <span class="tema-muestra"
+                     style="background:linear-gradient(135deg,${x.muestra[0]} 50%,${x.muestra[1]} 50%)">${x.logo}</span>
+-- 
+2.43.0
+

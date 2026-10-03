@@ -12,25 +12,37 @@
      Tema.aplicar('espacio')          → cambia y guarda el tema
      Tema.montar(elemento, {variante}) → dibuja el selector dentro de elemento
                                         variante: 'flotante' | 'sobre-color'
+
+   <html> recibe data-tema="id" y data-modo="claro|oscuro".
 ═══════════════════════════════════════════════════════════════ */
 const Tema = (() => {
   const CLAVE = 'mk_tema';
   const POR_DEFECTO = 'jardin';
 
   /* Para agregar un tema: registrarlo acá y crear su bloque en themes.css */
+  /* grupo: cómo se agrupan en el menú · oscuro: activa el bloque data-modo="oscuro" */
   const TEMAS = [
-    { id: 'jardin',    nombre: 'Jardín mágico',   desc: 'Colorido y alegre',    logo: '🌱', deco: ['🌸','🦋','🌟'],
+    { id: 'jardin',    grupo: 'Alegres',       nombre: 'Jardín mágico',   desc: 'Colorido y alegre',      logo: '🌱', deco: ['🌸','🦋','🌟'],
       muestra: ['#2DD4BF', '#FF6B6B', '#FFD93D'], barra: '#2DD4BF' },
-    { id: 'oceano',    nombre: 'Océano',          desc: 'Azules y aguamarina',  logo: '🐠', deco: ['🌊','🐬','🐚'],
+    { id: 'oceano',    grupo: 'Alegres',       nombre: 'Océano',          desc: 'Azules y aguamarina',    logo: '🐠', deco: ['🌊','🐬','🐚'],
       muestra: ['#0EA5E9', '#6366F1', '#BAE6FD'], barra: '#0EA5E9' },
-    { id: 'atardecer', nombre: 'Dulce atardecer', desc: 'Fucsia y durazno',     logo: '🌅', deco: ['🦄','🎈','🌈'],
+    { id: 'atardecer', grupo: 'Alegres',       nombre: 'Dulce atardecer', desc: 'Fucsia y durazno',       logo: '🌅', deco: ['🦄','🎈','🌈'],
       muestra: ['#D946EF', '#FB923C', '#FDE68A'], barra: '#D946EF' },
-    { id: 'espacio',   nombre: 'Espacio',         desc: 'Oscuro con estrellas', logo: '🚀', deco: ['🪐','🌟','🛸'],
-      muestra: ['#8B5CF6', '#22D3EE', '#1A1A3A'], barra: '#1A1A3A',
-      fuente: 'family=Righteous' },
-    { id: 'papel',     nombre: 'Papel',           desc: 'Sobrio y limpio',      logo: '📒', deco: ['✏️','📌','📚'],
+    { id: 'selva',     grupo: 'Alegres',       nombre: 'Selva',           desc: 'Verde musgo y río',      logo: '🌳', deco: ['🌿','🦜','🍃'],
+      muestra: ['#4D7C0F', '#0E7490', '#65A30D'], barra: '#4D7C0F' },
+    { id: 'altiplano', grupo: 'Alegres',       nombre: 'Altiplano',       desc: 'Terracota y azul lago',  logo: '🦙', deco: ['🦙','⛰️','🌄'],
+      muestra: ['#B45309', '#0369A1', '#F59E0B'], barra: '#B45309' },
+    { id: 'papel',     grupo: 'Sobrios',       nombre: 'Papel',           desc: 'Sobrio y limpio',        logo: '📒', deco: ['✏️','📌','📚'],
       muestra: ['#2563EB', '#94A3B8', '#1E293B'], barra: '#2563EB',
       fuente: 'family=Inter:wght@400;500;600;700;800&family=DM+Serif+Display' },
+    { id: 'espacio',   grupo: 'Oscuros',       nombre: 'Espacio',         desc: 'Oscuro con estrellas',   logo: '🚀', deco: ['🪐','🌟','🛸'],
+      muestra: ['#8B5CF6', '#22D3EE', '#1A1A3A'], barra: '#1A1A3A', oscuro: true,
+      fuente: 'family=Righteous' },
+    { id: 'noche',     grupo: 'Oscuros',       nombre: 'Noche suave',     desc: 'Oscuro y tranquilo',     logo: '🌙', deco: ['🌙','⭐','☁️'],
+      muestra: ['#0F766E', '#4F46E5', '#1E293B'], barra: '#0F172A', oscuro: true },
+    { id: 'altocontraste', grupo: 'Accesibilidad', nombre: 'Alto contraste', desc: 'Máxima legibilidad', logo: '👁️', deco: ['⭐','✅','🔔'],
+      muestra: ['#0B3BCC', '#FFD000', '#000000'], barra: '#0B3BCC',
+      fuente: 'family=Atkinson+Hyperlegible:wght@400;700' },
   ];
 
   const porId = id => TEMAS.find(t => t.id === id);
@@ -94,6 +106,7 @@ const Tema = (() => {
   function aplicar(id, { guardarEleccion = true } = {}) {
     const tema = porId(id) || porId(POR_DEFECTO);
     document.documentElement.setAttribute('data-tema', tema.id);
+    document.documentElement.setAttribute('data-modo', tema.oscuro ? 'oscuro' : 'claro');
     cargarFuente(tema);
     pintarBarraNavegador(tema);
     actualizarLogos(tema);
@@ -127,8 +140,8 @@ const Tema = (() => {
           <span class="tema-flecha" aria-hidden="true">▲</span>
         </button>
         <div class="tema-menu" role="radiogroup" aria-label="Tema de la aplicación">
-          <div class="tema-menu-titulo">Aspecto de la app</div>
-          ${TEMAS.map(x => `
+          ${TEMAS.map((x, n) => (n === 0 || TEMAS[n - 1].grupo !== x.grupo
+              ? `<div class="tema-menu-titulo" role="presentation">${x.grupo}</div>` : '') + `
             <button type="button" class="tema-op" role="radio" data-id="${x.id}" aria-checked="false">
               <span class="tema-muestra"
                     style="background:linear-gradient(135deg,${x.muestra[0]} 50%,${x.muestra[1]} 50%)">${x.logo}</span>
