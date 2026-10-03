@@ -5,6 +5,8 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Desarrollo — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
@@ -32,7 +34,7 @@
     }
     .progreso-fill {
       height:100%;border-radius:var(--radio-full);
-      background:linear-gradient(90deg,var(--turquesa),var(--verde));
+      background:linear-gradient(90deg,var(--turquesa), var(--primario-2));
       transition:width .6s ease;
     }
     /* ── Selector de hitos por secciones (modal Nueva evaluación) ── */
@@ -49,7 +51,7 @@
     .hp-barra .form-input { flex:1 1 180px;min-width:0; }
     .hp-seg { display:inline-flex;border:1.5px solid var(--gris-200);border-radius:var(--radio-full);overflow:hidden;background:var(--blanco); }
     .hp-seg button { border:none;background:none;padding:6px 12px;font-size:var(--text-xs);font-weight:800;color:var(--gris-600);cursor:pointer;font-family:inherit; }
-    .hp-seg button.activo { background:var(--turquesa);color:var(--blanco); }
+    .hp-seg button.activo { background:var(--turquesa);color:var(--texto-sobre-color); }
     .hp-areas { display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:var(--gap-xs); }
     .hp-area-chip {
       flex-shrink:0;border:1.5px solid var(--gris-200);background:var(--blanco);border-radius:var(--radio-full);
@@ -90,7 +92,7 @@
     .estado-btn .ico { font-size:1.5rem; }
     .estado-btn:hover { border-color:var(--gris-400); }
     .estado-btn.activo[data-estado="logrado"]    { border-color:var(--verde-d);background:var(--verde-l);color:var(--verde-d); }
-    .estado-btn.activo[data-estado="en_proceso"] { border-color:var(--amarillo-d);background:var(--amarillo-l);color:#92400E; }
+    .estado-btn.activo[data-estado="en_proceso"] { border-color:var(--amarillo-d);background:var(--amarillo-l);color:var(--amarillo-txt); }
     .estado-btn.activo[data-estado="no_logrado"] { border-color:var(--gris-500);background:var(--gris-100);color:var(--gris-700); }
     .estado-btn.activo { box-shadow:var(--sombra-sm); }
     .estado-btn:focus-visible { outline:3px solid var(--turquesa);outline-offset:2px; }

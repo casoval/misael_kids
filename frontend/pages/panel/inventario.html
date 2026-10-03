@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inventario — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
@@ -79,7 +81,7 @@
 
     /* ── Alertas de stock ── */
     .alertas-banner {
-      background: linear-gradient(135deg, var(--coral-l), #FFE8E8);
+      background: linear-gradient(135deg, var(--coral-l), var(--coral-xl2));
       border: 2px solid var(--coral);
       border-radius: var(--radio-xl);
       padding: var(--gap-lg);
@@ -316,7 +318,7 @@
       </button>
       <button type="button" class="tipo-mov-btn ajuste" onclick="seleccionarTipoMov('ajuste',this)">
         <span class="t-icono">⚖️</span>
-        <span class="t-label" style="color:#92400E">Ajuste</span>
+        <span class="t-label" style="color:var(--amarillo-txt)">Ajuste</span>
       </button>
     </div>
 

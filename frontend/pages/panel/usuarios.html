@@ -5,19 +5,21 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Usuarios — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
   <style>
     .rol-badge { padding:3px 10px;border-radius:var(--radio-full);font-size:var(--text-xs);font-weight:700; }
     .rol-admin          { background:var(--coral-l);color:var(--coral-d); }
-    .rol-directora      { background:var(--amarillo-l);color:#92400E; }
+    .rol-directora      { background:var(--amarillo-l);color:var(--amarillo-txt); }
     .rol-educadora      { background:var(--turquesa-l);color:var(--turquesa-d); }
     .rol-ayudante       { background:var(--verde-l);color:var(--verde-d); }
     .rol-tutor          { background:var(--violeta-l);color:var(--violeta-d); }
-    .rol-profesional    { background:#FDE68A;color:#92400E; }
+    .rol-profesional    { background:var(--amarillo-l3);color:var(--amarillo-txt); }
     .rol-recepcionista { background:#E0E7FF;color:#3730A3; }
-    .rol-cocina         { background:var(--naranja-l);color:#7C2D12; }
+    .rol-cocina         { background:var(--naranja-l);color:var(--txt-naranja); }
     .avatar-usr { width:42px;height:42px;border-radius:50%;
       background:linear-gradient(135deg,var(--turquesa),var(--violeta));
       display:flex;align-items:center;justify-content:center;

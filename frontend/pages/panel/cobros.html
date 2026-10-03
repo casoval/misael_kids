@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cobros — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
@@ -54,14 +56,14 @@
     .metodo-btn:hover { border-color: var(--turquesa); background: var(--turquesa-l); }
     .metodo-btn.seleccionado {
       border-color: var(--turquesa); background: var(--turquesa-l);
-      box-shadow: 0 0 0 3px rgba(45,212,191,.2);
+      box-shadow: 0 0 0 3px rgba(var(--primario-rgb),.2);
     }
     .metodo-btn .icono { font-size: 1.6rem; display: block; margin-bottom: 4px; }
     .metodo-btn .label { font-size: var(--text-xs); font-weight: 700; color: var(--turquesa-d); }
 
     /* ── Generador masivo de cobros ── */
     .generador-mensual {
-      background: linear-gradient(135deg, var(--amarillo-l), #FFF3C4);
+      background: linear-gradient(135deg, var(--amarillo-l), var(--amarillo-xl));
       border: 2px solid var(--amarillo);
       border-radius: var(--radio-xl);
       padding: var(--gap-lg);
@@ -69,7 +71,7 @@
     }
     .generador-mensual h3 {
       font-family: var(--font-display);
-      color: #92400E; margin-bottom: var(--gap-sm);
+      color: var(--amarillo-txt); margin-bottom: var(--gap-sm);
     }
   </style>
 </head>
@@ -945,7 +947,7 @@ function actualizarSaldoRestante() {
   preview.textContent = restante > 0
     ? `Quedará un saldo pendiente de ${UI.moneda(restante)} después de este pago.`
     : '✅ Con este pago el cobro queda completamente saldado.';
-  preview.style.color = restante > 0 ? 'var(--amarillo-d,#92400E)' : 'var(--verde-d)';
+  preview.style.color = restante > 0 ? 'var(--amarillo-d,var(--amarillo-txt))' : 'var(--verde-d)';
 }
 
 function seleccionarMetodo(metodo, btn) {

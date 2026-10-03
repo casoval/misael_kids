@@ -5,12 +5,14 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Turnos — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
   <style>
     .turno-tipo { padding:3px 10px;border-radius:var(--radio-full);font-size:var(--text-xs);font-weight:700; }
-    .tipo-manana   { background:var(--amarillo-l);color:#92400E; }
+    .tipo-manana   { background:var(--amarillo-l);color:var(--amarillo-txt); }
     .tipo-tarde    { background:var(--turquesa-l);color:var(--turquesa-d); }
     .tipo-completo { background:var(--verde-l);color:var(--verde-d); }
     .tipo-especial { background:var(--violeta-l);color:var(--violeta-d); }

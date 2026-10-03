@@ -6,13 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
   <style>
     /* ── Bienvenida ── */
     .bienvenida {
-      background: linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
+      background: var(--grad-hero);
       border-radius: var(--radio-xl);
       padding: var(--gap-xl);
       color: white;
@@ -131,7 +133,7 @@
     .nino-avatar {
       width: 38px; height: 38px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--turquesa), var(--verde));
+      background: linear-gradient(135deg, var(--turquesa), var(--primario-2));
       display: flex; align-items: center; justify-content: center;
       color: white;
       font-weight: 800;
@@ -250,7 +252,7 @@
           <h2 id="saludo-texto">¡Buenos días! 👋</h2>
           <p id="saludo-nombre">Cargando tu información...</p>
         </div>
-        <div class="bienvenida-emoji">🌸</div>
+        <div class="bienvenida-emoji" data-tema-deco="0">🌸</div>
       </div>
 
       <!-- Estadísticas -->

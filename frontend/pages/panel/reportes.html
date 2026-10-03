@@ -5,6 +5,8 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reportes — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
@@ -56,7 +58,7 @@
     .fin-fila:last-child { border-bottom:none; }
     .fin-fila b { font-weight:800; }
     .progreso { height:10px;border-radius:var(--radio-full);background:var(--gris-100);overflow:hidden;margin:6px 0; }
-    .progreso > span { display:block;height:100%;background:linear-gradient(90deg,var(--turquesa),var(--verde)); }
+    .progreso > span { display:block;height:100%;background:linear-gradient(90deg,var(--turquesa), var(--primario-2)); }
 
     .estado-error { text-align:center;padding:var(--gap-xl);color:var(--coral-d);font-weight:700; }
 
@@ -262,7 +264,7 @@ function renderKpis(r) {
   $('kpis').innerHTML =
     kpi('📋 Asistencia', pct(a.porcentaje), a.total ? `${a.presentes} presentes de ${a.total} registros` : 'Sin registros en este período', 'var(--turquesa-d)') +
     kpi('✅ Cobrado en el período', bs(c.caja_mes.neto), `${c.caja_mes.cantidad_pagos} pago(s)` + (c.caja_mes.cantidad_devoluciones ? ` · ${c.caja_mes.cantidad_devoluciones} devolución(es)` : ''), 'var(--verde-d)') +
-    kpi('⏳ Por cobrar hoy', bs(c.pendiente.monto), `${c.pendiente.cantidad} cobro(s)` + (c.vencido.cantidad ? ` · <span style="color:var(--coral-d)">${bs(c.vencido.monto)} vencido</span>` : ''), '#92400E') +
+    kpi('⏳ Por cobrar hoy', bs(c.pendiente.monto), `${c.pendiente.cantidad} cobro(s)` + (c.vencido.cantidad ? ` · <span style="color:var(--coral-d)">${bs(c.vencido.monto)} vencido</span>` : ''), 'var(--amarillo-txt)') +
     kpi('⚠️ Niños con deuda', bs(r.deudas.monto), `${r.deudas.cantidad} niño(s) no están al día`, 'var(--coral-d)');
 }
 
@@ -316,7 +318,7 @@ function renderFinanciero(r) {
     <div class="fin-grid">
       ${caja('Emitido', bs(cm.emitido), 'var(--gris-50)', 'var(--gris-200)', 'var(--texto)')}
       ${caja('✅ Cobrado', bs(cm.cobrado), 'var(--verde-l)', 'var(--verde)', 'var(--verde-d)')}
-      ${caja('⏳ Falta cobrar', bs(cm.saldo), 'var(--amarillo-l)', 'var(--amarillo)', '#92400E')}
+      ${caja('⏳ Falta cobrar', bs(cm.saldo), 'var(--amarillo-l)', 'var(--amarillo)', 'var(--amarillo-txt)')}
     </div>
     <div class="progreso" title="Porcentaje cobrado de lo emitido"><span style="width:${Math.min(cm.porcentaje_cobrado || 0, 100)}%"></span></div>
     <div class="fin-fila"><span>% cobrado de lo emitido</span><b>${pct(cm.porcentaje_cobrado)}</b></div>

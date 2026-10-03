@@ -195,7 +195,7 @@ const UI = {
       exito:   { bg: 'var(--verde-l)',    color: 'var(--verde-d)',    icono: '✅' },
       error:   { bg: 'var(--coral-l)',    color: 'var(--coral-d)',    icono: '❌' },
       info:    { bg: 'var(--turquesa-l)', color: 'var(--turquesa-d)', icono: 'ℹ️' },
-      warn:    { bg: 'var(--amarillo-l)', color: '#92400E',           icono: '⚠️' },
+      warn:    { bg: 'var(--amarillo-l)', color: 'var(--amarillo-txt)',           icono: '⚠️' },
     };
     const c = colores[tipo] || colores.info;
 

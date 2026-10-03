@@ -80,7 +80,7 @@
   --sombra-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
   --sombra-lg: 0 10px 15px rgba(0,0,0,.08), 0 4px 6px rgba(0,0,0,.05);
   --sombra-xl: 0 20px 25px rgba(0,0,0,.10), 0 10px 10px rgba(0,0,0,.04);
-  --sombra-color: 0 8px 20px rgba(45,212,191,.25);
+  --sombra-color: 0 8px 20px rgba(var(--primario-rgb),.25);
 
   /* ── Sidebar ── */
   --sidebar-w: 208px;
@@ -90,4 +90,35 @@
   --trans-fast:   150ms ease;
   --trans-base:   250ms ease;
   --trans-slow:   400ms ease;
+
+  /* ═══ Tokens de tema (los redefine css/themes.css) ═══════════════
+     Con estos valores la app se ve exactamente como siempre
+     ("Jardín mágico"). Un tema solo cambia lo que quiera variar. */
+  --primario-rgb:   45, 212, 191;            /* = --turquesa, para sombras con alfa */
+  --primario-2:     var(--verde);            /* 2.º color de los degradados del primario */
+  --turquesa-xl:    #E0FDF4;                 /* tinte clarísimo del primario */
+  --coral-xl:       #FFF8F8;                 /* tinte clarísimo de alerta */
+  --amarillo-txt:   #92400E;                 /* texto sobre fondos amarillo-l */
+  --texto-sobre-color: #FFFFFF;              /* texto sobre botones/relleno de color */
+  --texto-sobre-amarillo: #1E293B;           /* texto sobre relleno amarillo (siempre oscuro) */
+  --fondo-panel:    var(--gris-50);          /* fondo de páginas del panel */
+  --fondo-grad:     linear-gradient(135deg, #E0FDF4 0%, #F0FFF4 40%, #FFF9DB 70%, #FFE4E4 100%);
+  --grad-hero:      linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
+  --login-card-bg:  rgba(255,255,255,.92);
+  --color-scheme:   light;
+
+  /* Colores que antes estaban fijos en páginas (mismos valores): el tema oscuro los redefine */
+  --txt-rojo:       #B91C1C;                 /* importes pendientes / devueltos */
+  --txt-verde:      #15803D;                 /* importes cobrados */
+  --txt-azul:       #1D4ED8;                 /* saldo a favor */
+  --txt-naranja:    #7C2D12;                 /* texto sobre --naranja-l (rol cocina) */
+  --fila-deuda-bg:  #FFF5F5;                 /* fila de tabla con deuda */
+  --ok-bg-suave:    #F0FDF4;                 /* tarjeta "inscripción actual" */
+  --amarillo-l2:    #FEF3C7;                 /* tinte amarillo medio */
+  --amarillo-l3:    #FDE68A;                 /* tinte amarillo fuerte */
+  --amarillo-xl:    #FFF3C4;                 /* fin de degradado amarillo */
+  --violeta-xl:     #EDE9FE;                 /* fin de degradado violeta */
+  --coral-xl2:      #FFE8E8;                 /* fin de degradado coral */
+  --tinta:          #0F172A;                 /* trazo/relleno de máximo contraste */
+  --tinta-inv:      #FFFFFF;                 /* texto sobre --tinta */
 }

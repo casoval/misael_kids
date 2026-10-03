@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Misael Kids — Ingresar</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -17,7 +19,7 @@
       align-items: center;
       justify-content: center;
       padding: 1rem;
-      background: linear-gradient(135deg, #E0FDF4 0%, #F0FFF4 35%, #FFF9DB 65%, #FFE4E4 100%);
+      background: var(--fondo-grad);
       overflow-x: hidden;
       overflow-y: auto;
       position: relative;
@@ -63,7 +65,7 @@
 
     /* ── Card de login ── */
     .login-card {
-      background: rgba(255,255,255,.92);
+      background: var(--login-card-bg);
       backdrop-filter: blur(20px);
       border-radius: 1.6rem;
       padding: 2.2rem 2rem;
@@ -140,7 +142,7 @@
     .form-input:focus {
       outline: none;
       border-color: var(--turquesa);
-      box-shadow: 0 0 0 3px rgba(45,212,191,.2);
+      box-shadow: 0 0 0 3px rgba(var(--primario-rgb),.2);
     }
     .toggle-pass {
       position: absolute;
@@ -160,7 +162,7 @@
     .btn-login {
       width: 100%;
       padding: .7rem;
-      background: linear-gradient(135deg, var(--turquesa), var(--verde));
+      background: linear-gradient(135deg, var(--turquesa), var(--primario-2));
       color: white;
       border: none;
       border-radius: var(--radio-full);
@@ -168,7 +170,7 @@
       font-size: 1rem;
       cursor: pointer;
       transition: all .25s;
-      box-shadow: 0 6px 20px rgba(45,212,191,.4);
+      box-shadow: 0 6px 20px rgba(var(--primario-rgb),.4);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -178,7 +180,7 @@
     .btn-login:focus-visible { outline: 3px solid var(--turquesa-d); outline-offset: 2px; }
     .btn-login:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 28px rgba(45,212,191,.5);
+      box-shadow: 0 10px 28px rgba(var(--primario-rgb),.5);
     }
     .btn-login:active { transform: translateY(0); }
     .btn-login:disabled { opacity: .65; cursor: not-allowed; transform: none; }
@@ -230,10 +232,14 @@
 
   <!-- Elementos flotantes -->
   <div class="estrellita e1">⭐</div>
-  <div class="estrellita e2">🌸</div>
-  <div class="estrellita e3">🦋</div>
-  <div class="estrellita e4">🌟</div>
+  <div class="estrellita e2" data-tema-deco="0">🌸</div>
+  <div class="estrellita e3" data-tema-deco="1">🦋</div>
+  <div class="estrellita e4" data-tema-deco="2">🌟</div>
   <div class="estrellita e5">✨</div>
+
+  <!-- Selector de tema (esquina inferior derecha) -->
+  <div id="tema-login"></div>
+  <script>Tema.montar(document.getElementById('tema-login'), { variante: 'flotante' });</script>
 
   <!-- Card de login -->
   <div class="login-card">

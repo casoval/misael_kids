@@ -1,0 +1,1515 @@
+From 088d5206e1ba04aba43b23289374d3d05a89c97a Mon Sep 17 00:00:00 2001
+From: "Temas Fase 1 (Claude)" <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 13:50:29 +0000
+Subject: [PATCH] =?UTF-8?q?feat(frontend):=20sistema=20de=20temas=20?=
+ =?UTF-8?q?=E2=80=94=20Fase=201?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Agrega 5 temas intercambiables que cambian la cara de toda la app:
+Jardín mágico (el original, por defecto), Océano, Dulce atardecer,
+Espacio (oscuro) y Papel (sobrio).
+
+Nuevo
+- css/themes.css: un bloque :root[data-tema="..."] por tema que solo
+  redefine variables (colores, radios, sombras, tipografía, adornos) +
+  estilos del selector.
+- js/tema.js: aplica el tema antes de pintar (sin parpadeo), lo guarda en
+  localStorage (mk_tema), sincroniza pestañas y construye el selector.
+- Selector de tema en el sidebar del panel, flotante en el login y en el
+  encabezado del portal de padres.
+
+Cambios en código existente (el tema Jardín se ve idéntico)
+- variables.css: tokens semánticos nuevos con los valores actuales
+  (--primario-rgb, --primario-2, --fondo-panel, --grad-hero, --txt-rojo...).
+- Colores fijos -> variables: rgba del primario, #92400E, degradados
+  turquesa->verde, banners, fondos/textos de inscripciones, usuarios,
+  personal, misael-link, inventario, cobros, asistencia y portal.
+- components.js: monta el selector y usa el emoji de logo del tema.
+- themes.css/tema.js enganchados en el <head> de las 18 páginas.
+
+Verificación: 426 tests OK, collectstatic con almacenamiento de
+producción OK, 19 rutas renderizadas con el motor de Django, 0 errores
+de JS en 5 temas x 18 páginas, y comparación píxel a píxel del tema
+Jardín contra el original.
+---
+ frontend/css/base.css                   |  27 +--
+ frontend/css/themes.css                 | 278 ++++++++++++++++++++++++
+ frontend/css/variables.css              |  33 ++-
+ frontend/js/api.js                      |   2 +-
+ frontend/js/components.js               |   4 +-
+ frontend/js/tema.js                     | 178 +++++++++++++++
+ frontend/login.html                     |  24 +-
+ frontend/pages/panel/agenda.html        |  10 +-
+ frontend/pages/panel/asistencia.html    |  12 +-
+ frontend/pages/panel/cobros.html        |  10 +-
+ frontend/pages/panel/comunicacion.html  |   2 +
+ frontend/pages/panel/dashboard.html     |   8 +-
+ frontend/pages/panel/evaluacion.html    |   8 +-
+ frontend/pages/panel/inscripciones.html |  42 ++--
+ frontend/pages/panel/inventario.html    |   6 +-
+ frontend/pages/panel/misael-link.html   |   8 +-
+ frontend/pages/panel/ninos.html         |   4 +-
+ frontend/pages/panel/personal.html      |   6 +-
+ frontend/pages/panel/reportes.html      |   8 +-
+ frontend/pages/panel/salud.html         |   2 +
+ frontend/pages/panel/sucursales.html    |   4 +-
+ frontend/pages/panel/turnos.html        |   4 +-
+ frontend/pages/panel/usuarios.html      |   8 +-
+ frontend/pages/portal/inicio.html       |  20 +-
+ 24 files changed, 620 insertions(+), 88 deletions(-)
+ create mode 100644 frontend/css/themes.css
+ create mode 100644 frontend/js/tema.js
+
+diff --git a/frontend/css/base.css b/frontend/css/base.css
+index 24b4405..56b8055 100644
+--- a/frontend/css/base.css
++++ b/frontend/css/base.css
+@@ -9,7 +9,8 @@ html { font-size: 92%; scroll-behavior: smooth; }
+ body {
+   font-family: var(--font-body);
+   color: var(--texto);
+-  background: var(--gris-50);
++  background: var(--fondo-panel);
++  background-attachment: fixed;
+   line-height: 1.6;
+   -webkit-font-smoothing: antialiased;
+ }
+@@ -17,7 +18,7 @@ body {
+ /* ── Fondo animado con burbujas ── */
+ .bg-burbujas {
+   position: fixed; inset: 0; z-index: -1; overflow: hidden;
+-  background: linear-gradient(135deg, #E0FDF4 0%, #F0FFF4 40%, #FFF9DB 70%, #FFE4E4 100%);
++  background: var(--fondo-grad);
+ }
+ .bg-burbujas::before,
+ .bg-burbujas::after {
+@@ -76,7 +77,7 @@ body {
+ }
+ .sidebar-logo .logo-icon {
+   width: 42px; height: 42px;
+-  background: linear-gradient(135deg, var(--turquesa), var(--verde));
++  background: linear-gradient(135deg, var(--turquesa), var(--primario-2));
+   border-radius: var(--radio-lg);
+   display: flex; align-items: center; justify-content: center;
+   font-size: 1.4rem;
+@@ -151,13 +152,13 @@ body {
+   transform: scale(1.1);
+ }
+ .nav-item.activo {
+-  background: linear-gradient(135deg, var(--turquesa-l), #E0FDF4);
++  background: linear-gradient(135deg, var(--turquesa-l), var(--turquesa-xl));
+   color: var(--turquesa-d);
+   box-shadow: var(--sombra-sm);
+ }
+ .nav-item.activo .nav-icon {
+   background: var(--turquesa);
+-  box-shadow: 0 4px 12px rgba(45,212,191,.4);
++  box-shadow: 0 4px 12px rgba(var(--primario-rgb),.4);
+ }
+ .nav-item .badge {
+   margin-left: auto;
+@@ -383,13 +384,13 @@ body {
+   white-space: nowrap;
+ }
+ .btn-primary {
+-  background: linear-gradient(135deg, var(--turquesa), var(--verde));
++  background: linear-gradient(135deg, var(--turquesa), var(--primario-2));
+   color: white;
+-  box-shadow: 0 4px 14px rgba(45,212,191,.4);
++  box-shadow: 0 4px 14px rgba(var(--primario-rgb),.4);
+ }
+ .btn-primary:hover {
+   transform: translateY(-2px);
+-  box-shadow: 0 6px 20px rgba(45,212,191,.5);
++  box-shadow: 0 6px 20px rgba(var(--primario-rgb),.5);
+ }
+ .btn-coral {
+   background: linear-gradient(135deg, var(--coral), var(--naranja));
+@@ -399,7 +400,7 @@ body {
+ .btn-coral:hover { transform: translateY(-2px); }
+ .btn-amarillo {
+   background: var(--amarillo);
+-  color: var(--gris-800);
++  color: var(--texto-sobre-amarillo);
+   box-shadow: 0 4px 14px rgba(255,217,61,.4);
+ }
+ .btn-outline {
+@@ -450,7 +451,7 @@ body {
+ .form-textarea:focus {
+   outline: none;
+   border-color: var(--turquesa);
+-  box-shadow: 0 0 0 3px rgba(45,212,191,.2);
++  box-shadow: 0 0 0 3px rgba(var(--primario-rgb),.2);
+ }
+ .form-input::placeholder { color: var(--gris-400); }
+ .form-textarea { resize: vertical; min-height: 90px; }
+@@ -510,7 +511,7 @@ tbody tr:hover { background: var(--gris-50); }
+ }
+ .chip-verde    { background: var(--verde-l);    color: var(--verde-d); }
+ .chip-coral    { background: var(--coral-l);    color: var(--coral-d); }
+-.chip-amarillo { background: var(--amarillo-l); color: #92400E; }
++.chip-amarillo { background: var(--amarillo-l); color: var(--amarillo-txt); }
+ .chip-turquesa { background: var(--turquesa-l); color: var(--turquesa-d); }
+ .chip-violeta  { background: var(--violeta-l);  color: var(--violeta-d); }
+ .chip-gris     { background: var(--gris-100);   color: var(--gris-600); }
+@@ -532,7 +533,7 @@ tbody tr:hover { background: var(--gris-50); }
+ .alerta-exito   { background: var(--verde-l);    border-color: var(--verde);    color: var(--verde-d); }
+ .alerta-peligro { background: var(--coral-l);    border-color: var(--coral);    color: var(--coral-d); }
+ .alerta-info    { background: var(--turquesa-l); border-color: var(--turquesa); color: var(--turquesa-d); }
+-.alerta-warn    { background: var(--amarillo-l); border-color: var(--amarillo); color: #92400E; }
++.alerta-warn    { background: var(--amarillo-l); border-color: var(--amarillo); color: var(--amarillo-txt); }
+ 
+ /* ══════════════════════════════════════
+    MODAL
+@@ -780,7 +781,7 @@ tbody tr:hover { background: var(--gris-50); }
+   transition: transform var(--trans-fast), box-shadow var(--trans-fast);
+ }
+ .tarjeta-nino:hover { transform: translateY(-2px); box-shadow: var(--sombra-lg); }
+-.tarjeta-nino.tn-alerta { border-left-color: var(--coral); background: #FFF8F8; }
++.tarjeta-nino.tn-alerta { border-left-color: var(--coral); background: var(--coral-xl); }
+ .tarjeta-nino.tn-aviso  { border-left-color: var(--naranja); }
+ .tarjeta-nino.tn-ok     { border-left-color: var(--verde, #22C55E); }
+ .tarjeta-nino.tn-violeta{ border-left-color: var(--violeta); }
+diff --git a/frontend/css/themes.css b/frontend/css/themes.css
+new file mode 100644
+index 0000000..80f343c
+--- /dev/null
++++ b/frontend/css/themes.css
+@@ -0,0 +1,278 @@
++/* ═══════════════════════════════════════════════════════════════
++   Misael Kids — Temas
++   ───────────────────────────────────────────────────────────────
++   Cada tema es un bloque  :root[data-tema="id"] { ... }  que solo
++   redefine variables de variables.css. El tema por defecto
++   ("jardin", el look original) no necesita bloque.
++
++   Se activa con  <html data-tema="id">  (lo hace js/tema.js).
++
++   Para agregar un tema nuevo:
++     1. Copia un bloque de abajo y cambia el id y los valores.
++     2. Registra el id en js/tema.js (lista TEMAS).
++
++   Variables que conviene redefinir:
++     · Primario ....... --turquesa, -d (texto/acentos), -l (tinte), -xl,
++                        --primario-rgb (sombras con transparencia) y
++                        --primario-2 (2.º color de los degradados)
++     · Acento ......... --violeta, -d, -l
++     · Fondos ......... --fondo-panel, --fondo-grad (login/portal)
++     · Banner ......... --grad-hero (cabecera dashboard/portal)
++     · Forma .......... --radio-*, --sombra-*
++     · Tipografía ..... --font-display, --font-body
++     · Decoración ..... --deco-header (emojis del portal)
++═══════════════════════════════════════════════════════════════ */
++
++:root { color-scheme: var(--color-scheme); }
++
++
++/* ═══ 🌊 OCÉANO ═══════════════════════════════════════════════ */
++:root[data-tema="oceano"] {
++  --turquesa:    #0EA5E9;
++  --turquesa-d:  #0369A1;
++  --turquesa-l:  #E0F2FE;
++  --turquesa-xl: #F0F9FF;
++  --primario-rgb: 14, 165, 233;
++  --primario-2:  #22D3EE;
++
++  --violeta:     #6366F1;
++  --violeta-d:   #4338CA;
++  --violeta-l:   #E0E7FF;
++
++  --fondo-panel: linear-gradient(160deg, #F0F9FF 0%, #E3F2FB 100%);
++  --fondo-grad:  linear-gradient(135deg, #E0F2FE 0%, #F0F9FF 40%, #ECFEFF 70%, #DBEAFE 100%);
++  --grad-hero:   linear-gradient(135deg, #0369A1, #0E7490);
++  --deco-header: '🐠🌊🐚';
++}
++
++
++/* ═══ 🌅 DULCE ATARDECER ══════════════════════════════════════ */
++:root[data-tema="atardecer"] {
++  --turquesa:    #D946EF;
++  --turquesa-d:  #A21CAF;
++  --turquesa-l:  #FAE8FF;
++  --turquesa-xl: #FDF4FF;
++  --primario-rgb: 217, 70, 239;
++  --primario-2:  #FB923C;
++
++  --fondo-panel: linear-gradient(135deg, #FFF7ED 0%, #FDF4FF 100%);
++  --fondo-grad:  linear-gradient(135deg, #FFEDD5 0%, #FFE4F1 45%, #FAE8FF 75%, #FEF3C7 100%);
++  --grad-hero:   linear-gradient(135deg, #C026D3, #EA580C);
++  --deco-header: '🌅🦄🎈';
++
++  /* más redondeado y "blandito" */
++  --radio-md: 1rem;
++  --radio-lg: 1.25rem;
++  --radio-xl: 2rem;
++}
++
++
++/* ═══ 🚀 ESPACIO (oscuro) ═════════════════════════════════════ */
++:root[data-tema="espacio"] {
++  --color-scheme: dark;
++
++  /* primario violeta · acento cian */
++  --turquesa:    #8B5CF6;
++  --turquesa-d:  #A78BFA;
++  --turquesa-l:  #2B2158;
++  --turquesa-xl: #241C4D;
++  --primario-rgb: 139, 92, 246;
++  --primario-2:  #22D3EE;
++  --violeta:     #22D3EE;
++  --violeta-d:   #67E8F9;
++  --violeta-l:   #10394A;
++
++  /* estados: se aclaran para leerse sobre fondo oscuro */
++  --verde:       #34D399;  --verde-d:    #6EE7B7;  --verde-l:    #0F3A2E;
++  --coral:       #FB7185;  --coral-d:    #FDA4AF;  --coral-l:    #4A1D2C;  --coral-xl: #3A1824;
++  --amarillo:    #FACC15;  --amarillo-d: #FDE047;  --amarillo-l: #42370C;  --amarillo-txt: #FDE68A;
++  --naranja:     #FB923C;                          --naranja-l:  #4A2A12;
++
++  /* superficies y texto: escala de grises invertida */
++  --txt-rojo:    #FCA5A5;   --txt-verde:   #86EFAC;   --txt-azul:    #93C5FD;   --txt-naranja: #FDBA74;
++  --fila-deuda-bg: #3A1824; --ok-bg-suave: #0F3A2E;
++  --amarillo-l2: #4A3E10;   --amarillo-l3: #5A4A10;   --amarillo-xl: #3A300A;
++  --violeta-xl:  #0C2A38;   --coral-xl2:   #3F1A28;
++  --tinta:       #E9E9FA;   --tinta-inv:   #1A1A3A;
++  --texto-sobre-amarillo: #1A1A3A;   /* el amarillo sigue siendo claro: su texto debe ser oscuro */
++  --blanco:   #1A1A3A;
++  --gris-50:  #12122B;
++  --gris-100: #20204A;
++  --gris-200: #2E2E5E;
++  --gris-300: #44447A;
++  --gris-400: #8B8BBA;
++  --gris-500: #A3A3CE;
++  --gris-600: #C3C3E2;
++  --gris-700: #DADAF0;
++  --gris-800: #ECECFA;
++  --texto:       #E9E9FA;
++  --texto-suave: #A3A3CE;
++
++  --sombra-sm: 0 1px 3px rgba(0,0,0,.40), 0 1px 2px rgba(0,0,0,.30);
++  --sombra-md: 0 4px 8px rgba(0,0,0,.40), 0 2px 4px rgba(0,0,0,.30);
++  --sombra-lg: 0 10px 18px rgba(0,0,0,.45), 0 4px 6px rgba(0,0,0,.30);
++  --sombra-xl: 0 20px 28px rgba(0,0,0,.50), 0 10px 10px rgba(0,0,0,.30);
++
++  --fondo-grad:     linear-gradient(135deg, #0B0B24 0%, #1B1245 40%, #0F2A4A 75%, #1A0B2E 100%);
++  --grad-hero:      linear-gradient(135deg, #6D28D9, #0E7490);
++  --login-card-bg:  rgba(26, 26, 58, .92);
++  --deco-header:    '🚀🪐⭐';
++
++  --font-display: 'Righteous', 'Fredoka One', cursive;
++}
++/* estrellitas de fondo en el panel */
++:root[data-tema="espacio"] body {
++  background-image:
++    radial-gradient(1px   1px   at  20px  30px, rgba(255,255,255,.55), transparent),
++    radial-gradient(1px   1px   at 120px  80px, rgba(255,255,255,.40), transparent),
++    radial-gradient(1.5px 1.5px at 200px 150px, rgba(255,255,255,.60), transparent),
++    radial-gradient(1px   1px   at  70px 170px, rgba(167,139,250,.60), transparent);
++  background-size: 240px 200px;
++}
++/* calendarios (flatpickr) en oscuro */
++:root[data-tema="espacio"] .flatpickr-calendar,
++:root[data-tema="espacio"] .flatpickr-months .flatpickr-month,
++:root[data-tema="espacio"] .flatpickr-monthSelect-month { background: var(--blanco); color: var(--texto); }
++:root[data-tema="espacio"] .flatpickr-calendar { border: 1px solid var(--gris-200); }
++:root[data-tema="espacio"] .flatpickr-current-month .flatpickr-monthDropdown-months,
++:root[data-tema="espacio"] .flatpickr-current-month input.cur-year,
++:root[data-tema="espacio"] .flatpickr-day,
++:root[data-tema="espacio"] .flatpickr-monthSelect-month { color: var(--texto); }
++:root[data-tema="espacio"] .flatpickr-day.prevMonthDay,
++:root[data-tema="espacio"] .flatpickr-day.nextMonthDay,
++:root[data-tema="espacio"] .flatpickr-day.flatpickr-disabled { color: var(--gris-300); }
++:root[data-tema="espacio"] span.flatpickr-weekday { color: var(--texto-suave); background: transparent; }
++:root[data-tema="espacio"] .flatpickr-months .flatpickr-prev-month svg,
++:root[data-tema="espacio"] .flatpickr-months .flatpickr-next-month svg { fill: var(--texto); }
++:root[data-tema="espacio"] .flatpickr-day.selected,
++:root[data-tema="espacio"] .flatpickr-day.selected:hover { color: #fff; }
++
++
++/* ═══ 📒 PAPEL (sobrio) ═══════════════════════════════════════ */
++:root[data-tema="papel"] {
++  --turquesa:    #2563EB;
++  --turquesa-d:  #1D4ED8;
++  --turquesa-l:  #DBEAFE;
++  --turquesa-xl: #EFF6FF;
++  --primario-rgb: 37, 99, 235;
++  --primario-2:  #3B82F6;
++
++  --fondo-panel: #F5F4F0;
++  --fondo-grad:  linear-gradient(#F5F4F0, #F5F4F0);
++  --grad-hero:   linear-gradient(135deg, #1E40AF, #2563EB);
++  --deco-header: '';
++
++  /* formas más serias: radios chicos y sombras casi planas */
++  --radio-sm: .25rem;
++  --radio-md: .375rem;
++  --radio-lg: .5rem;
++  --radio-xl: .75rem;
++  --sombra-sm:    0 1px 2px rgba(0,0,0,.05);
++  --sombra-md:    0 1px 3px rgba(0,0,0,.08);
++  --sombra-lg:    0 2px 6px rgba(0,0,0,.08);
++  --sombra-xl:    0 6px 16px rgba(0,0,0,.10);
++  --sombra-color: 0 1px 2px rgba(0,0,0,.10);
++
++  --font-body:    'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
++  --font-display: 'DM Serif Display', Georgia, 'Times New Roman', serif;
++}
++/* sin adornos: ni burbujas, ni estrellitas, ni líneas punteadas */
++:root[data-tema="papel"] .burbuja,
++:root[data-tema="papel"] .estrellita,
++:root[data-tema="papel"] .bg-burbujas::before,
++:root[data-tema="papel"] .bg-burbujas::after { display: none; }
++:root[data-tema="papel"] .sidebar-logo,
++:root[data-tema="papel"] .card-header,
++:root[data-tema="papel"] .tabla-apilada tbody td { border-bottom-style: solid; }
++:root[data-tema="papel"] .sidebar-footer,
++:root[data-tema="papel"] .tn-datos,
++:root[data-tema="papel"] .tn-acciones   { border-top-style: solid; }
++
++
++/* ═══ Decoración del portal controlada por tema ═══════════════ */
++.portal-header::before { content: var(--deco-header, '🌸🌟🦋'); }
++
++
++/* ═══════════════════════════════════════════════════════════════
++   SELECTOR DE TEMA  (lo construye Tema.montar() en js/tema.js)
++   Es autosuficiente: funciona también en login, que no carga base.css
++═══════════════════════════════════════════════════════════════ */
++.tema-selector { position: relative; font-family: var(--font-body); }
++
++.tema-btn {
++  display: flex; align-items: center; gap: .5rem; width: 100%;
++  padding: .45rem .65rem; margin-bottom: var(--gap-sm);
++  border: 1.5px solid var(--gris-200); border-radius: var(--radio-lg);
++  background: var(--blanco); color: var(--texto);
++  font: 700 var(--text-sm) var(--font-body);
++  cursor: pointer; text-align: left;
++  transition: border-color var(--trans-fast), background var(--trans-fast);
++}
++.tema-btn:hover { border-color: var(--turquesa); }
++.tema-btn:focus-visible, .tema-op:focus-visible { outline: 3px solid rgba(var(--primario-rgb), .45); outline-offset: 1px; }
++.tema-btn .tema-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.tema-btn .tema-flecha { font-size: .65rem; opacity: .6; }
++
++.tema-puntos { display: inline-flex; flex-shrink: 0; }
++/* en el sidebar no hay ancho: el nombre ya dice el tema y las muestras están en el menú */
++.tema-selector:not([data-variante]) .tema-puntos { display: none; }
++.tema-puntos i {
++  width: 11px; height: 11px; border-radius: 50%;
++  border: 1.5px solid var(--blanco); margin-left: -4px;
++}
++.tema-puntos i:first-child { margin-left: 0; }
++
++.tema-menu {
++  display: none; position: absolute; z-index: 10000;
++  bottom: calc(100% + 4px); left: 0; min-width: 232px;
++  padding: .4rem; background: var(--blanco);
++  border: 1.5px solid var(--gris-200); border-radius: var(--radio-lg);
++  box-shadow: var(--sombra-xl);
++}
++.tema-selector.abierto .tema-menu { display: block; animation: temaPop .14s ease-out; }
++@keyframes temaPop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
++
++.tema-menu-titulo {
++  padding: .35rem .6rem .25rem; font-size: var(--text-xs); font-weight: 800;
++  text-transform: uppercase; letter-spacing: .06em; color: var(--gris-400);
++}
++.tema-op {
++  display: flex; align-items: center; gap: .65rem; width: 100%;
++  padding: .45rem .6rem; border: none; border-radius: var(--radio-md);
++  background: none; color: var(--texto); cursor: pointer; text-align: left;
++  font: 700 var(--text-sm) var(--font-body);
++}
++.tema-op:hover { background: var(--gris-100); }
++.tema-op[aria-checked="true"] { background: var(--turquesa-l); color: var(--turquesa-d); }
++.tema-op .tema-muestra {
++  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
++  display: flex; align-items: center; justify-content: center; font-size: .95rem;
++  border: 2px solid var(--blanco); box-shadow: 0 0 0 1.5px var(--gris-200);
++}
++.tema-op .tema-txt { flex: 1; min-width: 0; line-height: 1.2; }
++.tema-op .tema-txt small { display: block; font-weight: 600; font-size: var(--text-xs); color: var(--texto-suave); }
++.tema-op .tema-check { visibility: hidden; font-weight: 900; }
++.tema-op[aria-checked="true"] .tema-check { visibility: visible; }
++
++/* Variante flotante (login): esquina inferior derecha */
++.tema-selector[data-variante="flotante"] { position: fixed; right: 1rem; bottom: 1rem; z-index: 50; }
++.tema-selector[data-variante="flotante"] .tema-btn {
++  width: auto; margin: 0; padding: .55rem .85rem; box-shadow: var(--sombra-md);
++  border-radius: var(--radio-full);
++}
++.tema-selector[data-variante="flotante"] .tema-menu { left: auto; right: 0; }
++
++/* Variante sobre color (portal): botón translúcido, menú hacia abajo */
++.tema-selector[data-variante="sobre-color"] .tema-btn {
++  width: auto; margin: 0; background: rgba(255,255,255,.2);
++  color: #fff; border: 2px solid rgba(255,255,255,.3);
++}
++.tema-selector[data-variante="sobre-color"] .tema-btn:hover { background: rgba(255,255,255,.3); }
++.tema-selector[data-variante="sobre-color"] .tema-puntos i { border-color: rgba(255,255,255,.7); }
++.tema-selector[data-variante="sobre-color"] .tema-menu { bottom: auto; top: calc(100% + 6px); left: auto; right: 0; }
++
++/* en el encabezado del portal el botón es compacto: solo 🎨 + muestras */
++.tema-selector[data-variante="sobre-color"] .tema-nombre { display: none; }
++@media (prefers-reduced-motion: reduce) {
++  .tema-selector.abierto .tema-menu { animation: none; }
++}
+diff --git a/frontend/css/variables.css b/frontend/css/variables.css
+index f74d9bb..c052953 100644
+--- a/frontend/css/variables.css
++++ b/frontend/css/variables.css
+@@ -80,7 +80,7 @@
+   --sombra-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+   --sombra-lg: 0 10px 15px rgba(0,0,0,.08), 0 4px 6px rgba(0,0,0,.05);
+   --sombra-xl: 0 20px 25px rgba(0,0,0,.10), 0 10px 10px rgba(0,0,0,.04);
+-  --sombra-color: 0 8px 20px rgba(45,212,191,.25);
++  --sombra-color: 0 8px 20px rgba(var(--primario-rgb),.25);
+ 
+   /* ── Sidebar ── */
+   --sidebar-w: 208px;
+@@ -90,4 +90,35 @@
+   --trans-fast:   150ms ease;
+   --trans-base:   250ms ease;
+   --trans-slow:   400ms ease;
++
++  /* ═══ Tokens de tema (los redefine css/themes.css) ═══════════════
++     Con estos valores la app se ve exactamente como siempre
++     ("Jardín mágico"). Un tema solo cambia lo que quiera variar. */
++  --primario-rgb:   45, 212, 191;            /* = --turquesa, para sombras con alfa */
++  --primario-2:     var(--verde);            /* 2.º color de los degradados del primario */
++  --turquesa-xl:    #E0FDF4;                 /* tinte clarísimo del primario */
++  --coral-xl:       #FFF8F8;                 /* tinte clarísimo de alerta */
++  --amarillo-txt:   #92400E;                 /* texto sobre fondos amarillo-l */
++  --texto-sobre-color: #FFFFFF;              /* texto sobre botones/relleno de color */
++  --texto-sobre-amarillo: #1E293B;           /* texto sobre relleno amarillo (siempre oscuro) */
++  --fondo-panel:    var(--gris-50);          /* fondo de páginas del panel */
++  --fondo-grad:     linear-gradient(135deg, #E0FDF4 0%, #F0FFF4 40%, #FFF9DB 70%, #FFE4E4 100%);
++  --grad-hero:      linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
++  --login-card-bg:  rgba(255,255,255,.92);
++  --color-scheme:   light;
++
++  /* Colores que antes estaban fijos en páginas (mismos valores): el tema oscuro los redefine */
++  --txt-rojo:       #B91C1C;                 /* importes pendientes / devueltos */
++  --txt-verde:      #15803D;                 /* importes cobrados */
++  --txt-azul:       #1D4ED8;                 /* saldo a favor */
++  --txt-naranja:    #7C2D12;                 /* texto sobre --naranja-l (rol cocina) */
++  --fila-deuda-bg:  #FFF5F5;                 /* fila de tabla con deuda */
++  --ok-bg-suave:    #F0FDF4;                 /* tarjeta "inscripción actual" */
++  --amarillo-l2:    #FEF3C7;                 /* tinte amarillo medio */
++  --amarillo-l3:    #FDE68A;                 /* tinte amarillo fuerte */
++  --amarillo-xl:    #FFF3C4;                 /* fin de degradado amarillo */
++  --violeta-xl:     #EDE9FE;                 /* fin de degradado violeta */
++  --coral-xl2:      #FFE8E8;                 /* fin de degradado coral */
++  --tinta:          #0F172A;                 /* trazo/relleno de máximo contraste */
++  --tinta-inv:      #FFFFFF;                 /* texto sobre --tinta */
+ }
+diff --git a/frontend/js/api.js b/frontend/js/api.js
+index a1f0881..103a061 100644
+--- a/frontend/js/api.js
++++ b/frontend/js/api.js
+@@ -195,7 +195,7 @@ const UI = {
+       exito:   { bg: 'var(--verde-l)',    color: 'var(--verde-d)',    icono: '✅' },
+       error:   { bg: 'var(--coral-l)',    color: 'var(--coral-d)',    icono: '❌' },
+       info:    { bg: 'var(--turquesa-l)', color: 'var(--turquesa-d)', icono: 'ℹ️' },
+-      warn:    { bg: 'var(--amarillo-l)', color: '#92400E',           icono: '⚠️' },
++      warn:    { bg: 'var(--amarillo-l)', color: 'var(--amarillo-txt)',           icono: '⚠️' },
+     };
+     const c = colores[tipo] || colores.info;
+ 
+diff --git a/frontend/js/components.js b/frontend/js/components.js
+index dd2af0a..40cafd5 100644
+--- a/frontend/js/components.js
++++ b/frontend/js/components.js
+@@ -322,11 +322,12 @@ function _pintarSidebar(items, paginaActiva, usr) {
+   if (!sidebar) return;
+   sidebar.innerHTML = `
+     <div class="sidebar-logo">
+-      <div class="logo-icon">🌱</div>
++      <div class="logo-icon" data-tema-logo>🌱</div>
+       <div class="logo-texto"><h2>Misael Kids</h2><span>Panel interno</span></div>
+     </div>
+     <nav class="sidebar-nav">${html}</nav>
+     <div class="sidebar-footer">
++      <div id="tema-sidebar"></div>
+       <div class="usuario-card">
+         <div class="usuario-avatar">${UI.iniciales(usr.nombres + ' ' + usr.apellidos)}</div>
+         <div class="usuario-info">
+@@ -338,6 +339,7 @@ function _pintarSidebar(items, paginaActiva, usr) {
+       </div>
+     </div>`;
+ 
++  if (typeof Tema !== 'undefined') Tema.montar(document.getElementById('tema-sidebar'));
+   insertarMenuMovil();
+ }
+ 
+diff --git a/frontend/js/tema.js b/frontend/js/tema.js
+new file mode 100644
+index 0000000..e940193
+--- /dev/null
++++ b/frontend/js/tema.js
+@@ -0,0 +1,178 @@
++/* ═══════════════════════════════════════════════════════════════
++   Misael Kids — Temas (aplicación, persistencia y selector)
++   ───────────────────────────────────────────────────────────────
++   · Se carga en el <head>, SIN defer, para aplicar el tema antes de
++     que el navegador pinte y evitar el parpadeo del tema equivocado.
++   · La elección se guarda en localStorage ('mk_tema') y se sincroniza
++     entre pestañas abiertas.
++   · Los valores de cada tema viven en css/themes.css.
++
++   API:
++     Tema.actual()                    → id del tema activo
++     Tema.aplicar('espacio')          → cambia y guarda el tema
++     Tema.montar(elemento, {variante}) → dibuja el selector dentro de elemento
++                                        variante: 'flotante' | 'sobre-color'
++═══════════════════════════════════════════════════════════════ */
++const Tema = (() => {
++  const CLAVE = 'mk_tema';
++  const POR_DEFECTO = 'jardin';
++
++  /* Para agregar un tema: registrarlo acá y crear su bloque en themes.css */
++  const TEMAS = [
++    { id: 'jardin',    nombre: 'Jardín mágico',   desc: 'Colorido y alegre',    logo: '🌱', deco: ['🌸','🦋','🌟'],
++      muestra: ['#2DD4BF', '#FF6B6B', '#FFD93D'], barra: '#2DD4BF' },
++    { id: 'oceano',    nombre: 'Océano',          desc: 'Azules y aguamarina',  logo: '🐠', deco: ['🌊','🐬','🐚'],
++      muestra: ['#0EA5E9', '#6366F1', '#BAE6FD'], barra: '#0EA5E9' },
++    { id: 'atardecer', nombre: 'Dulce atardecer', desc: 'Fucsia y durazno',     logo: '🌅', deco: ['🦄','🎈','🌈'],
++      muestra: ['#D946EF', '#FB923C', '#FDE68A'], barra: '#D946EF' },
++    { id: 'espacio',   nombre: 'Espacio',         desc: 'Oscuro con estrellas', logo: '🚀', deco: ['🪐','🌟','🛸'],
++      muestra: ['#8B5CF6', '#22D3EE', '#1A1A3A'], barra: '#1A1A3A',
++      fuente: 'family=Righteous' },
++    { id: 'papel',     nombre: 'Papel',           desc: 'Sobrio y limpio',      logo: '📒', deco: ['✏️','📌','📚'],
++      muestra: ['#2563EB', '#94A3B8', '#1E293B'], barra: '#2563EB',
++      fuente: 'family=Inter:wght@400;500;600;700;800&family=DM+Serif+Display' },
++  ];
++
++  const porId = id => TEMAS.find(t => t.id === id);
++
++  function leer() {
++    try {
++      const id = localStorage.getItem(CLAVE);
++      if (porId(id)) return id;
++    } catch (_) { /* modo privado / storage bloqueado */ }
++    return POR_DEFECTO;
++  }
++
++  function guardar(id) {
++    try { localStorage.setItem(CLAVE, id); } catch (_) { /* se aplica igual, solo no persiste */ }
++  }
++
++  /* Los temas con tipografía propia la piden a Google Fonts solo cuando se usan */
++  function cargarFuente(tema) {
++    if (!tema.fuente) return;
++    const idLink = 'mk-fuente-' + tema.id;
++    if (document.getElementById(idLink)) return;
++    const link = document.createElement('link');
++    link.id = idLink;
++    link.rel = 'stylesheet';
++    link.href = 'https://fonts.googleapis.com/css2?' + tema.fuente + '&display=swap';
++    document.head.appendChild(link);
++  }
++
++  /* Color de la barra del navegador en móvil */
++  function pintarBarraNavegador(tema) {
++    let meta = document.querySelector('meta[name="theme-color"]');
++    if (!meta) {
++      meta = document.createElement('meta');
++      meta.name = 'theme-color';
++      document.head.appendChild(meta);
++    }
++    meta.content = tema.barra;
++  }
++
++  /* data-tema-logo → emoji del tema · data-tema-deco → emojis decorativos del tema */
++  function actualizarLogos(tema) {
++    document.querySelectorAll('[data-tema-logo]').forEach(el => { el.textContent = tema.logo; });
++    /* adornos: data-tema-deco="0|1|2" elige uno de los 3 emojis decorativos del tema */
++    document.querySelectorAll('[data-tema-deco]').forEach(el => {
++      el.textContent = tema.deco[Number(el.dataset.temaDeco)] || '';
++    });
++  }
++
++  function marcarSelectores(id) {
++    document.querySelectorAll('.tema-selector').forEach(sel => {
++      const t = porId(id);
++      const nombre = sel.querySelector('.tema-btn .tema-nombre');
++      const puntos = sel.querySelector('.tema-btn .tema-puntos');
++      if (nombre) nombre.textContent = t.nombre;
++      if (puntos) puntos.innerHTML = t.muestra.map(c => `<i style="background:${c}"></i>`).join('');
++      sel.querySelectorAll('.tema-op').forEach(op =>
++        op.setAttribute('aria-checked', String(op.dataset.id === id)));
++    });
++  }
++
++  function aplicar(id, { guardarEleccion = true } = {}) {
++    const tema = porId(id) || porId(POR_DEFECTO);
++    document.documentElement.setAttribute('data-tema', tema.id);
++    cargarFuente(tema);
++    pintarBarraNavegador(tema);
++    actualizarLogos(tema);
++    marcarSelectores(tema.id);
++    if (guardarEleccion) guardar(tema.id);
++    document.dispatchEvent(new CustomEvent('mk:tema', { detail: { id: tema.id } }));
++  }
++
++  function actual() {
++    return document.documentElement.getAttribute('data-tema') || POR_DEFECTO;
++  }
++
++  /* ── Selector ─────────────────────────────────────────────── */
++  function cerrarTodos() {
++    document.querySelectorAll('.tema-selector.abierto').forEach(sel => {
++      sel.classList.remove('abierto');
++      sel.querySelector('.tema-btn')?.setAttribute('aria-expanded', 'false');
++    });
++  }
++
++  function montar(contenedor, { variante = '' } = {}) {
++    if (!contenedor) return;
++    const t = porId(actual());
++    contenedor.innerHTML = `
++      <div class="tema-selector" ${variante ? `data-variante="${variante}"` : ''}>
++        <button type="button" class="tema-btn" aria-haspopup="true" aria-expanded="false"
++                title="Cambiar el aspecto de la app">
++          <span>🎨</span>
++          <span class="tema-puntos"></span>
++          <span class="tema-nombre"></span>
++          <span class="tema-flecha" aria-hidden="true">▲</span>
++        </button>
++        <div class="tema-menu" role="radiogroup" aria-label="Tema de la aplicación">
++          <div class="tema-menu-titulo">Aspecto de la app</div>
++          ${TEMAS.map(x => `
++            <button type="button" class="tema-op" role="radio" data-id="${x.id}" aria-checked="false">
++              <span class="tema-muestra"
++                    style="background:linear-gradient(135deg,${x.muestra[0]} 50%,${x.muestra[1]} 50%)">${x.logo}</span>
++              <span class="tema-txt">${x.nombre}<small>${x.desc}</small></span>
++              <span class="tema-check" aria-hidden="true">✓</span>
++            </button>`).join('')}
++        </div>
++      </div>`;
++
++    const sel = contenedor.querySelector('.tema-selector');
++    const btn = sel.querySelector('.tema-btn');
++
++    btn.addEventListener('click', e => {
++      e.stopPropagation();
++      const abrir = !sel.classList.contains('abierto');
++      cerrarTodos();
++      sel.classList.toggle('abierto', abrir);
++      btn.setAttribute('aria-expanded', String(abrir));
++      if (abrir) sel.querySelector('.tema-op[aria-checked="true"]')?.focus();
++    });
++
++    sel.querySelectorAll('.tema-op').forEach(op => {
++      op.addEventListener('click', () => {
++        aplicar(op.dataset.id);
++        cerrarTodos();
++        btn.focus();
++      });
++    });
++
++    marcarSelectores(t.id);
++    actualizarLogos(t);
++  }
++
++  /* cerrar al hacer clic fuera o con Escape */
++  document.addEventListener('click', e => { if (!e.target.closest('.tema-selector')) cerrarTodos(); });
++  document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarTodos(); });
++
++  /* sincronizar con otras pestañas abiertas */
++  window.addEventListener('storage', e => {
++    if (e.key === CLAVE && porId(e.newValue)) aplicar(e.newValue, { guardarEleccion: false });
++  });
++
++  /* Aplicación inmediata (este script va en el <head>) */
++  aplicar(leer(), { guardarEleccion: false });
++
++  return { TEMAS, actual, aplicar, montar };
++})();
+diff --git a/frontend/login.html b/frontend/login.html
+index 208bd00..f4df0a4 100644
+--- a/frontend/login.html
++++ b/frontend/login.html
+@@ -6,6 +6,8 @@
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Misael Kids — Ingresar</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <style>
+     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+@@ -17,7 +19,7 @@
+       align-items: center;
+       justify-content: center;
+       padding: 1rem;
+-      background: linear-gradient(135deg, #E0FDF4 0%, #F0FFF4 35%, #FFF9DB 65%, #FFE4E4 100%);
++      background: var(--fondo-grad);
+       overflow-x: hidden;
+       overflow-y: auto;
+       position: relative;
+@@ -63,7 +65,7 @@
+ 
+     /* ── Card de login ── */
+     .login-card {
+-      background: rgba(255,255,255,.92);
++      background: var(--login-card-bg);
+       backdrop-filter: blur(20px);
+       border-radius: 1.6rem;
+       padding: 2.2rem 2rem;
+@@ -140,7 +142,7 @@
+     .form-input:focus {
+       outline: none;
+       border-color: var(--turquesa);
+-      box-shadow: 0 0 0 3px rgba(45,212,191,.2);
++      box-shadow: 0 0 0 3px rgba(var(--primario-rgb),.2);
+     }
+     .toggle-pass {
+       position: absolute;
+@@ -160,7 +162,7 @@
+     .btn-login {
+       width: 100%;
+       padding: .7rem;
+-      background: linear-gradient(135deg, var(--turquesa), var(--verde));
++      background: linear-gradient(135deg, var(--turquesa), var(--primario-2));
+       color: white;
+       border: none;
+       border-radius: var(--radio-full);
+@@ -168,7 +170,7 @@
+       font-size: 1rem;
+       cursor: pointer;
+       transition: all .25s;
+-      box-shadow: 0 6px 20px rgba(45,212,191,.4);
++      box-shadow: 0 6px 20px rgba(var(--primario-rgb),.4);
+       display: flex;
+       align-items: center;
+       justify-content: center;
+@@ -178,7 +180,7 @@
+     .btn-login:focus-visible { outline: 3px solid var(--turquesa-d); outline-offset: 2px; }
+     .btn-login:hover:not(:disabled) {
+       transform: translateY(-2px);
+-      box-shadow: 0 10px 28px rgba(45,212,191,.5);
++      box-shadow: 0 10px 28px rgba(var(--primario-rgb),.5);
+     }
+     .btn-login:active { transform: translateY(0); }
+     .btn-login:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+@@ -230,11 +232,15 @@
+ 
+   <!-- Elementos flotantes -->
+   <div class="estrellita e1">⭐</div>
+-  <div class="estrellita e2">🌸</div>
+-  <div class="estrellita e3">🦋</div>
+-  <div class="estrellita e4">🌟</div>
++  <div class="estrellita e2" data-tema-deco="0">🌸</div>
++  <div class="estrellita e3" data-tema-deco="1">🦋</div>
++  <div class="estrellita e4" data-tema-deco="2">🌟</div>
+   <div class="estrellita e5">✨</div>
+ 
++  <!-- Selector de tema (esquina inferior derecha) -->
++  <div id="tema-login"></div>
++  <script>Tema.montar(document.getElementById('tema-login'), { variante: 'flotante' });</script>
++
+   <!-- Card de login -->
+   <div class="login-card">
+     <!-- Logo -->
+diff --git a/frontend/pages/panel/agenda.html b/frontend/pages/panel/agenda.html
+index 50a62da..35c73a8 100644
+--- a/frontend/pages/panel/agenda.html
++++ b/frontend/pages/panel/agenda.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Agenda — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -43,7 +45,7 @@
+       background:var(--verde);color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+     }
+     .cal-pill.mas  { background:var(--gris-300);color:var(--gris-700); }
+-    .cal-pill.falta{ background:transparent;color:#92400E;border:1px dashed var(--amarillo-d); }
++    .cal-pill.falta{ background:transparent;color:var(--amarillo-txt);border:1px dashed var(--amarillo-d); }
+     .cal-leyenda { display:flex;flex-wrap:wrap;gap:var(--gap-md);margin-top:var(--gap-md);
+       font-size:var(--text-xs);font-weight:700;color:var(--texto-suave); }
+     .cal-leyenda i { display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-2px; }
+@@ -70,7 +72,7 @@
+     .pl-pendiente {
+       display:flex;align-items:center;justify-content:space-between;gap:var(--gap-sm);flex-wrap:wrap;
+       border:1.5px dashed var(--amarillo-d);background:var(--amarillo-l);border-radius:var(--radio-lg);
+-      padding:.6rem .9rem;margin-top:var(--gap-sm);font-size:var(--text-sm);font-weight:700;color:#92400E;
++      padding:.6rem .9rem;margin-top:var(--gap-sm);font-size:var(--text-sm);font-weight:700;color:var(--amarillo-txt);
+     }
+     .btn-peligro { background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral); }
+ 
+@@ -91,7 +93,7 @@
+       display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere; }
+     .plan-acc { display:flex;gap:6px;flex-wrap:wrap;margin-top:var(--gap-sm);align-items:center; }
+     .progreso { height:8px;border-radius:var(--radio-full);background:var(--gris-100);overflow:hidden;margin:2px 0 4px; }
+-    .progreso > span { display:block;height:100%;background:linear-gradient(90deg,var(--turquesa),var(--verde));
++    .progreso > span { display:block;height:100%;background:linear-gradient(90deg,var(--turquesa), var(--primario-2));
+       border-radius:var(--radio-full);transition:width var(--trans-base); }
+     .progreso-txt { font-size:var(--text-xs);font-weight:700;color:var(--gris-600);display:flex;justify-content:space-between; }
+     .objetivo-row {
+@@ -118,7 +120,7 @@
+     .avances summary { cursor:pointer;font-weight:800;color:var(--turquesa-d); }
+     .avance-row { display:flex;gap:var(--gap-sm);align-items:flex-start;padding:.3rem 0;color:var(--gris-700); }
+     .avance-row .f { font-weight:800;min-width:72px; }
+-    .aviso-reg { display:none;background:var(--amarillo-l);color:#92400E;border-radius:var(--radio-md);
++    .aviso-reg { display:none;background:var(--amarillo-l);color:var(--amarillo-txt);border-radius:var(--radio-md);
+       padding:.5rem .75rem;font-size:var(--text-xs);font-weight:700;margin-bottom:var(--gap-md); }
+ 
+     @media (max-width:640px) {
+diff --git a/frontend/pages/panel/asistencia.html b/frontend/pages/panel/asistencia.html
+index e428b23..f0b6185 100644
+--- a/frontend/pages/panel/asistencia.html
++++ b/frontend/pages/panel/asistencia.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Asistencia — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -12,7 +14,7 @@
+     /* ── Avatar con foto (cae a iniciales si no hay foto o no carga) ── */
+     .av {
+       position:relative;border-radius:50%;flex-shrink:0;overflow:hidden;
+-      background:linear-gradient(135deg,var(--turquesa),var(--verde));
++      background:linear-gradient(135deg,var(--turquesa), var(--primario-2));
+       display:flex;align-items:center;justify-content:center;
+       color:white;font-weight:800;border:3px solid var(--blanco);
+       box-shadow:0 2px 8px rgba(15,23,42,.15);
+@@ -39,8 +41,8 @@
+     .edu-chip .av { border-width:2px;background:linear-gradient(135deg,var(--violeta),var(--violeta-d)); }
+     .edu-nombre { font-weight:800;font-size:var(--text-sm);color:var(--texto);line-height:1.1; }
+     .edu-rol { font-size:.68rem;font-weight:700;color:var(--violeta-d); }
+-    .edu-vacio { border-color:var(--amarillo);background:var(--amarillo-l);color:#92400E;font-weight:700;font-size:var(--text-sm); }
+-    .edu-vacio .edu-titulo { color:#92400E; }
++    .edu-vacio { border-color:var(--amarillo);background:var(--amarillo-l);color:var(--amarillo-txt);font-weight:700;font-size:var(--text-sm); }
++    .edu-vacio .edu-titulo { color:var(--amarillo-txt); }
+ 
+     /* ── Selector de vista ── */
+     .vista-toggle {
+@@ -187,7 +189,7 @@
+     .pick-otra-box.abierto { display:flex; }
+     .pick-aviso { font-size:var(--text-xs);font-weight:700;color:var(--coral-d);background:var(--coral-l);
+       border-radius:var(--radio-md);padding:.4rem .6rem; }
+-    .pick-vacio { font-size:var(--text-xs);font-weight:700;color:#92400E;background:var(--amarillo-l);
++    .pick-vacio { font-size:var(--text-xs);font-weight:700;color:var(--amarillo-txt);background:var(--amarillo-l);
+       border-radius:var(--radio-md);padding:.5rem .75rem;margin-bottom:var(--gap-sm); }
+ 
+     .resumen-chip {
+@@ -198,7 +200,7 @@
+     }
+     .resumen-chip .num { font-family:var(--font-display);font-size:var(--text-xl); }
+     .toolbar-masivo {
+-      background:linear-gradient(135deg,var(--turquesa-l),#E0FFF4);
++      background:linear-gradient(135deg,var(--turquesa-l),var(--turquesa-xl));
+       border:2px solid var(--turquesa);border-radius:var(--radio-xl);
+       padding:var(--gap-md) var(--gap-lg);display:flex;align-items:center;
+       gap:var(--gap-md);margin-bottom:var(--gap-md);flex-wrap:wrap;
+diff --git a/frontend/pages/panel/cobros.html b/frontend/pages/panel/cobros.html
+index 31682e0..c1b0408 100644
+--- a/frontend/pages/panel/cobros.html
++++ b/frontend/pages/panel/cobros.html
+@@ -6,6 +6,8 @@
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Cobros — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -54,14 +56,14 @@
+     .metodo-btn:hover { border-color: var(--turquesa); background: var(--turquesa-l); }
+     .metodo-btn.seleccionado {
+       border-color: var(--turquesa); background: var(--turquesa-l);
+-      box-shadow: 0 0 0 3px rgba(45,212,191,.2);
++      box-shadow: 0 0 0 3px rgba(var(--primario-rgb),.2);
+     }
+     .metodo-btn .icono { font-size: 1.6rem; display: block; margin-bottom: 4px; }
+     .metodo-btn .label { font-size: var(--text-xs); font-weight: 700; color: var(--turquesa-d); }
+ 
+     /* ── Generador masivo de cobros ── */
+     .generador-mensual {
+-      background: linear-gradient(135deg, var(--amarillo-l), #FFF3C4);
++      background: linear-gradient(135deg, var(--amarillo-l), var(--amarillo-xl));
+       border: 2px solid var(--amarillo);
+       border-radius: var(--radio-xl);
+       padding: var(--gap-lg);
+@@ -69,7 +71,7 @@
+     }
+     .generador-mensual h3 {
+       font-family: var(--font-display);
+-      color: #92400E; margin-bottom: var(--gap-sm);
++      color: var(--amarillo-txt); margin-bottom: var(--gap-sm);
+     }
+   </style>
+ </head>
+@@ -945,7 +947,7 @@ function actualizarSaldoRestante() {
+   preview.textContent = restante > 0
+     ? `Quedará un saldo pendiente de ${UI.moneda(restante)} después de este pago.`
+     : '✅ Con este pago el cobro queda completamente saldado.';
+-  preview.style.color = restante > 0 ? 'var(--amarillo-d,#92400E)' : 'var(--verde-d)';
++  preview.style.color = restante > 0 ? 'var(--amarillo-d,var(--amarillo-txt))' : 'var(--verde-d)';
+ }
+ 
+ function seleccionarMetodo(metodo, btn) {
+diff --git a/frontend/pages/panel/comunicacion.html b/frontend/pages/panel/comunicacion.html
+index 7fe2209..db3df82 100644
+--- a/frontend/pages/panel/comunicacion.html
++++ b/frontend/pages/panel/comunicacion.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Comunicación — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+diff --git a/frontend/pages/panel/dashboard.html b/frontend/pages/panel/dashboard.html
+index 606720c..b452ae1 100644
+--- a/frontend/pages/panel/dashboard.html
++++ b/frontend/pages/panel/dashboard.html
+@@ -6,13 +6,15 @@
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Dashboard — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+   <style>
+     /* ── Bienvenida ── */
+     .bienvenida {
+-      background: linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
++      background: var(--grad-hero);
+       border-radius: var(--radio-xl);
+       padding: var(--gap-xl);
+       color: white;
+@@ -131,7 +133,7 @@
+     .nino-avatar {
+       width: 38px; height: 38px;
+       border-radius: 50%;
+-      background: linear-gradient(135deg, var(--turquesa), var(--verde));
++      background: linear-gradient(135deg, var(--turquesa), var(--primario-2));
+       display: flex; align-items: center; justify-content: center;
+       color: white;
+       font-weight: 800;
+@@ -250,7 +252,7 @@
+           <h2 id="saludo-texto">¡Buenos días! 👋</h2>
+           <p id="saludo-nombre">Cargando tu información...</p>
+         </div>
+-        <div class="bienvenida-emoji">🌸</div>
++        <div class="bienvenida-emoji" data-tema-deco="0">🌸</div>
+       </div>
+ 
+       <!-- Estadísticas -->
+diff --git a/frontend/pages/panel/evaluacion.html b/frontend/pages/panel/evaluacion.html
+index 9ed6705..7cc3bdd 100644
+--- a/frontend/pages/panel/evaluacion.html
++++ b/frontend/pages/panel/evaluacion.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Desarrollo — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -32,7 +34,7 @@
+     }
+     .progreso-fill {
+       height:100%;border-radius:var(--radio-full);
+-      background:linear-gradient(90deg,var(--turquesa),var(--verde));
++      background:linear-gradient(90deg,var(--turquesa), var(--primario-2));
+       transition:width .6s ease;
+     }
+     /* ── Selector de hitos por secciones (modal Nueva evaluación) ── */
+@@ -49,7 +51,7 @@
+     .hp-barra .form-input { flex:1 1 180px;min-width:0; }
+     .hp-seg { display:inline-flex;border:1.5px solid var(--gris-200);border-radius:var(--radio-full);overflow:hidden;background:var(--blanco); }
+     .hp-seg button { border:none;background:none;padding:6px 12px;font-size:var(--text-xs);font-weight:800;color:var(--gris-600);cursor:pointer;font-family:inherit; }
+-    .hp-seg button.activo { background:var(--turquesa);color:var(--blanco); }
++    .hp-seg button.activo { background:var(--turquesa);color:var(--texto-sobre-color); }
+     .hp-areas { display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:var(--gap-xs); }
+     .hp-area-chip {
+       flex-shrink:0;border:1.5px solid var(--gris-200);background:var(--blanco);border-radius:var(--radio-full);
+@@ -90,7 +92,7 @@
+     .estado-btn .ico { font-size:1.5rem; }
+     .estado-btn:hover { border-color:var(--gris-400); }
+     .estado-btn.activo[data-estado="logrado"]    { border-color:var(--verde-d);background:var(--verde-l);color:var(--verde-d); }
+-    .estado-btn.activo[data-estado="en_proceso"] { border-color:var(--amarillo-d);background:var(--amarillo-l);color:#92400E; }
++    .estado-btn.activo[data-estado="en_proceso"] { border-color:var(--amarillo-d);background:var(--amarillo-l);color:var(--amarillo-txt); }
+     .estado-btn.activo[data-estado="no_logrado"] { border-color:var(--gris-500);background:var(--gris-100);color:var(--gris-700); }
+     .estado-btn.activo { box-shadow:var(--sombra-sm); }
+     .estado-btn:focus-visible { outline:3px solid var(--turquesa);outline-offset:2px; }
+diff --git a/frontend/pages/panel/inscripciones.html b/frontend/pages/panel/inscripciones.html
+index b78a019..6a63b2e 100644
+--- a/frontend/pages/panel/inscripciones.html
++++ b/frontend/pages/panel/inscripciones.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Inscripciones — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -38,7 +40,7 @@
+     .pg-dia.pg-futuro     { background:#fff;color:#334155;border:2px dotted #94A3B8; }
+     .pg-dia.pg-sin        { background:var(--gris-100);color:var(--gris-400);font-weight:600; }
+     .pg-dia.pg-finde      { background:transparent; }
+-    .pg-dia.pg-hoy        { box-shadow:0 0 0 3px #0F172A; }
++    .pg-dia.pg-hoy        { box-shadow:0 0 0 3px var(--tinta); }
+     .pg-dia.pg-falta::after { content:'';position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;
+       background:#DC2626;border:1.5px solid #fff; }
+     .pg-leyenda { display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 14px;margin-top:14px;
+@@ -65,11 +67,11 @@
+     .hc-tot > div { background:var(--gris-100);border-radius:10px;padding:.5rem .7rem;font-size:var(--text-xs);color:var(--texto-suave); }
+     .hc-tot strong { display:block;font-size:var(--text-md,1rem);color:var(--texto);font-family:var(--font-display); }
+     .hc-insc { border:1.5px solid var(--gris-200);border-radius:10px;padding:.5rem .7rem;margin-bottom:6px;font-size:var(--text-sm); }
+-    .hc-insc.actual { border-color:#16A34A;background:#F0FDF4; }
++    .hc-insc.actual { border-color:#16A34A;background:var(--ok-bg-suave); }
+     .hc-insc small { display:block;color:var(--texto-suave); }
+     .hc-filtros { display:flex;gap:6px;flex-wrap:wrap;margin:10px 0; }
+-    .hc-filtros button { border:1.5px solid var(--gris-300);background:#fff;border-radius:99px;padding:.2rem .65rem;font-size:var(--text-xs);font-weight:700;cursor:pointer;font-family:inherit; }
+-    .hc-filtros button.on { background:#0F172A;color:#fff;border-color:#0F172A; }
++    .hc-filtros button { border:1.5px solid var(--gris-300);background:var(--blanco);border-radius:99px;padding:.2rem .65rem;font-size:var(--text-xs);font-weight:700;cursor:pointer;font-family:inherit; }
++    .hc-filtros button.on { background:var(--tinta);color:var(--tinta-inv);border-color:var(--tinta); }
+     .hc-mov { display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--gris-100);font-size:var(--text-sm);border-left:4px solid var(--gris-300);padding-left:8px; }
+     .hc-mov.entra { border-left-color:#16A34A; } .hc-mov.sale { border-left-color:#DC2626; }
+     .hc-mov.cobro { border-left-color:#F59E0B; } .hc-mov.info { border-left-color:#94A3B8; }
+@@ -77,16 +79,16 @@
+     .hc-mov .c { flex:1; } .hc-mov .c small { display:block;color:var(--texto-suave); }
+     .hc-mov .m { text-align:right;font-weight:800;white-space:nowrap; }
+     .hc-tag { display:inline-block;border-radius:99px;padding:0 .45rem;font-size:.68rem;font-weight:800;margin-left:4px; }
+-    .hc-tag.diaria { background:#FEF3C7;color:#92400E; } .hc-tag.mensual { background:#CCFBF1;color:#115E59; }
++    .hc-tag.diaria { background:var(--amarillo-l2);color:var(--amarillo-txt); } .hc-tag.mensual { background:#CCFBF1;color:#115E59; }
+     .pg-barra.sobre { display:flex;overflow:visible;position:relative; }
+     .pg-barra.sobre > div { border-radius:0; }
+     .pg-barra.sobre > .ok { background:#16A34A;border-radius:99px 0 0 99px; }
+     .pg-barra.sobre > .extra { background:repeating-linear-gradient(45deg,#2563EB,#2563EB 6px,#60A5FA 6px,#60A5FA 12px);border-radius:0 99px 99px 0; }
+-    .pg-barra.sobre > .marca { position:absolute;top:-4px;bottom:-4px;width:3px;background:#0F172A;border-radius:2px; }
+-    .pg-sobre-nota { font-size:var(--text-sm);font-weight:700;color:#1D4ED8;margin-top:2px; }
++    .pg-barra.sobre > .marca { position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--tinta);border-radius:2px; }
++    .pg-sobre-nota { font-size:var(--text-sm);font-weight:700;color:var(--txt-azul);margin-top:2px; }
+     .pg-nota { font-size:var(--text-xs);color:var(--texto-suave);margin-top:8px;line-height:1.45; }
+     /* Estado de pago en la lista de inscripciones */
+-    tr.fila-deuda td { background:#FFF5F5; }
++    tr.fila-deuda td { background:var(--fila-deuda-bg); }
+     tr.fila-deuda td:first-child { box-shadow:inset 4px 0 0 #DC2626; }
+     .est-pago { display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:.25rem .65rem;font-size:var(--text-xs);
+       font-weight:800;border:none;cursor:pointer;font-family:inherit; }
+@@ -97,7 +99,7 @@
+     .est-favor { display:block;margin-top:6px;border-radius:10px;padding:.3rem .55rem;font-size:var(--text-xs);font-weight:800;
+       background:#DBEAFE;color:#1E3A8A;border:1.5px solid #2563EB;line-height:1.35; }
+     .est-pago-det { font-size:var(--text-xs);color:var(--texto-suave);margin-top:4px;line-height:1.35; }
+-    .est-pago-det.rojo { color:#B91C1C;font-weight:700; }
++    .est-pago-det.rojo { color:var(--txt-rojo);font-weight:700; }
+     /* Calendario grande para elegir los días (pago por día) */
+     .cal-dias { background:var(--blanco);border:1.5px solid var(--gris-200);border-radius:var(--radio-lg);padding:var(--gap-md); }
+     .cal-dias-cab { display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--gap-sm); }
+@@ -1060,7 +1062,7 @@ function htmlEstadoPago(i) {
+     favor = `<span class="est-favor">💙 Saldo a favor ${UI.moneda(e.saldo_a_favor)}<br><span style="font-weight:600">Cubrirá la próxima mensualidad</span></span>`;
+   }
+   if (parseFloat(e.deuda_anterior) > 0) {
+-    detalle += `<br><b style="color:#B91C1C">+ Bs. ${parseFloat(e.deuda_anterior).toFixed(2)} de inscripción anterior</b> `
++    detalle += `<br><b style="color:var(--txt-rojo)">+ Bs. ${parseFloat(e.deuda_anterior).toFixed(2)} de inscripción anterior</b> `
+              + `<a href="#" onclick="abrirHistorial('${i.id}'); return false" style="font-weight:700;color:var(--turquesa-d)">ver / cobrar</a>`;
+   }
+   return `<button class="est-pago ${e.nivel}" title="${e.mensaje.replace(/"/g, '&quot;')}" onclick="${abrir}">${icono} ${etiqueta}</button>
+@@ -1854,7 +1856,7 @@ function pgPintarDiario(cal, r) {
+     ['#CBD5E1', '#94A3B8', 'Bloqueado: cierra primero el anterior'],
+     ['#fff', '#475569', 'Le tocaba y no hay asistencia marcada', 'dashed'],
+   ].map(([bg, bd, txt, est]) => `<span><i style="background:${bg};border:2px ${est || 'solid'} ${bd}"></i>${txt}</span>`).join('')
+-    + `<span><i style="background:#fff;border:2px solid #0F172A"></i>Hoy</span>`
++    + `<span><i style="background:#fff;border:2px solid var(--tinta)"></i>Hoy</span>`
+     + `<span><i style="background:#fff;position:relative;border:2px solid var(--gris-300)"><b style="position:absolute;top:1px;right:1px;width:7px;height:7px;border-radius:50%;background:#DC2626"></b></i>Faltó sin aviso (se cobra)</span>`;
+ 
+   document.getElementById('pg-contenido').innerHTML = `
+@@ -1909,11 +1911,11 @@ function pgHtmlCuentaDiaria(r) {
+       <tr><td>Costo por día</td><td>${costo}</td></tr>
+       <tr><td>Monto a pagar por adelantado<small>${c.dias_a_pagar} × ${costo}</small></td><td>${UI.moneda(c.monto_acordado)}</td></tr>
+       <tr><td>Ya pagó<small>Todo lo abonado y cobrado, menos devoluciones</small></td>
+-          <td style="color:#15803D">${UI.moneda(c.pagado_total)}</td></tr>
++          <td style="color:var(--txt-verde)">${UI.moneda(c.pagado_total)}</td></tr>
+       <tr class="pg-total"><td>${parseFloat(c.falta_pagar) > 0 ? 'Falta pagar para estar al día' : 'Falta pagar'}
+           ${parseFloat(c.falta_pagar) > 0 ? `<small>Equivale a ${plural(c.dias_sin_pagar, 'día', 'días')} sin pagar</small>` : ''}</td>
+-          <td style="color:${parseFloat(c.falta_pagar) > 0 ? '#B91C1C' : '#15803D'}">${UI.moneda(c.falta_pagar)}</td></tr>
+-      ${parseFloat(c.pagado_de_mas) > 0 ? `<tr><td>Por encima de lo acordado<small>Queda como saldo a favor para más días</small></td><td style="color:#1D4ED8">${UI.moneda(c.pagado_de_mas)}</td></tr>` : ''}
++          <td style="color:${parseFloat(c.falta_pagar) > 0 ? 'var(--txt-rojo)' : 'var(--txt-verde)'}">${UI.moneda(c.falta_pagar)}</td></tr>
++      ${parseFloat(c.pagado_de_mas) > 0 ? `<tr><td>Por encima de lo acordado<small>Queda como saldo a favor para más días</small></td><td style="color:var(--txt-azul)">${UI.moneda(c.pagado_de_mas)}</td></tr>` : ''}
+     </table>
+     ${barra}` : '';
+ 
+@@ -2293,16 +2295,16 @@ function hcPintar() {
+   const tag = m => `<span class="hc-tag ${m}">${m === 'diaria' ? 'Por día' : 'Mensual'}</span>`;
+   const tot = `<div class="hc-tot">
+     <div>Total cobrado<strong>${UI.moneda(t.cobrado)}</strong></div>
+-    <div>Dinero recibido<strong style="color:#15803D">${UI.moneda(t.recibido)}</strong></div>
+-    <div>Devuelto<strong style="color:#B91C1C">${UI.moneda(t.devuelto)}</strong></div>
++    <div>Dinero recibido<strong style="color:var(--txt-verde)">${UI.moneda(t.recibido)}</strong></div>
++    <div>Devuelto<strong style="color:var(--txt-rojo)">${UI.moneda(t.devuelto)}</strong></div>
+     <div>Condonado<strong>${UI.moneda(t.condonado)}</strong></div>
+-    <div>Pendiente de pago<strong style="color:${parseFloat(t.pendiente) > 0 ? '#B91C1C' : '#15803D'}">${UI.moneda(t.pendiente)}</strong></div>
+-    <div>Saldo a favor<strong style="color:#1D4ED8">${UI.moneda(t.saldo_a_favor)}</strong></div>
++    <div>Pendiente de pago<strong style="color:${parseFloat(t.pendiente) > 0 ? 'var(--txt-rojo)' : 'var(--txt-verde)'}">${UI.moneda(t.pendiente)}</strong></div>
++    <div>Saldo a favor<strong style="color:var(--txt-azul)">${UI.moneda(t.saldo_a_favor)}</strong></div>
+   </div>`;
+   const inscs = h.inscripciones.map(i => `<div class="hc-insc ${i.es_actual ? 'actual' : ''}">
+       <b>${i.etiqueta}</b> ${tag(i.modalidad)} ${i.activa ? '<span class="chip chip-verde">Activa</span>' : '<span class="chip chip-coral">Cerrada</span>'}
+       <small>${UI.fecha(i.fecha_inicio)}${i.fecha_fin ? ' → ' + UI.fecha(i.fecha_fin) : ' → en curso'} · ${i.sucursal}</small>
+-      <small>Cobrado ${UI.moneda(i.cobrado)} · Recibió ${UI.moneda(i.recibido)} · Devuelto ${UI.moneda(i.devuelto)}${parseFloat(i.pendiente) > 0 ? ' · <b style="color:#B91C1C">Pendiente ' + UI.moneda(i.pendiente) + '</b>' : ''}</small>
++      <small>Cobrado ${UI.moneda(i.cobrado)} · Recibió ${UI.moneda(i.recibido)} · Devuelto ${UI.moneda(i.devuelto)}${parseFloat(i.pendiente) > 0 ? ' · <b style="color:var(--txt-rojo)">Pendiente ' + UI.moneda(i.pendiente) + '</b>' : ''}</small>
+       ${parseFloat(i.pendiente) > 0 && !i.es_actual ? `<button class="btn btn-sm btn-primary" style="margin-top:6px" onclick="hcCobrar('${i.id}','${i.modalidad}','${i.etiqueta.replace(/'/g, '')}')">💳 Cobrar lo pendiente de esta inscripción</button>` : ''}
+     </div>`).join('');
+   const grupos = {
+@@ -2317,7 +2319,7 @@ function hcPintar() {
+   const icono = { pago: '💵', abono: '💵', devolucion: '↩️', traspaso: '🔄', cobro: '🧾', aplicacion: '🔗', condonacion: '🤝', inscripcion: '🔁', dias: '🗓️' };
+   const filas = movs.length ? movs.map(m => {
+     const signo = m.efecto === 'entra' ? '+' : m.efecto === 'sale' ? '−' : '';
+-    const color = m.efecto === 'entra' ? '#15803D' : m.efecto === 'sale' ? '#B91C1C' : 'inherit';
++    const color = m.efecto === 'entra' ? 'var(--txt-verde)' : m.efecto === 'sale' ? 'var(--txt-rojo)' : 'inherit';
+     return `<div class="hc-mov ${m.efecto}">
+       <div class="f">${UI.fecha(m.fecha)}</div>
+       <div class="c"><b>${icono[m.tipo] || ''} ${m.titulo}</b> ${tag(m.modalidad)}
+diff --git a/frontend/pages/panel/inventario.html b/frontend/pages/panel/inventario.html
+index 7ee90a7..f1fd136 100644
+--- a/frontend/pages/panel/inventario.html
++++ b/frontend/pages/panel/inventario.html
+@@ -6,6 +6,8 @@
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Inventario — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -79,7 +81,7 @@
+ 
+     /* ── Alertas de stock ── */
+     .alertas-banner {
+-      background: linear-gradient(135deg, var(--coral-l), #FFE8E8);
++      background: linear-gradient(135deg, var(--coral-l), var(--coral-xl2));
+       border: 2px solid var(--coral);
+       border-radius: var(--radio-xl);
+       padding: var(--gap-lg);
+@@ -316,7 +318,7 @@
+       </button>
+       <button type="button" class="tipo-mov-btn ajuste" onclick="seleccionarTipoMov('ajuste',this)">
+         <span class="t-icono">⚖️</span>
+-        <span class="t-label" style="color:#92400E">Ajuste</span>
++        <span class="t-label" style="color:var(--amarillo-txt)">Ajuste</span>
+       </button>
+     </div>
+ 
+diff --git a/frontend/pages/panel/misael-link.html b/frontend/pages/panel/misael-link.html
+index f3599cc..6579daa 100644
+--- a/frontend/pages/panel/misael-link.html
++++ b/frontend/pages/panel/misael-link.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Centro Misael — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -22,7 +24,7 @@
+     .derivacion-card.cerrada     { border-left:4px solid var(--gris-300); opacity:.7; }
+ 
+     .plan-misael-card {
+-      background:linear-gradient(135deg,var(--violeta-l),#EDE9FE);
++      background:linear-gradient(135deg,var(--violeta-l),var(--violeta-xl));
+       border:1.5px solid var(--violeta);border-radius:var(--radio-xl);
+       padding:var(--gap-lg);margin-bottom:var(--gap-md);box-shadow:var(--sombra-sm);
+     }
+@@ -41,7 +43,7 @@
+     .estado-badge-der {
+       padding:4px 12px;border-radius:var(--radio-full);font-size:var(--text-xs);font-weight:700;
+     }
+-    .estado-solicitada  { background:var(--amarillo-l);color:#92400E; }
++    .estado-solicitada  { background:var(--amarillo-l);color:var(--amarillo-txt); }
+     .estado-aceptada    { background:var(--turquesa-l);color:var(--turquesa-d); }
+     .estado-en_proceso  { background:var(--violeta-l);color:var(--violeta-d); }
+     .estado-cerrada     { background:var(--gris-100);color:var(--gris-600); }
+@@ -60,7 +62,7 @@
+     <div class="pagina">
+ 
+       <!-- Info explicativa -->
+-      <div style="background:linear-gradient(135deg,var(--coral-l),#FFE8E8);border:1.5px solid var(--coral);
++      <div style="background:linear-gradient(135deg,var(--coral-l),var(--coral-xl2));border:1.5px solid var(--coral);
+         border-radius:var(--radio-xl);padding:var(--gap-lg);margin-bottom:var(--gap-lg)">
+         <h3 style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--coral-d);margin-bottom:var(--gap-sm)">
+           🔗 Conexión con el Centro de Neurodesarrollo Infantil Misael
+diff --git a/frontend/pages/panel/ninos.html b/frontend/pages/panel/ninos.html
+index 0496c89..7f0dae4 100644
+--- a/frontend/pages/panel/ninos.html
++++ b/frontend/pages/panel/ninos.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Niños — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -19,7 +21,7 @@
+     }
+     .perfil-lateral.abierto { transform:translateX(0); }
+     .perfil-header {
+-      background:linear-gradient(135deg,var(--turquesa-d),var(--verde-d));
++      background:var(--grad-hero);
+       padding:var(--gap-xl) var(--gap-lg) var(--gap-lg);color:white;position:relative;
+     }
+     .perfil-avatar-grande {
+diff --git a/frontend/pages/panel/personal.html b/frontend/pages/panel/personal.html
+index 45e96e0..d3639f5 100644
+--- a/frontend/pages/panel/personal.html
++++ b/frontend/pages/panel/personal.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Personal — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -15,10 +17,10 @@
+       color:white;font-weight:800;font-size:var(--text-sm);flex-shrink:0; }
+     .rol-badge { padding:3px 10px;border-radius:var(--radio-full);font-size:var(--text-xs);font-weight:700; }
+     .rol-educadora   { background:var(--turquesa-l);color:var(--turquesa-d); }
+-    .rol-directora   { background:var(--amarillo-l);color:#92400E; }
++    .rol-directora   { background:var(--amarillo-l);color:var(--amarillo-txt); }
+     .rol-ayudante    { background:var(--verde-l);color:var(--verde-d); }
+     .rol-recepcionista { background:var(--violeta-l);color:var(--violeta-d); }
+-    .rol-cocina      { background:var(--naranja-l);color:#7C2D12; }
++    .rol-cocina      { background:var(--naranja-l);color:var(--txt-naranja); }
+   </style>
+ </head>
+ <body>
+diff --git a/frontend/pages/panel/reportes.html b/frontend/pages/panel/reportes.html
+index c59e290..80515e6 100644
+--- a/frontend/pages/panel/reportes.html
++++ b/frontend/pages/panel/reportes.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Reportes — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -56,7 +58,7 @@
+     .fin-fila:last-child { border-bottom:none; }
+     .fin-fila b { font-weight:800; }
+     .progreso { height:10px;border-radius:var(--radio-full);background:var(--gris-100);overflow:hidden;margin:6px 0; }
+-    .progreso > span { display:block;height:100%;background:linear-gradient(90deg,var(--turquesa),var(--verde)); }
++    .progreso > span { display:block;height:100%;background:linear-gradient(90deg,var(--turquesa), var(--primario-2)); }
+ 
+     .estado-error { text-align:center;padding:var(--gap-xl);color:var(--coral-d);font-weight:700; }
+ 
+@@ -262,7 +264,7 @@ function renderKpis(r) {
+   $('kpis').innerHTML =
+     kpi('📋 Asistencia', pct(a.porcentaje), a.total ? `${a.presentes} presentes de ${a.total} registros` : 'Sin registros en este período', 'var(--turquesa-d)') +
+     kpi('✅ Cobrado en el período', bs(c.caja_mes.neto), `${c.caja_mes.cantidad_pagos} pago(s)` + (c.caja_mes.cantidad_devoluciones ? ` · ${c.caja_mes.cantidad_devoluciones} devolución(es)` : ''), 'var(--verde-d)') +
+-    kpi('⏳ Por cobrar hoy', bs(c.pendiente.monto), `${c.pendiente.cantidad} cobro(s)` + (c.vencido.cantidad ? ` · <span style="color:var(--coral-d)">${bs(c.vencido.monto)} vencido</span>` : ''), '#92400E') +
++    kpi('⏳ Por cobrar hoy', bs(c.pendiente.monto), `${c.pendiente.cantidad} cobro(s)` + (c.vencido.cantidad ? ` · <span style="color:var(--coral-d)">${bs(c.vencido.monto)} vencido</span>` : ''), 'var(--amarillo-txt)') +
+     kpi('⚠️ Niños con deuda', bs(r.deudas.monto), `${r.deudas.cantidad} niño(s) no están al día`, 'var(--coral-d)');
+ }
+ 
+@@ -316,7 +318,7 @@ function renderFinanciero(r) {
+     <div class="fin-grid">
+       ${caja('Emitido', bs(cm.emitido), 'var(--gris-50)', 'var(--gris-200)', 'var(--texto)')}
+       ${caja('✅ Cobrado', bs(cm.cobrado), 'var(--verde-l)', 'var(--verde)', 'var(--verde-d)')}
+-      ${caja('⏳ Falta cobrar', bs(cm.saldo), 'var(--amarillo-l)', 'var(--amarillo)', '#92400E')}
++      ${caja('⏳ Falta cobrar', bs(cm.saldo), 'var(--amarillo-l)', 'var(--amarillo)', 'var(--amarillo-txt)')}
+     </div>
+     <div class="progreso" title="Porcentaje cobrado de lo emitido"><span style="width:${Math.min(cm.porcentaje_cobrado || 0, 100)}%"></span></div>
+     <div class="fin-fila"><span>% cobrado de lo emitido</span><b>${pct(cm.porcentaje_cobrado)}</b></div>
+diff --git a/frontend/pages/panel/salud.html b/frontend/pages/panel/salud.html
+index 74c0413..d49d239 100644
+--- a/frontend/pages/panel/salud.html
++++ b/frontend/pages/panel/salud.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Salud — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+diff --git a/frontend/pages/panel/sucursales.html b/frontend/pages/panel/sucursales.html
+index d564a96..a066b16 100644
+--- a/frontend/pages/panel/sucursales.html
++++ b/frontend/pages/panel/sucursales.html
+@@ -5,6 +5,8 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Sucursales — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -16,7 +18,7 @@
+     }
+     .sucursal-card::before {
+       content:'';position:absolute;top:0;left:0;right:0;height:5px;
+-      background:linear-gradient(90deg,var(--turquesa),var(--verde));
++      background:linear-gradient(90deg,var(--turquesa), var(--primario-2));
+     }
+     .sucursal-card:hover { transform:translateY(-2px);box-shadow:var(--sombra-xl); }
+     .suc-header { display:flex;align-items:flex-start;gap:var(--gap-md);margin-bottom:var(--gap-lg); }
+diff --git a/frontend/pages/panel/turnos.html b/frontend/pages/panel/turnos.html
+index c334cb6..b68f265 100644
+--- a/frontend/pages/panel/turnos.html
++++ b/frontend/pages/panel/turnos.html
+@@ -5,12 +5,14 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Turnos — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+   <style>
+     .turno-tipo { padding:3px 10px;border-radius:var(--radio-full);font-size:var(--text-xs);font-weight:700; }
+-    .tipo-manana   { background:var(--amarillo-l);color:#92400E; }
++    .tipo-manana   { background:var(--amarillo-l);color:var(--amarillo-txt); }
+     .tipo-tarde    { background:var(--turquesa-l);color:var(--turquesa-d); }
+     .tipo-completo { background:var(--verde-l);color:var(--verde-d); }
+     .tipo-especial { background:var(--violeta-l);color:var(--violeta-d); }
+diff --git a/frontend/pages/panel/usuarios.html b/frontend/pages/panel/usuarios.html
+index 983eeac..8ecc9a8 100644
+--- a/frontend/pages/panel/usuarios.html
++++ b/frontend/pages/panel/usuarios.html
+@@ -5,19 +5,21 @@
+   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Usuarios — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+   <style>
+     .rol-badge { padding:3px 10px;border-radius:var(--radio-full);font-size:var(--text-xs);font-weight:700; }
+     .rol-admin          { background:var(--coral-l);color:var(--coral-d); }
+-    .rol-directora      { background:var(--amarillo-l);color:#92400E; }
++    .rol-directora      { background:var(--amarillo-l);color:var(--amarillo-txt); }
+     .rol-educadora      { background:var(--turquesa-l);color:var(--turquesa-d); }
+     .rol-ayudante       { background:var(--verde-l);color:var(--verde-d); }
+     .rol-tutor          { background:var(--violeta-l);color:var(--violeta-d); }
+-    .rol-profesional    { background:#FDE68A;color:#92400E; }
++    .rol-profesional    { background:var(--amarillo-l3);color:var(--amarillo-txt); }
+     .rol-recepcionista { background:#E0E7FF;color:#3730A3; }
+-    .rol-cocina         { background:var(--naranja-l);color:#7C2D12; }
++    .rol-cocina         { background:var(--naranja-l);color:var(--txt-naranja); }
+     .avatar-usr { width:42px;height:42px;border-radius:50%;
+       background:linear-gradient(135deg,var(--turquesa),var(--violeta));
+       display:flex;align-items:center;justify-content:center;
+diff --git a/frontend/pages/portal/inicio.html b/frontend/pages/portal/inicio.html
+index 215578d..ff02f24 100644
+--- a/frontend/pages/portal/inicio.html
++++ b/frontend/pages/portal/inicio.html
+@@ -6,6 +6,8 @@
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+   <title>Portal Padres — Misael Kids</title>
+   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
++  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
++  <script src="{% static 'js/tema.js' %}"></script>
+   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
+@@ -20,7 +22,7 @@
+ 
+     /* ── Header del portal ── */
+     .portal-header {
+-      background: linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
++      background: var(--grad-hero);
+       border-radius: var(--radio-xl);
+       padding: var(--gap-xl);
+       color: white;
+@@ -29,10 +31,10 @@
+       align-items: center;
+       justify-content: space-between;
+       position: relative;
+-      overflow: hidden;
++      /* sin overflow:hidden: el menú del selector de tema se despliega fuera del header */
+     }
+     .portal-header::before {
+-      content: '🌸🌟🦋';
++      content: var(--deco-header, '🌸🌟🦋');
+       position: absolute; right: var(--gap-xl); top: 50%;
+       transform: translateY(-50%);
+       font-size: 3rem; opacity: .3; letter-spacing: .5rem;
+@@ -82,7 +84,7 @@
+       white-space: nowrap;
+     }
+     .portal-tab.activo {
+-      background: linear-gradient(135deg, var(--turquesa-l), #E0FFF4);
++      background: linear-gradient(135deg, var(--turquesa-l), var(--turquesa-xl));
+       color: var(--turquesa-d);
+       box-shadow: var(--sombra-sm);
+     }
+@@ -93,7 +95,7 @@
+ 
+     /* ── Tarjeta de hijo ── */
+     .hijo-card {
+-      background: linear-gradient(135deg, #FFF9DB, #FFE4E4);
++      background: linear-gradient(135deg, var(--amarillo-l), var(--coral-l));
+       border: 2px solid var(--amarillo);
+       border-radius: var(--radio-xl);
+       padding: var(--gap-lg);
+@@ -134,7 +136,7 @@
+       box-shadow: var(--sombra-sm);
+     }
+     .bitacora-dia-header {
+-      background: linear-gradient(135deg, var(--turquesa-l), #E0FFF4);
++      background: linear-gradient(135deg, var(--turquesa-l), var(--turquesa-xl));
+       padding: var(--gap-md) var(--gap-lg);
+       display: flex;
+       align-items: center;
+@@ -256,7 +258,7 @@
+     .bottom-nav-btn.activo { color: var(--turquesa-d); }
+ 
+     /* ── Responsive del portal ── */
+-    .portal-header::before { right: calc(var(--gap-xl) + 11rem); }   /* los emojis ya no quedan bajo el botón Salir */
++    .portal-header::before { right: calc(var(--gap-xl) + 18rem); }   /* los emojis no quedan bajo el selector de tema ni el botón Salir */
+     .portal-header-left { min-width: 0; }
+     .hijo-info { min-width: 0; }
+     .hijo-info h2 { overflow-wrap: anywhere; }
+@@ -293,7 +295,9 @@
+       <p id="fecha-hoy-portal">Hoy es un gran día en el jardín</p>
+     </div>
+     <div style="display:flex;align-items:center;gap:var(--gap-md);position:relative;z-index:1">
+-      <div class="portal-header-logo">🌱</div>
++      <div id="tema-portal"></div>
++      <script>Tema.montar(document.getElementById('tema-portal'), { variante: 'sobre-color' });</script>
++      <div class="portal-header-logo" data-tema-logo>🌱</div>
+       <button onclick="Auth.cerrar()" class="btn" style="background:rgba(255,255,255,.2);color:white;border:2px solid rgba(255,255,255,.3)">
+         🚪 Salir
+       </button>
+-- 
+2.43.0
+

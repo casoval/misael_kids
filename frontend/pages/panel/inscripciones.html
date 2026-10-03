@@ -5,6 +5,8 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inscripciones — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
@@ -38,7 +40,7 @@
     .pg-dia.pg-futuro     { background:#fff;color:#334155;border:2px dotted #94A3B8; }
     .pg-dia.pg-sin        { background:var(--gris-100);color:var(--gris-400);font-weight:600; }
     .pg-dia.pg-finde      { background:transparent; }
-    .pg-dia.pg-hoy        { box-shadow:0 0 0 3px #0F172A; }
+    .pg-dia.pg-hoy        { box-shadow:0 0 0 3px var(--tinta); }
     .pg-dia.pg-falta::after { content:'';position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;
       background:#DC2626;border:1.5px solid #fff; }
     .pg-leyenda { display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 14px;margin-top:14px;
@@ -65,11 +67,11 @@
     .hc-tot > div { background:var(--gris-100);border-radius:10px;padding:.5rem .7rem;font-size:var(--text-xs);color:var(--texto-suave); }
     .hc-tot strong { display:block;font-size:var(--text-md,1rem);color:var(--texto);font-family:var(--font-display); }
     .hc-insc { border:1.5px solid var(--gris-200);border-radius:10px;padding:.5rem .7rem;margin-bottom:6px;font-size:var(--text-sm); }
-    .hc-insc.actual { border-color:#16A34A;background:#F0FDF4; }
+    .hc-insc.actual { border-color:#16A34A;background:var(--ok-bg-suave); }
     .hc-insc small { display:block;color:var(--texto-suave); }
     .hc-filtros { display:flex;gap:6px;flex-wrap:wrap;margin:10px 0; }
-    .hc-filtros button { border:1.5px solid var(--gris-300);background:#fff;border-radius:99px;padding:.2rem .65rem;font-size:var(--text-xs);font-weight:700;cursor:pointer;font-family:inherit; }
-    .hc-filtros button.on { background:#0F172A;color:#fff;border-color:#0F172A; }
+    .hc-filtros button { border:1.5px solid var(--gris-300);background:var(--blanco);border-radius:99px;padding:.2rem .65rem;font-size:var(--text-xs);font-weight:700;cursor:pointer;font-family:inherit; }
+    .hc-filtros button.on { background:var(--tinta);color:var(--tinta-inv);border-color:var(--tinta); }
     .hc-mov { display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--gris-100);font-size:var(--text-sm);border-left:4px solid var(--gris-300);padding-left:8px; }
     .hc-mov.entra { border-left-color:#16A34A; } .hc-mov.sale { border-left-color:#DC2626; }
     .hc-mov.cobro { border-left-color:#F59E0B; } .hc-mov.info { border-left-color:#94A3B8; }
@@ -77,16 +79,16 @@
     .hc-mov .c { flex:1; } .hc-mov .c small { display:block;color:var(--texto-suave); }
     .hc-mov .m { text-align:right;font-weight:800;white-space:nowrap; }
     .hc-tag { display:inline-block;border-radius:99px;padding:0 .45rem;font-size:.68rem;font-weight:800;margin-left:4px; }
-    .hc-tag.diaria { background:#FEF3C7;color:#92400E; } .hc-tag.mensual { background:#CCFBF1;color:#115E59; }
+    .hc-tag.diaria { background:var(--amarillo-l2);color:var(--amarillo-txt); } .hc-tag.mensual { background:#CCFBF1;color:#115E59; }
     .pg-barra.sobre { display:flex;overflow:visible;position:relative; }
     .pg-barra.sobre > div { border-radius:0; }
     .pg-barra.sobre > .ok { background:#16A34A;border-radius:99px 0 0 99px; }
     .pg-barra.sobre > .extra { background:repeating-linear-gradient(45deg,#2563EB,#2563EB 6px,#60A5FA 6px,#60A5FA 12px);border-radius:0 99px 99px 0; }
-    .pg-barra.sobre > .marca { position:absolute;top:-4px;bottom:-4px;width:3px;background:#0F172A;border-radius:2px; }
-    .pg-sobre-nota { font-size:var(--text-sm);font-weight:700;color:#1D4ED8;margin-top:2px; }
+    .pg-barra.sobre > .marca { position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--tinta);border-radius:2px; }
+    .pg-sobre-nota { font-size:var(--text-sm);font-weight:700;color:var(--txt-azul);margin-top:2px; }
     .pg-nota { font-size:var(--text-xs);color:var(--texto-suave);margin-top:8px;line-height:1.45; }
     /* Estado de pago en la lista de inscripciones */
-    tr.fila-deuda td { background:#FFF5F5; }
+    tr.fila-deuda td { background:var(--fila-deuda-bg); }
     tr.fila-deuda td:first-child { box-shadow:inset 4px 0 0 #DC2626; }
     .est-pago { display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:.25rem .65rem;font-size:var(--text-xs);
       font-weight:800;border:none;cursor:pointer;font-family:inherit; }
@@ -97,7 +99,7 @@
     .est-favor { display:block;margin-top:6px;border-radius:10px;padding:.3rem .55rem;font-size:var(--text-xs);font-weight:800;
       background:#DBEAFE;color:#1E3A8A;border:1.5px solid #2563EB;line-height:1.35; }
     .est-pago-det { font-size:var(--text-xs);color:var(--texto-suave);margin-top:4px;line-height:1.35; }
-    .est-pago-det.rojo { color:#B91C1C;font-weight:700; }
+    .est-pago-det.rojo { color:var(--txt-rojo);font-weight:700; }
     /* Calendario grande para elegir los días (pago por día) */
     .cal-dias { background:var(--blanco);border:1.5px solid var(--gris-200);border-radius:var(--radio-lg);padding:var(--gap-md); }
     .cal-dias-cab { display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--gap-sm); }
@@ -1060,7 +1062,7 @@ function htmlEstadoPago(i) {
     favor = `<span class="est-favor">💙 Saldo a favor ${UI.moneda(e.saldo_a_favor)}<br><span style="font-weight:600">Cubrirá la próxima mensualidad</span></span>`;
   }
   if (parseFloat(e.deuda_anterior) > 0) {
-    detalle += `<br><b style="color:#B91C1C">+ Bs. ${parseFloat(e.deuda_anterior).toFixed(2)} de inscripción anterior</b> `
+    detalle += `<br><b style="color:var(--txt-rojo)">+ Bs. ${parseFloat(e.deuda_anterior).toFixed(2)} de inscripción anterior</b> `
              + `<a href="#" onclick="abrirHistorial('${i.id}'); return false" style="font-weight:700;color:var(--turquesa-d)">ver / cobrar</a>`;
   }
   return `<button class="est-pago ${e.nivel}" title="${e.mensaje.replace(/"/g, '&quot;')}" onclick="${abrir}">${icono} ${etiqueta}</button>
@@ -1854,7 +1856,7 @@ function pgPintarDiario(cal, r) {
     ['#CBD5E1', '#94A3B8', 'Bloqueado: cierra primero el anterior'],
     ['#fff', '#475569', 'Le tocaba y no hay asistencia marcada', 'dashed'],
   ].map(([bg, bd, txt, est]) => `<span><i style="background:${bg};border:2px ${est || 'solid'} ${bd}"></i>${txt}</span>`).join('')
-    + `<span><i style="background:#fff;border:2px solid #0F172A"></i>Hoy</span>`
+    + `<span><i style="background:#fff;border:2px solid var(--tinta)"></i>Hoy</span>`
     + `<span><i style="background:#fff;position:relative;border:2px solid var(--gris-300)"><b style="position:absolute;top:1px;right:1px;width:7px;height:7px;border-radius:50%;background:#DC2626"></b></i>Faltó sin aviso (se cobra)</span>`;
 
   document.getElementById('pg-contenido').innerHTML = `
@@ -1909,11 +1911,11 @@ function pgHtmlCuentaDiaria(r) {
       <tr><td>Costo por día</td><td>${costo}</td></tr>
       <tr><td>Monto a pagar por adelantado<small>${c.dias_a_pagar} × ${costo}</small></td><td>${UI.moneda(c.monto_acordado)}</td></tr>
       <tr><td>Ya pagó<small>Todo lo abonado y cobrado, menos devoluciones</small></td>
-          <td style="color:#15803D">${UI.moneda(c.pagado_total)}</td></tr>
+          <td style="color:var(--txt-verde)">${UI.moneda(c.pagado_total)}</td></tr>
       <tr class="pg-total"><td>${parseFloat(c.falta_pagar) > 0 ? 'Falta pagar para estar al día' : 'Falta pagar'}
           ${parseFloat(c.falta_pagar) > 0 ? `<small>Equivale a ${plural(c.dias_sin_pagar, 'día', 'días')} sin pagar</small>` : ''}</td>
-          <td style="color:${parseFloat(c.falta_pagar) > 0 ? '#B91C1C' : '#15803D'}">${UI.moneda(c.falta_pagar)}</td></tr>
-      ${parseFloat(c.pagado_de_mas) > 0 ? `<tr><td>Por encima de lo acordado<small>Queda como saldo a favor para más días</small></td><td style="color:#1D4ED8">${UI.moneda(c.pagado_de_mas)}</td></tr>` : ''}
+          <td style="color:${parseFloat(c.falta_pagar) > 0 ? 'var(--txt-rojo)' : 'var(--txt-verde)'}">${UI.moneda(c.falta_pagar)}</td></tr>
+      ${parseFloat(c.pagado_de_mas) > 0 ? `<tr><td>Por encima de lo acordado<small>Queda como saldo a favor para más días</small></td><td style="color:var(--txt-azul)">${UI.moneda(c.pagado_de_mas)}</td></tr>` : ''}
     </table>
     ${barra}` : '';
 
@@ -2293,16 +2295,16 @@ function hcPintar() {
   const tag = m => `<span class="hc-tag ${m}">${m === 'diaria' ? 'Por día' : 'Mensual'}</span>`;
   const tot = `<div class="hc-tot">
     <div>Total cobrado<strong>${UI.moneda(t.cobrado)}</strong></div>
-    <div>Dinero recibido<strong style="color:#15803D">${UI.moneda(t.recibido)}</strong></div>
-    <div>Devuelto<strong style="color:#B91C1C">${UI.moneda(t.devuelto)}</strong></div>
+    <div>Dinero recibido<strong style="color:var(--txt-verde)">${UI.moneda(t.recibido)}</strong></div>
+    <div>Devuelto<strong style="color:var(--txt-rojo)">${UI.moneda(t.devuelto)}</strong></div>
     <div>Condonado<strong>${UI.moneda(t.condonado)}</strong></div>
-    <div>Pendiente de pago<strong style="color:${parseFloat(t.pendiente) > 0 ? '#B91C1C' : '#15803D'}">${UI.moneda(t.pendiente)}</strong></div>
-    <div>Saldo a favor<strong style="color:#1D4ED8">${UI.moneda(t.saldo_a_favor)}</strong></div>
+    <div>Pendiente de pago<strong style="color:${parseFloat(t.pendiente) > 0 ? 'var(--txt-rojo)' : 'var(--txt-verde)'}">${UI.moneda(t.pendiente)}</strong></div>
+    <div>Saldo a favor<strong style="color:var(--txt-azul)">${UI.moneda(t.saldo_a_favor)}</strong></div>
   </div>`;
   const inscs = h.inscripciones.map(i => `<div class="hc-insc ${i.es_actual ? 'actual' : ''}">
       <b>${i.etiqueta}</b> ${tag(i.modalidad)} ${i.activa ? '<span class="chip chip-verde">Activa</span>' : '<span class="chip chip-coral">Cerrada</span>'}
       <small>${UI.fecha(i.fecha_inicio)}${i.fecha_fin ? ' → ' + UI.fecha(i.fecha_fin) : ' → en curso'} · ${i.sucursal}</small>
-      <small>Cobrado ${UI.moneda(i.cobrado)} · Recibió ${UI.moneda(i.recibido)} · Devuelto ${UI.moneda(i.devuelto)}${parseFloat(i.pendiente) > 0 ? ' · <b style="color:#B91C1C">Pendiente ' + UI.moneda(i.pendiente) + '</b>' : ''}</small>
+      <small>Cobrado ${UI.moneda(i.cobrado)} · Recibió ${UI.moneda(i.recibido)} · Devuelto ${UI.moneda(i.devuelto)}${parseFloat(i.pendiente) > 0 ? ' · <b style="color:var(--txt-rojo)">Pendiente ' + UI.moneda(i.pendiente) + '</b>' : ''}</small>
       ${parseFloat(i.pendiente) > 0 && !i.es_actual ? `<button class="btn btn-sm btn-primary" style="margin-top:6px" onclick="hcCobrar('${i.id}','${i.modalidad}','${i.etiqueta.replace(/'/g, '')}')">💳 Cobrar lo pendiente de esta inscripción</button>` : ''}
     </div>`).join('');
   const grupos = {
@@ -2317,7 +2319,7 @@ function hcPintar() {
   const icono = { pago: '💵', abono: '💵', devolucion: '↩️', traspaso: '🔄', cobro: '🧾', aplicacion: '🔗', condonacion: '🤝', inscripcion: '🔁', dias: '🗓️' };
   const filas = movs.length ? movs.map(m => {
     const signo = m.efecto === 'entra' ? '+' : m.efecto === 'sale' ? '−' : '';
-    const color = m.efecto === 'entra' ? '#15803D' : m.efecto === 'sale' ? '#B91C1C' : 'inherit';
+    const color = m.efecto === 'entra' ? 'var(--txt-verde)' : m.efecto === 'sale' ? 'var(--txt-rojo)' : 'inherit';
     return `<div class="hc-mov ${m.efecto}">
       <div class="f">${UI.fecha(m.fecha)}</div>
       <div class="c"><b>${icono[m.tipo] || ''} ${m.titulo}</b> ${tag(m.modalidad)}

@@ -322,11 +322,12 @@ function _pintarSidebar(items, paginaActiva, usr) {
   if (!sidebar) return;
   sidebar.innerHTML = `
     <div class="sidebar-logo">
-      <div class="logo-icon">🌱</div>
+      <div class="logo-icon" data-tema-logo>🌱</div>
       <div class="logo-texto"><h2>Misael Kids</h2><span>Panel interno</span></div>
     </div>
     <nav class="sidebar-nav">${html}</nav>
     <div class="sidebar-footer">
+      <div id="tema-sidebar"></div>
       <div class="usuario-card">
         <div class="usuario-avatar">${UI.iniciales(usr.nombres + ' ' + usr.apellidos)}</div>
         <div class="usuario-info">
@@ -338,6 +339,7 @@ function _pintarSidebar(items, paginaActiva, usr) {
       </div>
     </div>`;
 
+  if (typeof Tema !== 'undefined') Tema.montar(document.getElementById('tema-sidebar'));
   insertarMenuMovil();
 }
 

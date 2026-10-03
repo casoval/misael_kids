@@ -5,6 +5,8 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Centro Misael — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
@@ -22,7 +24,7 @@
     .derivacion-card.cerrada     { border-left:4px solid var(--gris-300); opacity:.7; }
 
     .plan-misael-card {
-      background:linear-gradient(135deg,var(--violeta-l),#EDE9FE);
+      background:linear-gradient(135deg,var(--violeta-l),var(--violeta-xl));
       border:1.5px solid var(--violeta);border-radius:var(--radio-xl);
       padding:var(--gap-lg);margin-bottom:var(--gap-md);box-shadow:var(--sombra-sm);
     }
@@ -41,7 +43,7 @@
     .estado-badge-der {
       padding:4px 12px;border-radius:var(--radio-full);font-size:var(--text-xs);font-weight:700;
     }
-    .estado-solicitada  { background:var(--amarillo-l);color:#92400E; }
+    .estado-solicitada  { background:var(--amarillo-l);color:var(--amarillo-txt); }
     .estado-aceptada    { background:var(--turquesa-l);color:var(--turquesa-d); }
     .estado-en_proceso  { background:var(--violeta-l);color:var(--violeta-d); }
     .estado-cerrada     { background:var(--gris-100);color:var(--gris-600); }
@@ -60,7 +62,7 @@
     <div class="pagina">
 
       <!-- Info explicativa -->
-      <div style="background:linear-gradient(135deg,var(--coral-l),#FFE8E8);border:1.5px solid var(--coral);
+      <div style="background:linear-gradient(135deg,var(--coral-l),var(--coral-xl2));border:1.5px solid var(--coral);
         border-radius:var(--radio-xl);padding:var(--gap-lg);margin-bottom:var(--gap-lg)">
         <h3 style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--coral-d);margin-bottom:var(--gap-sm)">
           🔗 Conexión con el Centro de Neurodesarrollo Infantil Misael

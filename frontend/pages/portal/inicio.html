@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Portal Padres — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
@@ -20,7 +22,7 @@
 
     /* ── Header del portal ── */
     .portal-header {
-      background: linear-gradient(135deg, var(--turquesa-d), var(--verde-d));
+      background: var(--grad-hero);
       border-radius: var(--radio-xl);
       padding: var(--gap-xl);
       color: white;
@@ -29,10 +31,10 @@
       align-items: center;
       justify-content: space-between;
       position: relative;
-      overflow: hidden;
+      /* sin overflow:hidden: el menú del selector de tema se despliega fuera del header */
     }
     .portal-header::before {
-      content: '🌸🌟🦋';
+      content: var(--deco-header, '🌸🌟🦋');
       position: absolute; right: var(--gap-xl); top: 50%;
       transform: translateY(-50%);
       font-size: 3rem; opacity: .3; letter-spacing: .5rem;
@@ -82,7 +84,7 @@
       white-space: nowrap;
     }
     .portal-tab.activo {
-      background: linear-gradient(135deg, var(--turquesa-l), #E0FFF4);
+      background: linear-gradient(135deg, var(--turquesa-l), var(--turquesa-xl));
       color: var(--turquesa-d);
       box-shadow: var(--sombra-sm);
     }
@@ -93,7 +95,7 @@
 
     /* ── Tarjeta de hijo ── */
     .hijo-card {
-      background: linear-gradient(135deg, #FFF9DB, #FFE4E4);
+      background: linear-gradient(135deg, var(--amarillo-l), var(--coral-l));
       border: 2px solid var(--amarillo);
       border-radius: var(--radio-xl);
       padding: var(--gap-lg);
@@ -134,7 +136,7 @@
       box-shadow: var(--sombra-sm);
     }
     .bitacora-dia-header {
-      background: linear-gradient(135deg, var(--turquesa-l), #E0FFF4);
+      background: linear-gradient(135deg, var(--turquesa-l), var(--turquesa-xl));
       padding: var(--gap-md) var(--gap-lg);
       display: flex;
       align-items: center;
@@ -256,7 +258,7 @@
     .bottom-nav-btn.activo { color: var(--turquesa-d); }
 
     /* ── Responsive del portal ── */
-    .portal-header::before { right: calc(var(--gap-xl) + 11rem); }   /* los emojis ya no quedan bajo el botón Salir */
+    .portal-header::before { right: calc(var(--gap-xl) + 18rem); }   /* los emojis no quedan bajo el selector de tema ni el botón Salir */
     .portal-header-left { min-width: 0; }
     .hijo-info { min-width: 0; }
     .hijo-info h2 { overflow-wrap: anywhere; }
@@ -293,7 +295,9 @@
       <p id="fecha-hoy-portal">Hoy es un gran día en el jardín</p>
     </div>
     <div style="display:flex;align-items:center;gap:var(--gap-md);position:relative;z-index:1">
-      <div class="portal-header-logo">🌱</div>
+      <div id="tema-portal"></div>
+      <script>Tema.montar(document.getElementById('tema-portal'), { variante: 'sobre-color' });</script>
+      <div class="portal-header-logo" data-tema-logo>🌱</div>
       <button onclick="Auth.cerrar()" class="btn" style="background:rgba(255,255,255,.2);color:white;border:2px solid rgba(255,255,255,.3)">
         🚪 Salir
       </button>

@@ -5,6 +5,8 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sucursales — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
@@ -16,7 +18,7 @@
     }
     .sucursal-card::before {
       content:'';position:absolute;top:0;left:0;right:0;height:5px;
-      background:linear-gradient(90deg,var(--turquesa),var(--verde));
+      background:linear-gradient(90deg,var(--turquesa), var(--primario-2));
     }
     .sucursal-card:hover { transform:translateY(-2px);box-shadow:var(--sombra-xl); }
     .suc-header { display:flex;align-items:flex-start;gap:var(--gap-md);margin-bottom:var(--gap-lg); }

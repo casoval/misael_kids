@@ -5,6 +5,8 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Asistencia — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+  <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+  <script src="{% static 'js/tema.js' %}"></script>
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
   <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
@@ -12,7 +14,7 @@
     /* ── Avatar con foto (cae a iniciales si no hay foto o no carga) ── */
     .av {
       position:relative;border-radius:50%;flex-shrink:0;overflow:hidden;
-      background:linear-gradient(135deg,var(--turquesa),var(--verde));
+      background:linear-gradient(135deg,var(--turquesa), var(--primario-2));
       display:flex;align-items:center;justify-content:center;
       color:white;font-weight:800;border:3px solid var(--blanco);
       box-shadow:0 2px 8px rgba(15,23,42,.15);
@@ -39,8 +41,8 @@
     .edu-chip .av { border-width:2px;background:linear-gradient(135deg,var(--violeta),var(--violeta-d)); }
     .edu-nombre { font-weight:800;font-size:var(--text-sm);color:var(--texto);line-height:1.1; }
     .edu-rol { font-size:.68rem;font-weight:700;color:var(--violeta-d); }
-    .edu-vacio { border-color:var(--amarillo);background:var(--amarillo-l);color:#92400E;font-weight:700;font-size:var(--text-sm); }
-    .edu-vacio .edu-titulo { color:#92400E; }
+    .edu-vacio { border-color:var(--amarillo);background:var(--amarillo-l);color:var(--amarillo-txt);font-weight:700;font-size:var(--text-sm); }
+    .edu-vacio .edu-titulo { color:var(--amarillo-txt); }
 
     /* ── Selector de vista ── */
     .vista-toggle {
@@ -187,7 +189,7 @@
     .pick-otra-box.abierto { display:flex; }
     .pick-aviso { font-size:var(--text-xs);font-weight:700;color:var(--coral-d);background:var(--coral-l);
       border-radius:var(--radio-md);padding:.4rem .6rem; }
-    .pick-vacio { font-size:var(--text-xs);font-weight:700;color:#92400E;background:var(--amarillo-l);
+    .pick-vacio { font-size:var(--text-xs);font-weight:700;color:var(--amarillo-txt);background:var(--amarillo-l);
       border-radius:var(--radio-md);padding:.5rem .75rem;margin-bottom:var(--gap-sm); }
 
     .resumen-chip {
@@ -198,7 +200,7 @@
     }
     .resumen-chip .num { font-family:var(--font-display);font-size:var(--text-xl); }
     .toolbar-masivo {
-      background:linear-gradient(135deg,var(--turquesa-l),#E0FFF4);
+      background:linear-gradient(135deg,var(--turquesa-l),var(--turquesa-xl));
       border:2px solid var(--turquesa);border-radius:var(--radio-xl);
       padding:var(--gap-md) var(--gap-lg);display:flex;align-items:center;
       gap:var(--gap-md);margin-bottom:var(--gap-md);flex-wrap:wrap;
