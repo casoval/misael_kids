@@ -3,7 +3,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Portal Padres — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
@@ -12,10 +12,10 @@
   <style>
     /* ── Layout portal (sin sidebar) ── */
     .portal-layout {
-      max-width: 900px;
+      max-width: clamp(900px, 72vw, 1180px);   /* crece en pantallas grandes */
       margin: 0 auto;
-      padding: var(--gap-md);
-      min-height: 100vh;
+      padding: clamp(.65rem, 2vw, 1.5rem);
+      min-height: 100vh; min-height: 100dvh;
     }
 
     /* ── Header del portal ── */
@@ -254,6 +254,31 @@
     }
     .bottom-nav-btn .icono { font-size: 1.4rem; }
     .bottom-nav-btn.activo { color: var(--turquesa-d); }
+
+    /* ── Responsive del portal ── */
+    .portal-header::before { right: calc(var(--gap-xl) + 11rem); }   /* los emojis ya no quedan bajo el botón Salir */
+    .portal-header-left { min-width: 0; }
+    .hijo-info { min-width: 0; }
+    .hijo-info h2 { overflow-wrap: anywhere; }
+    @media (max-width: 900px) {
+      .portal-layout { max-width: 100%; }
+    }
+    @media (max-width: 600px) {
+      .portal-header { padding: var(--gap-md) var(--gap-lg); gap: var(--gap-sm); margin-bottom: var(--gap-md); }
+      .portal-header::before, .portal-header-logo { display: none; }
+      .portal-header-left h1 { font-size: var(--text-2xl); }
+      .hijo-card { padding: var(--gap-md); gap: var(--gap-md); margin-bottom: var(--gap-md); }
+      .hijo-avatar { width: 56px; height: 56px; font-size: 1.5rem; }
+      .hijo-info { flex: 1 1 0; }
+      .hijo-info h2 { font-size: var(--text-xl); line-height: 1.25; }
+      .bitacora-dia-header { padding: var(--gap-sm) var(--gap-md); gap: var(--gap-sm); }
+      .bitacora-dia-body { padding: var(--gap-md); }
+      .cobro-card { flex-wrap: wrap; padding: var(--gap-md); }
+      .bottom-nav { padding: .35rem .25rem calc(.35rem + env(safe-area-inset-bottom, 0px)); }
+      .bottom-nav-btn { flex: 1; min-width: 0; padding: .35rem .15rem; font-size: .68rem; }
+      .bottom-nav-btn .icono { font-size: 1.3rem; }
+    }
+    @media (min-width: 601px) { .bottom-nav { display: none !important; } }
   </style>
 </head>
 <body>
@@ -493,6 +518,9 @@
   </button>
   <button class="bottom-nav-btn" onclick="cambiarTab('desarrollo')">
     <span class="icono">🌱</span><span>Desarrollo</span>
+  </button>
+  <button class="bottom-nav-btn" onclick="cambiarTab('ausencia')">
+    <span class="icono">📄</span><span>Justificar</span>
   </button>
 </nav>
 

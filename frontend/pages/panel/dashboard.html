@@ -102,12 +102,21 @@
     /* ── Layout dos columnas ── */
     .dash-grid {
       display: grid;
-      grid-template-columns: 1fr 380px;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
       gap: var(--gap-xl);
       align-items: start;
     }
+    @media (min-width: 1700px) { .dash-grid { grid-template-columns: minmax(0, 1fr) 440px; } }
     @media (max-width: 1100px) {
-      .dash-grid { grid-template-columns: 1fr; }
+      .dash-grid { grid-template-columns: minmax(0, 1fr); gap: var(--gap-lg); }
+    }
+    @media (max-width: 600px) {
+      .bienvenida { padding: var(--gap-lg); margin-bottom: var(--gap-lg); gap: var(--gap-md); }
+      .bienvenida-texto h2 { font-size: var(--text-2xl); }
+      .bienvenida-emoji { font-size: 2.6rem; }
+      .acceso-rapido { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--gap-sm); margin-bottom: var(--gap-lg); }
+      .acceso-btn { padding: var(--gap-md) var(--gap-sm); }
+      .acceso-btn .icono { width: 44px; height: 44px; }
     }
 
     /* ── Lista de asistencia de hoy ── */

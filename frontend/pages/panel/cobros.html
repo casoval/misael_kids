@@ -42,7 +42,7 @@
 
     /* ── Modal de pago ── */
     .metodo-btns {
-      display: grid; grid-template-columns: repeat(3,1fr); gap: var(--gap-sm);
+      display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--gap-sm);
       margin-bottom: var(--gap-md);
     }
     .metodo-btn {
@@ -118,7 +118,7 @@
       </div>
 
       <!-- Pestañas: cobros programados vs. movimiento real de caja -->
-      <div class="tabs-cobros" style="display:flex;gap:var(--gap-sm);margin-bottom:var(--gap-lg)">
+      <div class="tabs-cobros" style="display:flex;flex-wrap:wrap;gap:var(--gap-sm);margin-bottom:var(--gap-lg)">
         <button class="btn btn-primary tab-cobros-btn" id="tab-btn-cobros" onclick="cambiarVista('cobros')">📋 Cobros</button>
         <button class="btn btn-outline tab-cobros-btn" id="tab-btn-movimientos" onclick="cambiarVista('movimientos')">🧾 Movimientos (pagos y devoluciones)</button>
       </div>

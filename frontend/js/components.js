@@ -313,7 +313,7 @@ function _pintarSidebar(items, paginaActiva, usr) {
     const activo = paginaActiva && item.href.includes(paginaActiva) ? 'activo' : '';
     const target = item.externo ? ' target="_blank" rel="noopener"' : '';
     const extraStyle = item.externo ? 'opacity:.75;border-top:1px dashed var(--gris-200);margin-top:4px;padding-top:var(--gap-sm)' : '';
-    return `<a class="nav-item ${activo}" href="${item.href}"${target} style="${extraStyle}">
+    return `<a class="nav-item ${activo}" href="${item.href}" title="${item.label}"${target} style="${extraStyle}">
       <div class="nav-icon">${item.icon}</div> ${item.label}${item.externo?' <span style="font-size:.6rem;opacity:.6">↗</span>':''}
     </a>`;
   }).join('');
@@ -361,6 +361,21 @@ function insertarMenuMovil() {
     backdrop.className = 'sidebar-backdrop';
     backdrop.onclick = cerrarSidebarMovil;
     document.body.appendChild(backdrop);
+  }
+
+  // Botón ☰ flotante: en móvil el topbar no queda fijo (ocuparía hasta 3 filas),
+  // así que cuando se sale de pantalla aparece este atajo para abrir el menú.
+  if (topbar && !document.getElementById('btn-menu-flotante') && 'IntersectionObserver' in window) {
+    const fab = document.createElement('button');
+    fab.id = 'btn-menu-flotante';
+    fab.className = 'btn-menu-flotante';
+    fab.type = 'button';
+    fab.setAttribute('aria-label', 'Abrir menú');
+    fab.innerHTML = '☰';
+    fab.onclick = toggleSidebarMovil;
+    document.body.appendChild(fab);
+    new IntersectionObserver(([e]) => fab.classList.toggle('visible', !e.isIntersecting))
+      .observe(topbar);
   }
 }
 
@@ -412,16 +427,11 @@ const Sucursal = {
     if (!topbar || document.getElementById('selector-sucursal')) return;
 
     const wrap = document.createElement('div');
-    wrap.style.display = 'flex';
-    wrap.style.alignItems = 'center';
-    wrap.style.gap = '8px';
-    wrap.style.marginLeft = 'var(--gap-lg)';
+    wrap.className = 'selector-sucursal-wrap';   // estilos y responsive en base.css
 
     const sel = document.createElement('select');
     sel.id = 'selector-sucursal';
     sel.className = 'form-select';
-    sel.style.maxWidth = '230px';
-    sel.style.fontWeight = '700';
 
     let opciones = '';
     if (this.lista.length > 1) {
@@ -476,3 +486,40 @@ function initPanel(paginaActiva, rolesPermitidos = ['admin','directora','educado
   // para evitar condiciones de carrera con las cargas de datos
   Sucursal.init().catch(() => {}); // no bloquea si falla
 }
+
+/* ── Tablas responsive ────────────────────────────────────────
+   En pantallas ≤ 600px el CSS convierte cada fila en una tarjeta
+   (ver base.css). Para eso cada <td> necesita su etiqueta, que se
+   toma del <th> de su columna. Se re-etiqueta solo cuando la página
+   vuelve a pintar el <tbody> (listados cargados por API, filtros...).
+   Para excluir una tabla: <div class="tabla-wrap" data-no-apilar>. */
+function etiquetarTablas() {
+  document.querySelectorAll('.tabla-wrap:not([data-no-apilar]) table').forEach(tabla => {
+    const ths = tabla.querySelectorAll('thead th');
+    if (!ths.length) return;
+    if ([...ths].some(th => th.colSpan > 1 || th.rowSpan > 1)) return; // cabeceras complejas: se deja con scroll
+    const etiquetas = [...ths].map(th => th.textContent.trim());
+    tabla.classList.add('tabla-apilada');
+    tabla.querySelectorAll('tbody tr').forEach(tr => {
+      let col = 0;
+      [...tr.children].forEach(td => {
+        if (!td.hasAttribute('data-label')) td.setAttribute('data-label', td.colSpan > 1 ? '' : (etiquetas[col] || ''));
+        col += td.colSpan || 1;
+      });
+    });
+  });
+}
+
+(function iniciarTablasResponsive() {
+  let pendiente = 0;
+  const programar = () => {
+    cancelAnimationFrame(pendiente);
+    pendiente = requestAnimationFrame(etiquetarTablas);
+  };
+  const arrancar = () => {
+    etiquetarTablas();
+    new MutationObserver(programar).observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
+  else arrancar();
+})();

@@ -46,7 +46,7 @@
     .leyenda i { display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px; }
 
     /* ── Resumen financiero ── */
-    .fin-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap-sm); }
+    .fin-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap-sm); }
     .fin-caja { border-radius:var(--radio-lg);padding:var(--gap-sm) var(--gap-md);border:1.5px solid; }
     .fin-caja .e { font-size:var(--text-xs);font-weight:800;text-transform:none; }
     .fin-caja .v { font-family:var(--font-display);font-size:var(--text-xl);line-height:1.2; }

@@ -65,7 +65,7 @@
     }
     .btn-editar:hover { border-color:var(--turquesa);transform:scale(1.1); }
 
-    .est-grupo { display:grid;grid-template-columns:repeat(3,1fr);gap:6px; }
+    .est-grupo { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px; }
     .est-btn {
       display:flex;align-items:center;justify-content:center;gap:.3rem;
       padding:.5rem .35rem;border-radius:var(--radio-md);border:2px solid var(--gris-200);
@@ -250,7 +250,7 @@
             <option value="">Todos</option>
           </select>
         </div>
-        <div style="display:flex;align-items:flex-end;gap:6px">
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px">
           <button class="btn btn-primary" onclick="cargarAsistencia()">Cargar</button>
           <button class="btn btn-outline" onclick="abrirHistorial()">📅 Historial</button>
           <button class="btn btn-outline" onclick="abrirResumenMensual()">📊 Resumen mensual</button>
