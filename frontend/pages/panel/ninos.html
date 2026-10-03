@@ -120,7 +120,8 @@
           <h3 class="card-titulo">Lista de niños</h3>
           <span id="total-ninos" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
         </div>
-        <div class="tabla-wrap">
+        <div id="vt-ninos" class="vista-barra"></div>
+        <div class="tabla-wrap" id="wrap-ninos-filas">
           <table>
             <thead><tr>
               <th>Niño/a</th><th>Edad</th><th>Género</th><th>Tutores</th>
@@ -129,6 +130,7 @@
             <tbody id="tbody-ninos"></tbody>
           </table>
         </div>
+        <div id="tarjetas-ninos" class="grid-tarjetas" style="display:none"></div>
         <div class="paginacion" id="paginacion"></div>
       </div>
     </div>
@@ -423,6 +425,8 @@ const POR_PAGINA = 20;
 let autorizadosPendientes = [];
 let tutoresPendientes = [];
 
+Vista.montar('ninos', { filas:'wrap-ninos-filas', tarjetas:'tarjetas-ninos', selector:'vt-ninos' });
+
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);}}
 
 async function cargar() {
@@ -436,7 +440,9 @@ async function cargar() {
   if (genero) url += '&genero='+genero;
   if (plan)   url += '&tiene_plan_misael='+plan;
   if (activo) url += '&activo='+activo;
+  const tarj = document.getElementById('tarjetas-ninos');
   tbody.innerHTML = '<tr><td colspan="8"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  tarj.innerHTML  = '<div class="loader"><div class="spinner"></div></div>';
   try {
     const data  = await API.get(url);
     const lista = data.results||data;
@@ -444,8 +450,10 @@ async function cargar() {
     document.getElementById('total-ninos').textContent = total+' niño(s)';
     if (!lista.length) {
       tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin resultados</td></tr>';
+      tarj.innerHTML='<div class="tn-vacio">Sin resultados</div>';
       document.getElementById('paginacion').innerHTML=''; return;
     }
+    tarj.innerHTML = lista.map(tarjetaNino).join('');
     tbody.innerHTML = lista.map(n => `
       <tr style="cursor:pointer" onclick="verPerfil('${n.id}')">
         <td>
@@ -502,7 +510,34 @@ async function cargar() {
       <button class="pag-btn" ${paginaActual===totalPags?'disabled':''} onclick="cambiarPag(${paginaActual+1})">→</button>`;
   } catch (err) {
     tbody.innerHTML='<tr><td colspan="8"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+    tarj.innerHTML='<div class="alerta alerta-peligro">Error: '+Vista._esc(err.message)+'</div>';
   }
+}
+
+// Vista de tarjetas: mismos datos y acciones que la fila de la tabla.
+function tarjetaNino(n) {
+  const e = Vista._esc;
+  const badges = [
+    n.activo ? '<span class="chip chip-verde">✅ Activo</span>' : '<span class="chip chip-coral">❌ Inactivo</span>',
+    n.vinculado_centro_misael ? '<span class="chip chip-violeta" title="Vinculado con un paciente de Centro Misael">🔗 Centro Misael</span>' : '',
+    n.tiene_plan_misael ? '<span class="chip chip-violeta">🧠 Plan Misael</span>' : '',
+    n.alergias ? `<span class="chip chip-coral" title="${e(n.alergias)}">⚠️ Alergias</span>` : '',
+  ].join(' ');
+  const tutores = (n.tutores_resumen||[]).length
+    ? n.tutores_resumen.map(t => `<span class="chip ${t.es_principal?'chip-violeta':'chip-gris'}" style="margin:1px">${t.es_principal?'⭐ ':''}${e(t.nombre)}</span>`).join(' ')
+    : '<span class="chip chip-coral">⚠️ Sin tutor</span>';
+  const genero = n.genero==='M' ? '👦 Masc.' : n.genero==='F' ? '👧 Fem.' : '⚧️ Otro';
+  return Vista.tarjeta(n, {
+    clase: !n.activo ? 'tn-neutro' : (n.tutores_resumen||[]).length ? (n.vinculado_centro_misael ? 'tn-violeta' : 'tn-ok') : 'tn-aviso',
+    sub: `🎂 ${e(UI.edad(n.edad_en_meses, true))} · ${genero}`,
+    badges,
+    datos: Vista.dato('Nacimiento', e(UI.fecha(n.fecha_nacimiento)))
+         + Vista.dato('Tutores', tutores, true),
+    acciones: `<button class="btn btn-outline btn-sm" onclick="verPerfil('${n.id}')">👁 Ver</button>
+      <button class="btn btn-outline btn-sm" onclick="editar('${n.id}')">✏️ Editar</button>
+      <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+        onclick="eliminar('${n.id}','${e(n.nombre_completo.replace(/'/g,"\\'"))}')">🗑️</button>`,
+  });
 }
 
 function cambiarPag(p) { paginaActual=p; cargar(); window.scrollTo(0,0); }

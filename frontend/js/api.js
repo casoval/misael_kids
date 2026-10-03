@@ -138,10 +138,28 @@ const API = {
   // no envía el token, por eso se pide con fetch y se entrega como Blob.
   // Devuelve { nombre, filas } (filas = cabecera X-Filas, si el servidor la manda).
   // Con { omitirSiVacio: true } no descarga nada si el servidor informa 0 filas.
+  // Con { abrir: true } el archivo (p. ej. un PDF) se abre en una pestaña nueva del
+  // navegador en vez de guardarse; si el navegador bloquea la pestaña, se descarga.
   descargar: (endpoint, opciones) => apiDescargar(endpoint, opciones),
 };
 
-async function apiDescargar(endpoint, { nombre = 'descarga', omitirSiVacio = false } = {}) {
+async function apiDescargar(endpoint, { nombre = 'descarga', omitirSiVacio = false, abrir = false } = {}) {
+  // La pestaña se abre ANTES de pedir el archivo: dentro del clic el navegador lo permite,
+  // después de un await lo bloquearía como ventana emergente.
+  let ventana = null;
+  if (abrir) {
+    ventana = window.open('', '_blank');
+    if (ventana) ventana.document.write('<title>Preparando informe…</title><p style="font-family:sans-serif;padding:2rem">Preparando el informe…</p>');
+  }
+  try {
+    return await _apiDescargar(endpoint, { nombre, omitirSiVacio, ventana });
+  } catch (err) {
+    if (ventana) ventana.close();
+    throw err;
+  }
+}
+
+async function _apiDescargar(endpoint, { nombre, omitirSiVacio, ventana }) {
   const pedir = () => fetch(`${API_BASE}${endpoint}`, { headers: { Authorization: `Bearer ${Auth.getToken()}` } });
   let res = await pedir();
   if (res.status === 401 && await Auth.refrescarToken()) res = await pedir();
@@ -154,8 +172,17 @@ async function apiDescargar(endpoint, { nombre = 'descarga', omitirSiVacio = fal
   const dado  = /filename="?([^";]+)"?/.exec(cd);
   const filas = res.headers.has('X-Filas') ? parseInt(res.headers.get('X-Filas'), 10) : null;
   const archivo = dado ? dado[1] : nombre;
-  if (omitirSiVacio && filas === 0) return { nombre: archivo, filas, descargado: false };
-  const url = URL.createObjectURL(await res.blob());
+  if (omitirSiVacio && filas === 0) { if (ventana) ventana.close(); return { nombre: archivo, filas, descargado: false }; }
+  const blob = await res.blob();
+  if (ventana) {
+    // Se fuerza el tipo PDF para que el navegador lo muestre en su visor en lugar de guardarlo.
+    const tipo = blob.type || (/\.pdf$/i.test(archivo) ? 'application/pdf' : '');
+    const urlVer = URL.createObjectURL(tipo ? new Blob([blob], { type: tipo }) : blob);
+    ventana.location.replace(urlVer);
+    setTimeout(() => URL.revokeObjectURL(urlVer), 5 * 60 * 1000);   // la pestaña necesita la URL viva mientras se lee
+    return { nombre: archivo, filas, descargado: true, abierto: true };
+  }
+  const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement('a'), { href: url, download: archivo });
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);   // revocarla al instante puede cancelar la descarga en algunos navegadores

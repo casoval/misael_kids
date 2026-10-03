@@ -1,0 +1,319 @@
+From 8e7b7e17b4253ae044828630d4f5462ff8cb03db Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 22:57:01 +0000
+Subject: [PATCH] =?UTF-8?q?Vista=20de=20tarjetas=20en=20Ni=C3=B1os=20y=20P?=
+ =?UTF-8?q?ersonal,=20flujo=20de=20Centro=20Misael=20actualizado,=20PDF=20?=
+ =?UTF-8?q?de=20reportes=20en=20pesta=C3=B1a=20nueva?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ frontend/js/api.js                    | 33 +++++++++++++++++++++---
+ frontend/pages/panel/misael-link.html | 32 +++++++++++++++--------
+ frontend/pages/panel/ninos.html       | 37 ++++++++++++++++++++++++++-
+ frontend/pages/panel/personal.html    | 30 ++++++++++++++++++++--
+ frontend/pages/panel/reportes.html    |  3 ++-
+ 5 files changed, 117 insertions(+), 18 deletions(-)
+
+diff --git a/frontend/js/api.js b/frontend/js/api.js
+index 379187d..abc7b5e 100644
+--- a/frontend/js/api.js
++++ b/frontend/js/api.js
+@@ -138,10 +138,28 @@ const API = {
+   // no envía el token, por eso se pide con fetch y se entrega como Blob.
+   // Devuelve { nombre, filas } (filas = cabecera X-Filas, si el servidor la manda).
+   // Con { omitirSiVacio: true } no descarga nada si el servidor informa 0 filas.
++  // Con { abrir: true } el archivo (p. ej. un PDF) se abre en una pestaña nueva del
++  // navegador en vez de guardarse; si el navegador bloquea la pestaña, se descarga.
+   descargar: (endpoint, opciones) => apiDescargar(endpoint, opciones),
+ };
+ 
+-async function apiDescargar(endpoint, { nombre = 'descarga', omitirSiVacio = false } = {}) {
++async function apiDescargar(endpoint, { nombre = 'descarga', omitirSiVacio = false, abrir = false } = {}) {
++  // La pestaña se abre ANTES de pedir el archivo: dentro del clic el navegador lo permite,
++  // después de un await lo bloquearía como ventana emergente.
++  let ventana = null;
++  if (abrir) {
++    ventana = window.open('', '_blank');
++    if (ventana) ventana.document.write('<title>Preparando informe…</title><p style="font-family:sans-serif;padding:2rem">Preparando el informe…</p>');
++  }
++  try {
++    return await _apiDescargar(endpoint, { nombre, omitirSiVacio, ventana });
++  } catch (err) {
++    if (ventana) ventana.close();
++    throw err;
++  }
++}
++
++async function _apiDescargar(endpoint, { nombre, omitirSiVacio, ventana }) {
+   const pedir = () => fetch(`${API_BASE}${endpoint}`, { headers: { Authorization: `Bearer ${Auth.getToken()}` } });
+   let res = await pedir();
+   if (res.status === 401 && await Auth.refrescarToken()) res = await pedir();
+@@ -154,8 +172,17 @@ async function apiDescargar(endpoint, { nombre = 'descarga', omitirSiVacio = fal
+   const dado  = /filename="?([^";]+)"?/.exec(cd);
+   const filas = res.headers.has('X-Filas') ? parseInt(res.headers.get('X-Filas'), 10) : null;
+   const archivo = dado ? dado[1] : nombre;
+-  if (omitirSiVacio && filas === 0) return { nombre: archivo, filas, descargado: false };
+-  const url = URL.createObjectURL(await res.blob());
++  if (omitirSiVacio && filas === 0) { if (ventana) ventana.close(); return { nombre: archivo, filas, descargado: false }; }
++  const blob = await res.blob();
++  if (ventana) {
++    // Se fuerza el tipo PDF para que el navegador lo muestre en su visor en lugar de guardarlo.
++    const tipo = blob.type || (/\.pdf$/i.test(archivo) ? 'application/pdf' : '');
++    const urlVer = URL.createObjectURL(tipo ? new Blob([blob], { type: tipo }) : blob);
++    ventana.location.replace(urlVer);
++    setTimeout(() => URL.revokeObjectURL(urlVer), 5 * 60 * 1000);   // la pestaña necesita la URL viva mientras se lee
++    return { nombre: archivo, filas, descargado: true, abierto: true };
++  }
++  const url = URL.createObjectURL(blob);
+   const a = Object.assign(document.createElement('a'), { href: url, download: archivo });
+   document.body.appendChild(a); a.click(); a.remove();
+   setTimeout(() => URL.revokeObjectURL(url), 1500);   // revocarla al instante puede cancelar la descarga en algunos navegadores
+diff --git a/frontend/pages/panel/misael-link.html b/frontend/pages/panel/misael-link.html
+index 6579daa..ae12b8b 100644
+--- a/frontend/pages/panel/misael-link.html
++++ b/frontend/pages/panel/misael-link.html
+@@ -68,9 +68,11 @@
+           🔗 Conexión con el Centro de Neurodesarrollo Infantil Misael
+         </h3>
+         <p style="font-size:var(--text-sm);color:var(--coral-d);line-height:1.7;font-weight:600">
+-          Cuando una educadora detecta señales de alerta en el desarrollo de un niño, puede crear una
+-          <strong>derivación formal</strong> al Centro Misael. Con el consentimiento del tutor, los profesionales
+-          del centro crean un <strong>plan de trabajo individual</strong> que la educadora ejecuta día a día.
++          Primero se <strong>vincula al niño/a con su ficha de paciente</strong> en el Centro Misael; desde ese momento
++          aparece con el distintivo <strong>🔗 Centro Misael</strong> en la lista de niños. Si una educadora detecta
++          señales de alerta, crea una <strong>derivación formal</strong> con el consentimiento del tutor y el centro
++          la responde desde su sistema. Los profesionales elaboran el <strong>plan de trabajo</strong> en Centro Misael
++          y aquí se consulta <strong>en vivo, solo de lectura</strong>, para que la educadora lo aplique en el aula.
+         </p>
+       </div>
+ 
+@@ -82,32 +84,40 @@
+         <div class="flujo-step">
+           <div class="flujo-num">1</div>
+           <div>
+-            <div style="font-weight:700;font-size:var(--text-sm)">Educadora detecta señal de alerta</div>
+-            <div style="font-size:var(--text-xs);color:var(--texto-suave)">Comportamiento, desarrollo o síntoma que llama la atención</div>
++            <div style="font-weight:700;font-size:var(--text-sm)">Vincular al niño/a con Centro Misael</div>
++            <div style="font-size:var(--text-xs);color:var(--texto-suave)">Se busca al paciente por nombre del niño o del tutor (activo o inactivo). Al vincular se completan foto, salud y tutores que falten. También puede vincularlo el propio Centro desde su sistema.</div>
+           </div>
+         </div>
+         <div style="text-align:center;font-size:1.2rem;color:var(--gris-300);margin:.25rem 0">↓</div>
+         <div class="flujo-step">
+           <div class="flujo-num" style="background:var(--amarillo)">2</div>
+           <div>
+-            <div style="font-weight:700;font-size:var(--text-sm)">Crea derivación + obtiene consentimiento del tutor</div>
+-            <div style="font-size:var(--text-xs);color:var(--texto-suave)">El tutor debe autorizar compartir información entre ambos sistemas</div>
++            <div style="font-weight:700;font-size:var(--text-sm)">Educadora detecta una señal de alerta y crea la derivación</div>
++            <div style="font-size:var(--text-xs);color:var(--texto-suave)">Solo se puede derivar a niños ya vinculados. Se registra el área, el motivo y el consentimiento del tutor para compartir información.</div>
+           </div>
+         </div>
+         <div style="text-align:center;font-size:1.2rem;color:var(--gris-300);margin:.25rem 0">↓</div>
+         <div class="flujo-step">
+           <div class="flujo-num" style="background:var(--violeta)">3</div>
+           <div>
+-            <div style="font-weight:700;font-size:var(--text-sm)">Profesional del Centro crea plan de trabajo</div>
+-            <div style="font-size:var(--text-xs);color:var(--texto-suave)">Con objetivos específicos vinculados al plan individual del jardín</div>
++            <div style="font-weight:700;font-size:var(--text-sm)">Centro Misael recibe y responde la derivación</div>
++            <div style="font-size:var(--text-xs);color:var(--texto-suave)">El centro la ve en su sistema y la responde. El estado avanza: Solicitada → Aceptada → En proceso → Cerrada.</div>
+           </div>
+         </div>
+         <div style="text-align:center;font-size:1.2rem;color:var(--gris-300);margin:.25rem 0">↓</div>
+         <div class="flujo-step">
+           <div class="flujo-num" style="background:var(--verde)">4</div>
+           <div>
+-            <div style="font-weight:700;font-size:var(--text-sm)">Educadora ejecuta y registra avances diarios</div>
+-            <div style="font-size:var(--text-xs);color:var(--texto-suave)">Los avances son visibles para el profesional del Centro Misael</div>
++            <div style="font-weight:700;font-size:var(--text-sm)">El profesional crea el plan de trabajo en Centro Misael</div>
++            <div style="font-size:var(--text-xs);color:var(--texto-suave)">Se elabora directamente en el centro (con su área, fechas y documento adjunto). Aquí se consulta en vivo en la pestaña Planes de trabajo; no se crea ni se edita desde Misael Kids.</div>
++          </div>
++        </div>
++        <div style="text-align:center;font-size:1.2rem;color:var(--gris-300);margin:.25rem 0">↓</div>
++        <div class="flujo-step">
++          <div class="flujo-num" style="background:var(--turquesa)">5</div>
++          <div>
++            <div style="font-weight:700;font-size:var(--text-sm)">La educadora aplica el plan y registra el avance</div>
++            <div style="font-size:var(--text-xs);color:var(--texto-suave)">Lo ejecuta en el aula y anota el avance en la Agenda pedagógica.</div>
+           </div>
+         </div>
+       </div>
+diff --git a/frontend/pages/panel/ninos.html b/frontend/pages/panel/ninos.html
+index 1eebfb2..ee3a212 100644
+--- a/frontend/pages/panel/ninos.html
++++ b/frontend/pages/panel/ninos.html
+@@ -120,7 +120,8 @@
+           <h3 class="card-titulo">Lista de niños</h3>
+           <span id="total-ninos" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
+         </div>
+-        <div class="tabla-wrap">
++        <div id="vt-ninos" class="vista-barra"></div>
++        <div class="tabla-wrap" id="wrap-ninos-filas">
+           <table>
+             <thead><tr>
+               <th>Niño/a</th><th>Edad</th><th>Género</th><th>Tutores</th>
+@@ -129,6 +130,7 @@
+             <tbody id="tbody-ninos"></tbody>
+           </table>
+         </div>
++        <div id="tarjetas-ninos" class="grid-tarjetas" style="display:none"></div>
+         <div class="paginacion" id="paginacion"></div>
+       </div>
+     </div>
+@@ -423,6 +425,8 @@ const POR_PAGINA = 20;
+ let autorizadosPendientes = [];
+ let tutoresPendientes = [];
+ 
++Vista.montar('ninos', { filas:'wrap-ninos-filas', tarjetas:'tarjetas-ninos', selector:'vt-ninos' });
++
+ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);}}
+ 
+ async function cargar() {
+@@ -436,7 +440,9 @@ async function cargar() {
+   if (genero) url += '&genero='+genero;
+   if (plan)   url += '&tiene_plan_misael='+plan;
+   if (activo) url += '&activo='+activo;
++  const tarj = document.getElementById('tarjetas-ninos');
+   tbody.innerHTML = '<tr><td colspan="8"><div class="loader"><div class="spinner"></div></div></td></tr>';
++  tarj.innerHTML  = '<div class="loader"><div class="spinner"></div></div>';
+   try {
+     const data  = await API.get(url);
+     const lista = data.results||data;
+@@ -444,8 +450,10 @@ async function cargar() {
+     document.getElementById('total-ninos').textContent = total+' niño(s)';
+     if (!lista.length) {
+       tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin resultados</td></tr>';
++      tarj.innerHTML='<div class="tn-vacio">Sin resultados</div>';
+       document.getElementById('paginacion').innerHTML=''; return;
+     }
++    tarj.innerHTML = lista.map(tarjetaNino).join('');
+     tbody.innerHTML = lista.map(n => `
+       <tr style="cursor:pointer" onclick="verPerfil('${n.id}')">
+         <td>
+@@ -502,9 +510,36 @@ async function cargar() {
+       <button class="pag-btn" ${paginaActual===totalPags?'disabled':''} onclick="cambiarPag(${paginaActual+1})">→</button>`;
+   } catch (err) {
+     tbody.innerHTML='<tr><td colspan="8"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
++    tarj.innerHTML='<div class="alerta alerta-peligro">Error: '+Vista._esc(err.message)+'</div>';
+   }
+ }
+ 
++// Vista de tarjetas: mismos datos y acciones que la fila de la tabla.
++function tarjetaNino(n) {
++  const e = Vista._esc;
++  const badges = [
++    n.activo ? '<span class="chip chip-verde">✅ Activo</span>' : '<span class="chip chip-coral">❌ Inactivo</span>',
++    n.vinculado_centro_misael ? '<span class="chip chip-violeta" title="Vinculado con un paciente de Centro Misael">🔗 Centro Misael</span>' : '',
++    n.tiene_plan_misael ? '<span class="chip chip-violeta">🧠 Plan Misael</span>' : '',
++    n.alergias ? `<span class="chip chip-coral" title="${e(n.alergias)}">⚠️ Alergias</span>` : '',
++  ].join(' ');
++  const tutores = (n.tutores_resumen||[]).length
++    ? n.tutores_resumen.map(t => `<span class="chip ${t.es_principal?'chip-violeta':'chip-gris'}" style="margin:1px">${t.es_principal?'⭐ ':''}${e(t.nombre)}</span>`).join(' ')
++    : '<span class="chip chip-coral">⚠️ Sin tutor</span>';
++  const genero = n.genero==='M' ? '👦 Masc.' : n.genero==='F' ? '👧 Fem.' : '⚧️ Otro';
++  return Vista.tarjeta(n, {
++    clase: !n.activo ? 'tn-neutro' : (n.tutores_resumen||[]).length ? (n.vinculado_centro_misael ? 'tn-violeta' : 'tn-ok') : 'tn-aviso',
++    sub: `🎂 ${e(UI.edad(n.edad_en_meses, true))} · ${genero}`,
++    badges,
++    datos: Vista.dato('Nacimiento', e(UI.fecha(n.fecha_nacimiento)))
++         + Vista.dato('Tutores', tutores, true),
++    acciones: `<button class="btn btn-outline btn-sm" onclick="verPerfil('${n.id}')">👁 Ver</button>
++      <button class="btn btn-outline btn-sm" onclick="editar('${n.id}')">✏️ Editar</button>
++      <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
++        onclick="eliminar('${n.id}','${e(n.nombre_completo.replace(/'/g,"\\'"))}')">🗑️</button>`,
++  });
++}
++
+ function cambiarPag(p) { paginaActual=p; cargar(); window.scrollTo(0,0); }
+ function limpiarFiltros() {
+   ['f-buscar','f-genero','f-plan'].forEach(id=>document.getElementById(id).value='');
+diff --git a/frontend/pages/panel/personal.html b/frontend/pages/panel/personal.html
+index d3639f5..e25ac5d 100644
+--- a/frontend/pages/panel/personal.html
++++ b/frontend/pages/panel/personal.html
+@@ -71,12 +71,14 @@
+           <h3 class="card-titulo">Personal registrado</h3>
+           <span id="total-personal" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
+         </div>
+-        <div class="tabla-wrap">
++        <div id="vt-personal" class="vista-barra"></div>
++        <div class="tabla-wrap" id="wrap-personal-filas">
+           <table>
+             <thead><tr><th>Persona</th><th>CI</th><th>Rol</th><th>Teléfono</th><th>Ingreso</th><th>Estado</th><th>Acciones</th></tr></thead>
+             <tbody id="tbody-personal"></tbody>
+           </table>
+         </div>
++        <div id="tarjetas-personal" class="grid-tarjetas" style="display:none"></div>
+       </div>
+ 
+       <div class="card">
+@@ -249,6 +251,7 @@ const hoy = new Date().toISOString().split('T')[0];
+ document.getElementById('p-fecha-ingreso').value = hoy;
+ document.getElementById('asig-inicio').value = hoy;
+ let editandoId = null, editandoAsigId = null;
++Vista.montar('personal', { filas:'wrap-personal-filas', tarjetas:'tarjetas-personal', selector:'vt-personal' });
+ 
+ async function inicializar() {
+   await Promise.all([cargar(), cargarAsignaciones(), cargarSelectores()]);
+@@ -276,11 +279,14 @@ async function cargar() {
+   if (buscar) url += '&search='+encodeURIComponent(buscar);
+   if (rol) url += '&rol='+rol;
+   if (activo) url += '&activo='+activo;
++  const tarj = document.getElementById('tarjetas-personal');
+   tbody.innerHTML = '<tr><td colspan="7"><div class="loader"><div class="spinner"></div></div></td></tr>';
++  tarj.innerHTML  = '<div class="loader"><div class="spinner"></div></div>';
+   try {
+     const data = await API.get(url);
+     const lista = data.results||data;
+     document.getElementById('total-personal').textContent = lista.length+' persona(s)';
++    tarj.innerHTML = lista.length ? lista.map(tarjetaPersonal).join('') : '<div class="tn-vacio">Sin resultados</div>';
+     if (!lista.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin resultados</td></tr>'; return; }
+     tbody.innerHTML = lista.map(p => `<tr>
+       <td><div style="display:flex;align-items:center;gap:var(--gap-sm)">
+@@ -302,7 +308,27 @@ async function cargar() {
+           onclick="eliminar('${p.id}','${p.nombre_completo}')">Eliminar</button>
+       </div></td>
+     </tr>`).join('');
+-  } catch (err) { tbody.innerHTML='<tr><td colspan="7"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>'; }
++  } catch (err) {
++    tbody.innerHTML='<tr><td colspan="7"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
++    tarj.innerHTML='<div class="alerta alerta-peligro">Error: '+Vista._esc(err.message)+'</div>';
++  }
++}
++
++// Vista de tarjetas: mismos datos y acciones que la fila de la tabla.
++function tarjetaPersonal(p) {
++  const e = Vista._esc;
++  return Vista.tarjeta(p, {
++    clase: p.activo ? (p.tiene_acceso ? 'tn-ok' : 'tn-aviso') : 'tn-neutro',
++    sub: `<span class="rol-badge rol-${e(p.rol)}">${e(p.rol_display)}</span>`,
++    badges: (p.activo ? '<span class="chip chip-verde">Activo</span>' : '<span class="chip chip-coral">Inactivo</span>')
++      + (p.tiene_acceso ? ' <span class="chip chip-verde">🔑 Con acceso</span>' : ' <span class="chip chip-amarillo">Sin acceso</span>'),
++    datos: Vista.dato('CI', e(p.ci))
++         + Vista.dato('Teléfono', e(p.telefono||'—'))
++         + Vista.dato('Ingreso', e(UI.fecha(p.fecha_ingreso))),
++    acciones: `<button class="btn btn-outline btn-sm" onclick="editar('${p.id}')">Editar</button>
++      <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
++        onclick="eliminar('${p.id}','${e(p.nombre_completo.replace(/'/g,"\\'"))}')">Eliminar</button>`,
++  });
+ }
+ async function cargarAsignaciones() {
+   const tbody = document.getElementById('tbody-asignaciones');
+diff --git a/frontend/pages/panel/reportes.html b/frontend/pages/panel/reportes.html
+index 80515e6..5619bc8 100644
+--- a/frontend/pages/panel/reportes.html
++++ b/frontend/pages/panel/reportes.html
+@@ -493,8 +493,9 @@ async function descargar(clave, formato, boton) {
+   try {
+     const ruta = formato === 'pdf' ? `/reportes/pdf/${clave}/` : `/reportes/exportar/${clave}/`;
+     const r = await API.descargar(`${ruta}?${paramsInforme(clave, rango)}`,
+-      { nombre: `${clave}.${formato === 'pdf' ? 'pdf' : 'csv'}`, omitirSiVacio: formato === 'csv' });
++      { nombre: `${clave}.${formato === 'pdf' ? 'pdf' : 'csv'}`, omitirSiVacio: formato === 'csv', abrir: formato === 'pdf' });
+     if (!r.descargado) UI.toast('No hay registros para esa selección, no se descargó ningún archivo.', 'warn', 5000);
++    else if (r.abierto) UI.toast('✅ Informe abierto en una pestaña nueva. Desde el visor puedes guardarlo o imprimirlo.', 'exito', 5000);
+     else UI.toast(`✅ Informe descargado: ${r.nombre}`, 'exito');
+   } catch (err) { UI.toast('Error: ' + err.message, 'error', 6000); }
+   boton.disabled = false;
+-- 
+2.43.0
+

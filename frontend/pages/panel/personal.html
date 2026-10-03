@@ -71,12 +71,14 @@
           <h3 class="card-titulo">Personal registrado</h3>
           <span id="total-personal" style="font-size:var(--text-sm);color:var(--texto-suave);font-weight:700"></span>
         </div>
-        <div class="tabla-wrap">
+        <div id="vt-personal" class="vista-barra"></div>
+        <div class="tabla-wrap" id="wrap-personal-filas">
           <table>
             <thead><tr><th>Persona</th><th>CI</th><th>Rol</th><th>Teléfono</th><th>Ingreso</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody id="tbody-personal"></tbody>
           </table>
         </div>
+        <div id="tarjetas-personal" class="grid-tarjetas" style="display:none"></div>
       </div>
 
       <div class="card">
@@ -249,6 +251,7 @@ const hoy = new Date().toISOString().split('T')[0];
 document.getElementById('p-fecha-ingreso').value = hoy;
 document.getElementById('asig-inicio').value = hoy;
 let editandoId = null, editandoAsigId = null;
+Vista.montar('personal', { filas:'wrap-personal-filas', tarjetas:'tarjetas-personal', selector:'vt-personal' });
 
 async function inicializar() {
   await Promise.all([cargar(), cargarAsignaciones(), cargarSelectores()]);
@@ -276,11 +279,14 @@ async function cargar() {
   if (buscar) url += '&search='+encodeURIComponent(buscar);
   if (rol) url += '&rol='+rol;
   if (activo) url += '&activo='+activo;
+  const tarj = document.getElementById('tarjetas-personal');
   tbody.innerHTML = '<tr><td colspan="7"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  tarj.innerHTML  = '<div class="loader"><div class="spinner"></div></div>';
   try {
     const data = await API.get(url);
     const lista = data.results||data;
     document.getElementById('total-personal').textContent = lista.length+' persona(s)';
+    tarj.innerHTML = lista.length ? lista.map(tarjetaPersonal).join('') : '<div class="tn-vacio">Sin resultados</div>';
     if (!lista.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin resultados</td></tr>'; return; }
     tbody.innerHTML = lista.map(p => `<tr>
       <td><div style="display:flex;align-items:center;gap:var(--gap-sm)">
@@ -302,7 +308,27 @@ async function cargar() {
           onclick="eliminar('${p.id}','${p.nombre_completo}')">Eliminar</button>
       </div></td>
     </tr>`).join('');
-  } catch (err) { tbody.innerHTML='<tr><td colspan="7"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>'; }
+  } catch (err) {
+    tbody.innerHTML='<tr><td colspan="7"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+    tarj.innerHTML='<div class="alerta alerta-peligro">Error: '+Vista._esc(err.message)+'</div>';
+  }
+}
+
+// Vista de tarjetas: mismos datos y acciones que la fila de la tabla.
+function tarjetaPersonal(p) {
+  const e = Vista._esc;
+  return Vista.tarjeta(p, {
+    clase: p.activo ? (p.tiene_acceso ? 'tn-ok' : 'tn-aviso') : 'tn-neutro',
+    sub: `<span class="rol-badge rol-${e(p.rol)}">${e(p.rol_display)}</span>`,
+    badges: (p.activo ? '<span class="chip chip-verde">Activo</span>' : '<span class="chip chip-coral">Inactivo</span>')
+      + (p.tiene_acceso ? ' <span class="chip chip-verde">🔑 Con acceso</span>' : ' <span class="chip chip-amarillo">Sin acceso</span>'),
+    datos: Vista.dato('CI', e(p.ci))
+         + Vista.dato('Teléfono', e(p.telefono||'—'))
+         + Vista.dato('Ingreso', e(UI.fecha(p.fecha_ingreso))),
+    acciones: `<button class="btn btn-outline btn-sm" onclick="editar('${p.id}')">Editar</button>
+      <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+        onclick="eliminar('${p.id}','${e(p.nombre_completo.replace(/'/g,"\\'"))}')">Eliminar</button>`,
+  });
 }
 async function cargarAsignaciones() {
   const tbody = document.getElementById('tbody-asignaciones');
