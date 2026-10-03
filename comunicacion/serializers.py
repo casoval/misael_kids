@@ -7,7 +7,9 @@ class MensajeSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Mensaje
         fields = ["id","remitente","remitente_nombre","destinatario","destinatario_nombre","nino","nino_nombre","asunto","cuerpo","leido","leido_en","created_at","updated_at"]
-        read_only_fields = ["id","leido_en","created_at","updated_at"]
+        # `remitente` lo fija el servidor (perform_create). Antes era obligatorio
+        # en el body y el panel no lo enviaba, así que crear mensajes daba 400.
+        read_only_fields = ["id","remitente","leido_en","created_at","updated_at"]
 
 class AvisoSerializer(serializers.ModelSerializer):
     autor_nombre    = serializers.CharField(source="autor.nombre_completo", read_only=True)

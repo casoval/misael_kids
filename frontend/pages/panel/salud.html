@@ -296,7 +296,7 @@ async function cargar() {
             <button class="btn btn-outline btn-sm" onclick="verDetalle('${inc.id}')">👁 Ver</button>
             <button class="btn btn-outline btn-sm" onclick="editar('${inc.id}')">✏️</button>
             <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
-              onclick="eliminar('${inc.id}','incidente de ${inc.nino_nombre}')">🗑️</button>`;
+              onclick="eliminar('${escHtml(inc.id)}')">🗑️</button>`;
     tarj.innerHTML = lista.map(inc => Vista.tarjeta(inc, {
       clase: inc.requirio_atencion_medica ? 'tn-alerta' : 'tn-aviso',
       sub: Vista._esc(UI.fecha(inc.fecha)+' · '+(inc.hora?.slice(0,5)||'—')),
@@ -316,10 +316,10 @@ async function cargar() {
           <div style="font-size:var(--text-xs);color:var(--texto-suave)">${inc.hora?.slice(0,5)||'—'}</div>
         </td>
         <td style="font-size:var(--text-sm);max-width:200px">
-          ${inc.descripcion?.slice(0,80)}${inc.descripcion?.length>80?'...':''}
+          ${escHtml(inc.descripcion?.slice(0,80))}${inc.descripcion?.length>80?'...':''}
         </td>
         <td style="font-size:var(--text-sm);max-width:180px">
-          ${inc.accion_tomada?.slice(0,60)}${inc.accion_tomada?.length>60?'...':''}
+          ${escHtml(inc.accion_tomada?.slice(0,60))}${inc.accion_tomada?.length>60?'...':''}
         </td>
         <td>${inc.notificado_tutor
           ? '<span class="chip chip-verde">✅ Sí</span>'
@@ -393,7 +393,7 @@ async function verDetalle(id) {
         <div style="display:flex;gap:10px;align-items:center">
           ${Vista.avatar(inc,'md')}
           <div>
-          <div style="font-family:var(--font-display);font-size:var(--text-xl)">${inc.nino_nombre}</div>
+          <div style="font-family:var(--font-display);font-size:var(--text-xl)">${escHtml(inc.nino_nombre)}</div>
           <div style="font-size:var(--text-sm);color:var(--coral-d);font-weight:600">${tipoIcons[inc.tipo]||''} ${inc.tipo_display}</div>
           </div>
         </div>
@@ -405,12 +405,12 @@ async function verDetalle(id) {
       <div class="form-grupo">
         <label class="form-label">Descripción</label>
         <p style="font-size:var(--text-sm);line-height:1.7;padding:var(--gap-md);
-          background:var(--gris-50);border-radius:var(--radio-lg)">${inc.descripcion}</p>
+          background:var(--gris-50);border-radius:var(--radio-lg)">${escHtml(inc.descripcion)}</p>
       </div>
       <div class="form-grupo">
         <label class="form-label">Acción tomada</label>
         <p style="font-size:var(--text-sm);line-height:1.7;padding:var(--gap-md);
-          background:var(--gris-50);border-radius:var(--radio-lg)">${inc.accion_tomada}</p>
+          background:var(--gris-50);border-radius:var(--radio-lg)">${escHtml(inc.accion_tomada)}</p>
       </div>
       <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap">
         <span class="chip ${inc.notificado_tutor?'chip-verde':'chip-coral'}">
@@ -422,8 +422,8 @@ async function verDetalle(id) {
         </span>
       </div>
       <div style="margin-top:var(--gap-md);font-size:var(--text-xs);color:var(--texto-suave)">
-        Reportado por: <strong>${inc.reportado_por_nombre||'—'}</strong>
-        · Sucursal: <strong>${inc.sucursal_nombre||'—'}</strong>
+        Reportado por: <strong>${escHtml(inc.reportado_por_nombre||'—')}</strong>
+        · Sucursal: <strong>${escHtml(inc.sucursal_nombre||'—')}</strong>
       </div>`;
   } catch (err) {
     cont.innerHTML = '<div class="alerta alerta-peligro">Error: '+err.message+'</div>';
@@ -464,7 +464,7 @@ async function guardarIncidente() {
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
 }
 
-async function eliminar(id, nombre) {
+async function eliminar(id, nombre = 'este incidente') {
   if (!confirm('Eliminar '+nombre+'?\nEsta acción no se puede deshacer.')) return;
   try {
     await API.delete('/salud/incidentes/'+id+'/');

@@ -451,7 +451,7 @@ const Sucursal = {
       opciones += '<option value="">🏢 Todas las sucursales</option>';
     }
     this.lista.forEach(s => {
-      opciones += `<option value="${s.id}">🏢 ${s.nombre}</option>`;
+      opciones += `<option value="${escHtml(s.id)}">🏢 ${escHtml(s.nombre)}</option>`;
     });
     sel.innerHTML = opciones || '<option value="">Sin sucursales</option>';
     sel.value = this.getId();

@@ -602,7 +602,7 @@ async function inicializar() {
       lista.innerHTML = hijos.map(h => `
         <button class="btn btn-outline" onclick="seleccionarHijo('${h.id}')">
           <span style="font-size:1.3rem">${h.genero==='F'?'👧':'👦'}</span>
-          ${h.nombre_completo}
+          ${escHtml(h.nombre_completo)}
           <span class="chip chip-turquesa" style="font-size:.65rem">${UI.edad(h.edad_en_meses, true)}</span>
         </button>
       `).join('');
@@ -635,7 +635,7 @@ async function seleccionarHijo(id) {
     const chips = document.getElementById('hijo-chips');
     chips.innerHTML = [
       `<span class="chip chip-turquesa">🎂 ${UI.edad(n.edad_en_meses)}</span>`,
-      inscripcionActiva ? `<span class="chip chip-verde">📍 ${inscripcionActiva.sala_nombre} · ${inscripcionActiva.turno_nombre}</span>` : '',
+      inscripcionActiva ? `<span class="chip chip-verde">📍 ${escHtml(inscripcionActiva.sala_nombre)} · ${escHtml(inscripcionActiva.turno_nombre)}</span>` : '',
       n.tiene_plan_misael ? `<span class="chip chip-violeta">🧠 Plan Misael</span>` : '',
     ].join('');
 
@@ -644,7 +644,7 @@ async function seleccionarHijo(id) {
     if (inscripcionActiva) {
       ausSelect.innerHTML = `
         <option value="">Turno completo</option>
-        <option value="${inscripcionActiva.turno}">${inscripcionActiva.turno_nombre}</option>
+        <option value="${escHtml(inscripcionActiva.turno)}">${escHtml(inscripcionActiva.turno_nombre)}</option>
       `;
     }
 
@@ -696,7 +696,7 @@ async function cargarBitacora() {
         </div>
         <div class="bitacora-dia-body">
           <p style="font-size:var(--text-sm);color:var(--texto);margin-bottom:var(--gap-sm);line-height:1.7">
-            ${p.actividades}
+            ${escHtml(p.actividades)}
           </p>
           ${p.areas_trabajadas ? `
             <div style="margin-bottom:var(--gap-sm)">
@@ -704,7 +704,7 @@ async function cargarBitacora() {
                 text-transform:uppercase;letter-spacing:.05em">Áreas trabajadas:</span>
               <div style="margin-top:4px">
                 ${p.areas_trabajadas.split(',').map(a =>
-                  `<span class="area-chip">${a.trim()}</span>`
+                  `<span class="area-chip">${escHtml(a.trim())}</span>`
                 ).join('')}
               </div>
             </div>` : ''}
@@ -712,7 +712,7 @@ async function cargarBitacora() {
             <div style="background:var(--gris-50);border-radius:var(--radio-md);
               padding:var(--gap-sm);font-size:var(--text-sm);color:var(--texto-suave);
               font-style:italic">
-              📝 "${p.observaciones}"
+              📝 "${escHtml(p.observaciones)}"
             </div>` : ''}
         </div>
       </div>
@@ -776,8 +776,8 @@ async function cargarAsistenciaPortal() {
     tbody.innerHTML = lista.length ? lista.map(a => `
       <tr>
         <td>${UI.fecha(a.fecha)}</td>
-        <td>${a.sala_nombre}</td>
-        <td>${a.turno_nombre}</td>
+        <td>${escHtml(a.sala_nombre)}</td>
+        <td>${escHtml(a.turno_nombre)}</td>
         <td>${UI.chipAsistencia(a.estado)}</td>
         <td>${a.hora_entrada?.slice(0,5) || '—'}</td>
         <td>${a.hora_salida?.slice(0,5)  || '—'}</td>
@@ -865,14 +865,14 @@ async function cargarMensajes() {
     cont.innerHTML = lista.length ? lista.map(m => `
       <div class="mensaje-item ${!m.leido ? 'no-leido' : ''}">
         <div class="mensaje-header">
-          <span class="mensaje-asunto">${!m.leido ? '🔵 ' : ''}${m.asunto}</span>
+          <span class="mensaje-asunto">${!m.leido ? '🔵 ' : ''}${escHtml(m.asunto)}</span>
           <span style="font-size:var(--text-xs);color:var(--texto-suave)">
             ${new Date(m.created_at).toLocaleDateString('es-BO')}
           </span>
         </div>
-        <div class="mensaje-cuerpo">${m.cuerpo}</div>
+        <div class="mensaje-cuerpo">${escHtml(m.cuerpo)}</div>
         <div class="mensaje-remitente">
-          De: ${m.remitente_nombre}
+          De: ${escHtml(m.remitente_nombre)}
         </div>
       </div>
     `).join('') : `<div style="text-align:center;padding:var(--gap-xl)">
@@ -933,7 +933,7 @@ async function cargarDesarrollo() {
       const planCont = document.getElementById('plan-individual-contenido');
       const plan = listaPlanes[0];
       planCont.innerHTML = `
-        <p style="font-size:var(--text-sm);color:var(--texto);margin-bottom:var(--gap-md)">${plan.descripcion}</p>
+        <p style="font-size:var(--text-sm);color:var(--texto);margin-bottom:var(--gap-md)">${escHtml(plan.descripcion)}</p>
         <div>
           ${plan.objetivos?.map(obj => `
             <div style="display:flex;align-items:center;gap:var(--gap-sm);
@@ -941,7 +941,7 @@ async function cargarDesarrollo() {
               <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${
                 obj.estado==='logrado'?'var(--verde)':obj.estado==='en_proceso'?'var(--amarillo)':'var(--gris-300)'
               }"></div>
-              <div style="flex:1;font-size:var(--text-sm);font-weight:600">${obj.descripcion}</div>
+              <div style="flex:1;font-size:var(--text-sm);font-weight:600">${escHtml(obj.descripcion)}</div>
               ${obj.estado==='logrado'
                 ? '<span class="chip chip-verde">✅ Logrado</span>'
                 : obj.estado==='en_proceso'
@@ -971,7 +971,7 @@ async function cargarDesarrollo() {
             <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${
               ev.estado==='logrado'?'var(--verde)':ev.estado==='en_proceso'?'var(--amarillo)':'var(--gris-300)'
             }"></div>
-            <span style="flex:1;font-size:var(--text-sm);font-weight:600">${ev.hito_nombre}</span>
+            <span style="flex:1;font-size:var(--text-sm);font-weight:600">${escHtml(ev.hito_nombre)}</span>
             ${ev.alerta_rezago ? '<span class="chip chip-coral">⚠️ Alerta</span>' : ''}
             ${UI.chipAsistencia ? '' : ''}
             <span class="chip ${ev.estado==='logrado'?'chip-verde':ev.estado==='en_proceso'?'chip-amarillo':'chip-gris'}">
@@ -1052,8 +1052,8 @@ async function cargarHistorialAusencias() {
       <tbody>${mesActual.map(a => `
         <tr>
           <td>${UI.fecha(a.fecha)}</td>
-          <td>${a.turno_nombre}</td>
-          <td style="font-size:var(--text-sm)">${a.motivo_ausencia || '—'}</td>
+          <td>${escHtml(a.turno_nombre)}</td>
+          <td style="font-size:var(--text-sm)">${escHtml(a.motivo_ausencia || '—')}</td>
         </tr>`).join('')}
       </tbody></table></div>` :
       `<div style="text-align:center;padding:var(--gap-lg);color:var(--texto-suave);font-weight:600">

@@ -216,6 +216,16 @@ async function apiFetchForm(endpoint, formData, method) {
 }
 
 /* ══════════════════════════════════════
+   ESCAPE HTML — usar SIEMPRE que se interpole texto que viene de la
+   API (nombres, asuntos, cuerpos, observaciones...) dentro de un
+   template que termina en innerHTML. Evita XSS almacenado.
+══════════════════════════════════════ */
+function escHtml(t) {
+  return String(t ?? '').replace(/[&<>"'`]/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
+}
+
+/* ══════════════════════════════════════
    UI HELPERS
 ══════════════════════════════════════ */
 

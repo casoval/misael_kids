@@ -22,10 +22,11 @@ MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 # STATICFILES_STORAGE, que Django ya no lee — quedaba configurada pero
 # sin efecto real, así que WhiteNoise nunca comprimía ni le ponía hash
 # a los archivos, y por lo tanto no había cache-busting automático).
+# OJO: se parte de STORAGES (base.py) para NO pisar el storage 'default':
+# antes se fijaba aquí FileSystemStorage y Cloudinary quedaba desactivado
+# en producción aunque estuviera configurado.
 STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
+    **STORAGES,
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },

@@ -118,6 +118,17 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
+# ─── Validación de contraseñas ────────────────────────────────────────────────
+# Se aplican al crear usuarios, cambiar la propia contraseña y al resetear con
+# una contraseña escrita a mano (los usuarios creados por consola/shell no pasan
+# por aquí). Impide claves como '12345678' o solo numéricas.
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+     'OPTIONS': {'min_length': 8}},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
 # ─── Internacionalización ─────────────────────────────────────────────────────
 LANGUAGE_CODE = 'es-bo'
 TIME_ZONE = 'America/La_Paz'
@@ -147,6 +158,13 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Django 5.1 ELIMINÓ DEFAULT_FILE_STORAGE / STATICFILES_STORAGE: se ignoran por
+# completo. Antes de este arreglo Cloudinary nunca se activaba, aunque las
+# credenciales estuvieran configuradas, y las fotos se guardaban en disco local.
+STORAGES = {
+    'default':     {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
 if CLOUDINARY_CONFIGURADO:
     # A diferencia de Centro Misael (que activa Cloudinary solo si
     # IS_PRODUCTION), acá lo activamos según si las credenciales están
@@ -154,7 +172,7 @@ if CLOUDINARY_CONFIGURADO:
     # en local con las mismas credenciales, y si en producción alguien
     # olvida configurar las variables, el sitio sigue funcionando con
     # disco local en vez de romperse.
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    STORAGES['default'] = {'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage'}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -168,6 +186,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    # Solo el scope 'login' está limitado (ver accounts.views.MiTokenObtainPairView).
+    # Es por IP; si hay un proxy delante, definir NUM_PROXIES para que DRF lea
+    # bien X-Forwarded-For. Ajustable con LOGIN_THROTTLE_RATE (ej. '30/min').
+    'DEFAULT_THROTTLE_RATES': {
+        'login': env('LOGIN_THROTTLE_RATE', default='15/min'),
+    },
     'DEFAULT_PAGINATION_CLASS': 'core.pagination.PaginacionEstandar',
     'PAGE_SIZE': 25,
     'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S',

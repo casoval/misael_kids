@@ -293,24 +293,24 @@ async function cargarAvisos() {
           <div style="flex:1">
             <div style="display:flex;align-items:center;gap:var(--gap-sm);flex-wrap:wrap;margin-bottom:4px">
               ${av.importante?'<span class="chip chip-coral">🔴 Importante</span>':''}
-              ${av.sucursal_nombre?'<span class="chip chip-turquesa">🏢 '+av.sucursal_nombre+'</span>':'<span class="chip chip-gris">Todas las sucursales</span>'}
-              ${av.sala_nombre?'<span class="chip chip-verde">🏠 '+av.sala_nombre+'</span>':''}
-              ${av.turno?'<span class="chip chip-amarillo">⏰ '+av.turno+'</span>':''}
+              ${av.sucursal_nombre?'<span class="chip chip-turquesa">🏢 '+escHtml(av.sucursal_nombre)+'</span>':'<span class="chip chip-gris">Todas las sucursales</span>'}
+              ${av.sala_nombre?'<span class="chip chip-verde">🏠 '+escHtml(av.sala_nombre)+'</span>':''}
+              ${av.turno?'<span class="chip chip-amarillo">⏰ '+escHtml(av.turno)+'</span>':''}
             </div>
-            <div style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--texto)">${av.titulo}</div>
+            <div style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--texto)">${escHtml(av.titulo)}</div>
             <div style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:2px">
-              Por: ${av.autor_nombre} · ${new Date(av.publicado_en).toLocaleDateString('es-BO',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+              Por: ${escHtml(av.autor_nombre)} · ${new Date(av.publicado_en).toLocaleDateString('es-BO',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
             </div>
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;margin-left:var(--gap-md)">
             <button class="btn btn-outline btn-sm" onclick="editarAviso('${av.id}')">✏️ Editar</button>
             <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
-              onclick="eliminarAviso('${av.id}','${av.titulo}')">🗑️</button>
+              onclick="eliminarAviso('${escHtml(av.id)}')">🗑️</button>
           </div>
         </div>
         <p style="font-size:var(--text-sm);color:var(--texto);line-height:1.7;
           background:var(--gris-50);padding:var(--gap-md);border-radius:var(--radio-lg)">
-          ${av.cuerpo}
+          ${escHtml(av.cuerpo)}
         </p>
       </div>`).join('');
   } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
@@ -368,8 +368,8 @@ async function guardarAviso() {
   } catch (err) { UI.toast('Error: '+err.message,'error'); }
 }
 
-async function eliminarAviso(id, titulo) {
-  if (!confirm('Eliminar el aviso "'+titulo+'"?')) return;
+async function eliminarAviso(id) {
+  if (!confirm('¿Eliminar este aviso?')) return;
   try {
     await API.delete('/comunicacion/avisos/'+id+'/');
     UI.toast('Aviso eliminado','exito');
@@ -413,14 +413,14 @@ function filtrarMensajes(modo) {
     return `
       <div class="msg-item ${noLeido?'no-leido':''}" onclick="leerMensaje('${m.id}')">
         <div class="msg-header">
-          <span class="msg-asunto">${noLeido?'🔵 ':''}${m.asunto}</span>
+          <span class="msg-asunto">${noLeido?'🔵 ':''}${escHtml(m.asunto)}</span>
           <span class="msg-meta">${new Date(m.created_at).toLocaleDateString('es-BO',{day:'numeric',month:'short'})}</span>
         </div>
         <div class="msg-meta" style="margin-bottom:4px">
-          ${esEnviado?'→ Para: '+m.destinatario_nombre:'De: '+m.remitente_nombre}
-          ${m.nino_nombre?' · 👶 '+m.nino_nombre:''}
+          ${esEnviado?'→ Para: '+escHtml(m.destinatario_nombre):'De: '+escHtml(m.remitente_nombre)}
+          ${m.nino_nombre?' · 👶 '+escHtml(m.nino_nombre):''}
         </div>
-        <div class="msg-preview">${m.cuerpo?.slice(0,120)}${m.cuerpo?.length>120?'...':''}</div>
+        <div class="msg-preview">${escHtml(m.cuerpo?.slice(0,120))}${m.cuerpo?.length>120?'...':''}</div>
       </div>`;
   }).join('');
 }
@@ -433,15 +433,15 @@ async function leerMensaje(id) {
     <div style="display:flex;justify-content:space-between;margin-bottom:var(--gap-md);
       background:var(--gris-50);padding:var(--gap-md);border-radius:var(--radio-lg)">
       <div>
-        <div style="font-weight:700;font-size:var(--text-sm)">De: ${mensajeAbierto.remitente_nombre}</div>
-        <div style="font-weight:700;font-size:var(--text-sm)">Para: ${mensajeAbierto.destinatario_nombre}</div>
-        ${mensajeAbierto.nino_nombre?'<div style="font-size:var(--text-xs);color:var(--texto-suave)">👶 '+mensajeAbierto.nino_nombre+'</div>':''}
+        <div style="font-weight:700;font-size:var(--text-sm)">De: ${escHtml(mensajeAbierto.remitente_nombre)}</div>
+        <div style="font-weight:700;font-size:var(--text-sm)">Para: ${escHtml(mensajeAbierto.destinatario_nombre)}</div>
+        ${mensajeAbierto.nino_nombre?'<div style="font-size:var(--text-xs);color:var(--texto-suave)">👶 '+escHtml(mensajeAbierto.nino_nombre)+'</div>':''}
       </div>
       <div style="font-size:var(--text-xs);color:var(--texto-suave);text-align:right">
         ${new Date(mensajeAbierto.created_at).toLocaleString('es-BO')}
       </div>
     </div>
-    <p style="font-size:var(--text-sm);line-height:1.8;white-space:pre-wrap">${mensajeAbierto.cuerpo}</p>`;
+    <p style="font-size:var(--text-sm);line-height:1.8;white-space:pre-wrap">${escHtml(mensajeAbierto.cuerpo)}</p>`;
   UI.abrirModal('modal-leer-msg');
   // Marcar como leído
   if (!mensajeAbierto.leido && mensajeAbierto.destinatario_nombre===usr.nombres+' '+usr.apellidos) {

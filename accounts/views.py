@@ -5,7 +5,10 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 from .models import Usuario
 from .permissions import puede_gestionar_usuarios
@@ -16,8 +19,14 @@ from .serializers import (
 
 
 class MiTokenObtainPairView(TokenObtainPairView):
-    """Login JWT con datos del usuario incluidos."""
+    """Login JWT con datos del usuario incluidos.
+
+    Limitado por IP (scope 'login', ver REST_FRAMEWORK en settings) para
+    frenar la fuerza bruta de contraseñas.
+    """
     serializer_class = MiTokenObtainPairSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -50,8 +59,17 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         instancia = self.get_object()
         # Cualquier usuario puede editar su propio perfil (nombres, teléfono, foto...)
         if instancia.id == request.user.id:
-            request.data.pop('rol', None)  # no puede auto-ascenderse de rol
-            return super().update(request, *args, **kwargs)
+            # `request.data` es un QueryDict INMUTABLE con multipart (subida de
+            # foto): hacer .pop() directamente lanzaba AttributeError (HTTP 500).
+            # Se arma un dict nuevo SIN los campos que nadie puede cambiarse a sí
+            # mismo: el rol (auto-ascenso) y `activo`. (No se usa QueryDict.copy()
+            # porque hace deepcopy y falla con archivos grandes en disco temporal.)
+            datos = {k: v for k, v in request.data.items() if k not in ('rol', 'activo')}
+            serializer = self.get_serializer(
+                instancia, data=datos, partial=kwargs.get('partial', False))
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data)
         rol_solicitado = request.data.get('rol', instancia.rol)
         if not puede_gestionar_usuarios(request.user, rol_solicitado):
             return Response(
@@ -103,7 +121,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='cambiar-password')
     def cambiar_password(self, request):
         """Cambia la contraseña del usuario autenticado."""
-        serializer = CambiarPasswordSerializer(data=request.data)
+        serializer = CambiarPasswordSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         usuario = request.user
         if not usuario.check_password(serializer.validated_data['password_actual']):
@@ -117,13 +135,18 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='resetear-password')
     def resetear_password(self, request, pk=None):
-        """Restablece la contraseña de cualquier usuario. Solo admin/directora."""
-        if request.user.rol not in ['admin', 'directora']:
+        """
+        Restablece la contraseña de un usuario. Admin: cualquiera. Directora:
+        cualquiera EXCEPTO un admin (si no, bastaba con resetearle la clave a
+        un admin para quedarse con su cuenta: escalada de privilegios).
+        Es la misma regla que ya se usa para crear/editar/eliminar usuarios.
+        """
+        usuario = self.get_object()
+        if not puede_gestionar_usuarios(request.user, usuario.rol):
             return Response(
                 {'detail': 'No tienes permiso para realizar esta acción.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        usuario = self.get_object()
         nueva = request.data.get('password')
         if not nueva:
             # Antes, si no se especificaba una contraseña, se usaba SIEMPRE
@@ -138,6 +161,13 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 {'detail': 'La contraseña debe tener al menos 8 caracteres.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        if request.data.get('password'):
+            # Solo se valida la que escribió una persona; la generada ya es aleatoria.
+            try:
+                validate_password(nueva, user=usuario)
+            except DjangoValidationError as exc:
+                return Response({'detail': ' '.join(exc.messages)},
+                                status=status.HTTP_400_BAD_REQUEST)
         usuario.set_password(nueva)
         usuario.save()
         return Response({'mensaje': 'Contraseña restablecida correctamente.', 'password': nueva})

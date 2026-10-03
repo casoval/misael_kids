@@ -3,6 +3,9 @@ accounts/serializers.py
 Login JWT, registro y perfil de usuario.
 """
 from rest_framework import serializers
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import Usuario
@@ -94,6 +97,11 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
         if data['password'] != data['password2']:
             raise serializers.ValidationError({'password2': 'Las contraseñas no coinciden.'})
 
+        try:
+            validate_password(data['password'])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({'password': list(exc.messages)})
+
         email    = (data.get('email') or '').strip()
         username = (data.get('username') or '').strip()
 
@@ -135,6 +143,11 @@ class CambiarPasswordSerializer(serializers.Serializer):
     def validate(self, data):
         if data['password_nuevo'] != data['password_nuevo2']:
             raise serializers.ValidationError({'password_nuevo2': 'Las contraseñas no coinciden.'})
+        request = self.context.get('request')
+        try:
+            validate_password(data['password_nuevo'], user=getattr(request, 'user', None))
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({'password_nuevo': list(exc.messages)})
         return data
 
 
@@ -150,7 +163,16 @@ class MiTokenObtainPairSerializer(TokenObtainPairSerializer):
             models.Q(email__iexact=identificador) | models.Q(username__iexact=identificador)
         ).first()
 
-        if usuario is None or not usuario.check_password(password):
+        if usuario is None:
+            # Gasta el mismo tiempo que una verificación real; sin esto, el login
+            # responde mucho más rápido cuando el usuario NO existe y permite
+            # averiguar qué usuarios/emails están registrados midiendo tiempos.
+            make_password(password)
+            usuario_valido = False
+        else:
+            usuario_valido = usuario.check_password(password)
+
+        if not usuario_valido:
             raise serializers.ValidationError(
                 {'detail': 'Credenciales incorrectas. Verifica tu email/usuario y contraseña.'}
             )

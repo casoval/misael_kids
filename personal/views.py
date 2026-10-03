@@ -2,9 +2,8 @@
 personal/views.py
 """
 from rest_framework import viewsets, filters
-from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from accounts.permissions import EsAdminODirectora
+from accounts.permissions import EsAdminODirectora, SoloAdminODirectora
 from .models import Personal, AsignacionPersonal, AsistenciaPersonal
 from .serializers import (
     PersonalSerializer, AsignacionPersonalSerializer, AsistenciaPersonalSerializer
@@ -35,7 +34,10 @@ class AsistenciaPersonalViewSet(viewsets.ModelViewSet):
         'personal', 'sucursal'
     ).all()
     serializer_class   = AsistenciaPersonalSerializer
-    permission_classes = [IsAuthenticated]
+    # Antes solo IsAuthenticated: cualquier cuenta (incluido un tutor) podía leer,
+    # crear, editar y borrar la asistencia del personal. Es información laboral
+    # del equipo: lectura y escritura solo para admin/directora.
+    permission_classes = [SoloAdminODirectora]
     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields   = ['personal', 'sucursal', 'fecha', 'estado']
     ordering_fields    = ['fecha']

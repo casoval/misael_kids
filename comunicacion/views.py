@@ -1,4 +1,4 @@
-from datetime import datetime
+from django.utils import timezone
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -30,7 +30,7 @@ class MensajeViewSet(viewsets.ModelViewSet):
         mensaje = self.get_object()
         if mensaje.destinatario == request.user:
             mensaje.leido    = True
-            mensaje.leido_en = datetime.now()
+            mensaje.leido_en = timezone.now()
             mensaje.save()
         return Response(MensajeSerializer(mensaje).data)
 
