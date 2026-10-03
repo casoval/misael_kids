@@ -3,8 +3,13 @@
    ───────────────────────────────────────────────────────────────
    · Se carga en el <head>, SIN defer, para aplicar el tema antes de
      que el navegador pinte y evitar el parpadeo del tema equivocado.
-   · La elección se guarda en localStorage ('mk_tema') y se sincroniza
-     entre pestañas abiertas.
+   · El tema es PERSONAL: se guarda por usuario en localStorage
+     ('mk_tema_u_<id>') y en su perfil del servidor (campo Usuario.tema),
+     así que lo que elige el admin no cambia lo que ve la recepcionista,
+     la educadora, etc., ni al revés, aunque compartan el mismo navegador.
+   · Mientras nadie ha iniciado sesión (pantalla de login) se usa una
+     clave aparte, 'mk_tema_login', que se borra al cerrar sesión.
+   · Se sincroniza entre pestañas abiertas del mismo usuario.
    · Los valores de cada tema viven en css/themes.css.
 
    API:
@@ -12,11 +17,14 @@
      Tema.aplicar('espacio')          → cambia y guarda el tema
      Tema.montar(elemento, {variante}) → dibuja el selector dentro de elemento
                                         variante: 'flotante' | 'sobre-color'
+     Tema.alIniciarSesion(usuario)    → lo llama Auth.guardar() tras el login
 
    <html> recibe data-tema="id" y data-modo="claro|oscuro".
 ═══════════════════════════════════════════════════════════════ */
 const Tema = (() => {
-  const CLAVE = 'mk_tema';
+  const PREFIJO_USUARIO = 'mk_tema_u_';   // + id del usuario
+  const CLAVE_LOGIN     = 'mk_tema_login'; // pantalla de login (nadie identificado)
+  const CLAVE_ANTIGUA   = 'mk_tema';       // versión previa: una sola para todo el navegador
   const POR_DEFECTO = 'jardin';
 
   /* Para agregar un tema: registrarlo acá y crear su bloque en themes.css */
@@ -47,16 +55,71 @@ const Tema = (() => {
 
   const porId = id => TEMAS.find(t => t.id === id);
 
+  /* Usuario con sesión abierta (mk_usuario lo escribe Auth.guardar al hacer login).
+     Se lee directo: este script carga antes que api.js. */
+  function usuarioActual() {
+    try {
+      if (!localStorage.getItem('mk_token')) return null;
+      const u = JSON.parse(localStorage.getItem('mk_usuario') || 'null');
+      return u && u.id ? u : null;
+    } catch (_) { return null; }
+  }
+
+  /* Clave donde vive la preferencia de QUIEN está usando la app ahora */
+  function claveActual() {
+    const u = usuarioActual();
+    return u ? PREFIJO_USUARIO + u.id : CLAVE_LOGIN;
+  }
+
   function leer() {
     try {
-      const id = localStorage.getItem(CLAVE);
-      if (porId(id)) return id;
+      const propio = localStorage.getItem(claveActual());
+      if (porId(propio)) return propio;
+      const delServidor = usuarioActual()?.tema;   // viene en el login
+      if (porId(delServidor)) return delServidor;
     } catch (_) { /* modo privado / storage bloqueado */ }
     return POR_DEFECTO;
   }
 
+  /* Guarda en el perfil del servidor para que siga a la persona entre dispositivos.
+     Falla en silencio: el tema ya quedó aplicado y guardado en este navegador. */
+  function enviarAlServidor(id) {
+    if (!usuarioActual() || typeof API === 'undefined') return;
+    API.patch('/auth/usuarios/yo/tema/', { tema: id }).catch(() => {});
+  }
+
   function guardar(id) {
-    try { localStorage.setItem(CLAVE, id); } catch (_) { /* se aplica igual, solo no persiste */ }
+    try { localStorage.setItem(claveActual(), id); } catch (_) { /* se aplica igual, solo no persiste */ }
+    const u = usuarioActual();
+    if (u) {
+      try {  // mantener al día la copia local del perfil
+        u.tema = id;
+        localStorage.setItem('mk_usuario', JSON.stringify(u));
+      } catch (_) {}
+      enviarAlServidor(id);
+    }
+  }
+
+  /* Tras el login: el tema guardado en el perfil manda sobre lo que hubiera en
+     este navegador. Si la persona aún no tiene tema propio, conserva el que eligió
+     en la pantalla de login (si eligió alguno); si no, queda el de por defecto. */
+  function alIniciarSesion(usuario) {
+    if (!usuario || !usuario.id) return;
+    const clave = PREFIJO_USUARIO + usuario.id;
+    try {
+      if (porId(usuario.tema)) {
+        localStorage.setItem(clave, usuario.tema);
+      } else {
+        const elegidoEnLogin = localStorage.getItem(CLAVE_LOGIN);
+        if (porId(elegidoEnLogin) && !porId(localStorage.getItem(clave))) {
+          localStorage.setItem(clave, elegidoEnLogin);
+          usuario.tema = elegidoEnLogin;
+          localStorage.setItem('mk_usuario', JSON.stringify(usuario));
+          enviarAlServidor(elegidoEnLogin);
+        }
+      }
+      localStorage.removeItem(CLAVE_LOGIN);
+    } catch (_) {}
   }
 
   /* Los temas con tipografía propia la piden a Google Fonts solo cuando se usan */
@@ -181,11 +244,15 @@ const Tema = (() => {
 
   /* sincronizar con otras pestañas abiertas */
   window.addEventListener('storage', e => {
-    if (e.key === CLAVE && porId(e.newValue)) aplicar(e.newValue, { guardarEleccion: false });
+    if (e.key === claveActual() && porId(e.newValue)) aplicar(e.newValue, { guardarEleccion: false });
   });
+
+  /* La clave única de la versión anterior era compartida por todo el navegador:
+     se descarta para que el tema de una persona no "herede" a la siguiente. */
+  try { localStorage.removeItem(CLAVE_ANTIGUA); } catch (_) {}
 
   /* Aplicación inmediata (este script va en el <head>) */
   aplicar(leer(), { guardarEleccion: false });
 
-  return { TEMAS, actual, aplicar, montar };
+  return { TEMAS, actual, aplicar, montar, alIniciarSesion };
 })();

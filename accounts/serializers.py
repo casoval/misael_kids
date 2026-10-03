@@ -30,11 +30,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model  = Usuario
         fields = [
             'id', 'email', 'username', 'identificador', 'nombres', 'apellidos', 'nombre_completo',
-            'telefono', 'rol', 'rol_display', 'foto', 'activo',
+            'telefono', 'rol', 'rol_display', 'foto', 'activo', 'tema',
             'ficha_personal', 'requiere_ficha',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'tema', 'created_at', 'updated_at']
 
     def update(self, instance, validated_data):
         # Validar unicidad de email y username excluyendo el usuario actual
@@ -119,6 +119,12 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+
+
+class TemaSerializer(serializers.Serializer):
+    """Tema visual propio. Se valida el formato, no la lista: los temas
+    nuevos viven en el frontend (js/tema.js) y no deben exigir tocar esto."""
+    tema = serializers.RegexField(r'^[a-z0-9_-]{1,30}$', allow_blank=True)
 
 
 class CambiarPasswordSerializer(serializers.Serializer):

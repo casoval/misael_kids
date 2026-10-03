@@ -64,6 +64,10 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     rol        = models.CharField(max_length=20, choices=ROLES, default=ROL_TUTOR)
     foto       = models.ImageField(upload_to='usuarios/', null=True, blank=True)
     activo     = models.BooleanField(default=True)
+    tema       = models.CharField(
+        max_length=30, blank=True, default='',
+        help_text='Tema visual elegido por esta persona (vacío = el de por defecto). '
+                  'Es personal: no afecta a otros usuarios.')
 
     is_staff   = models.BooleanField(default=False)
     is_active  = models.BooleanField(default=True)

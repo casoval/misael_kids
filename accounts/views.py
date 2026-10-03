@@ -11,7 +11,7 @@ from .models import Usuario
 from .permissions import puede_gestionar_usuarios
 from .serializers import (
     UsuarioSerializer, UsuarioCreateSerializer,
-    CambiarPasswordSerializer, MiTokenObtainPairSerializer,
+    CambiarPasswordSerializer, MiTokenObtainPairSerializer, TemaSerializer,
 )
 
 
@@ -90,6 +90,15 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         """Devuelve el perfil del usuario autenticado."""
         serializer = UsuarioSerializer(request.user, context={'request': request})
         return Response(serializer.data)
+
+    @action(detail=False, methods=['patch'], url_path='yo/tema')
+    def yo_tema(self, request):
+        """Guarda el tema visual del usuario autenticado (solo el suyo)."""
+        serializer = TemaSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        request.user.tema = serializer.validated_data['tema']
+        request.user.save(update_fields=['tema'])
+        return Response({'tema': request.user.tema})
 
     @action(detail=False, methods=['post'], url_path='cambiar-password')
     def cambiar_password(self, request):

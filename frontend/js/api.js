@@ -18,12 +18,16 @@ const Auth = {
     localStorage.setItem('mk_token',   data.access);
     localStorage.setItem('mk_refresh', data.refresh);
     localStorage.setItem('mk_usuario', JSON.stringify(data.usuario));
+    // El tema es personal: se carga el del perfil de quien acaba de entrar
+    if (typeof Tema !== 'undefined') Tema.alIniciarSesion(data.usuario);
   },
 
   cerrar() {
     localStorage.removeItem('mk_token');
     localStorage.removeItem('mk_refresh');
     localStorage.removeItem('mk_usuario');
+    // La pantalla de login vuelve al tema por defecto: no hereda el de quien salió
+    localStorage.removeItem('mk_tema_login');
     window.location.href = '/';
   },
 
