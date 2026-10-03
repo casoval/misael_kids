@@ -459,6 +459,9 @@ async function cargar() {
             <div>
               <div style="font-weight:700">${n.nombre_completo}</div>
               <div style="font-size:var(--text-xs);color:var(--texto-suave)">${UI.fecha(n.fecha_nacimiento)}</div>
+              ${n.vinculado_centro_misael
+                ? '<span class="chip chip-violeta" style="margin-top:2px;font-size:var(--text-xs)" title="Vinculado con un paciente de Centro Misael">🔗 Centro Misael</span>'
+                : ''}
             </div>
           </div>
         </td>
@@ -534,6 +537,14 @@ async function verPerfil(id) {
         <div class="dato-fila"><span class="clave">Edad</span><span class="valor">${UI.edad(n.edad_en_meses)}</span></div>
         <div class="dato-fila"><span class="clave">Género</span><span class="valor">${n.genero==='M'?'👦 Masculino':n.genero==='F'?'👧 Femenino':'⚧️ Otro'}</span></div>
         <div class="dato-fila"><span class="clave">Plan Misael</span><span class="valor">${n.tiene_plan_misael?'🧠 Sí':'No'}</span></div>
+        <div class="dato-fila"><span class="clave">Centro Misael</span><span class="valor">${
+          n.vinculado_centro_misael
+            ? `<span class="chip chip-violeta" title="Paciente #${Number(n.centro_misael.paciente_centro_id)}">🔗 Vinculado</span>`
+              + (n.centro_misael.nombre_paciente ? ` <small>${Vista._esc(n.centro_misael.nombre_paciente)}</small>` : '')
+              + (n.centro_misael.estado_centro ? ` <small>(${Vista._esc(n.centro_misael.estado_centro)})</small>` : '')
+            : `<span class="chip chip-gris">No vinculado</span>`
+              + (n.tiene_plan_misael ? ` <a href="/panel/misael-link/?tab=vinculacion" title="Está marcado con plan Misael pero no está vinculado con un paciente del centro">⚠️ Vincular</a>` : '')
+        }</span></div>
         <div class="dato-fila"><span class="clave">Estado</span><span class="valor">${n.activo?'✅ Activo':'❌ Inactivo'}</span></div>
       </div>
       ${n.alergias?`<div class="perfil-seccion">

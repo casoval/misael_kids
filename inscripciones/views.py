@@ -35,7 +35,7 @@ from .services import (
     deuda_para_cambio_modalidad,
     devolver_saldo, SaldoInsuficiente, estado_pago_mensual, historial_cuenta,
     ultimo_dia_consumido,
-    ESTADOS_ABIERTOS,
+    ESTADOS_ABIERTOS, reajustar_cobro_por_cambio_precio, sincronizar_cobros_sin_pagos,
 )
 
 
@@ -114,17 +114,8 @@ class InscripcionViewSet(viewsets.ModelViewSet):
         antes = serializer.instance
         precio_antes = (antes.costo_mensual, antes.costo_mensual_final)
         inscripcion = serializer.save()
-        if (inscripcion.activa and inscripcion.modalidad_pago == Inscripcion.MODALIDAD_MENSUAL
-                and (inscripcion.costo_mensual, inscripcion.costo_mensual_final) != precio_antes):
-            sin_pagos = Cobro.objects.filter(
-                inscripcion=inscripcion, tipo=Cobro.TIPO_MENSUALIDAD,
-                estado__in=ESTADOS_ABIERTOS, pagos__isnull=True, monto_condonado_inicial__isnull=True,
-            ).distinct()
-            for cobro in sin_pagos:
-                cobro.monto_base = inscripcion.costo_mensual
-                cobro.monto_final = inscripcion.costo_mensual_final
-                cobro.save(update_fields=['monto_base', 'monto_final'])
-                cobro.recalcular_estado()
+        if (inscripcion.costo_mensual, inscripcion.costo_mensual_final) != precio_antes:
+            sincronizar_cobros_sin_pagos(inscripcion)
 
     def perform_create(self, serializer):
         """
@@ -1141,6 +1132,76 @@ class CobroViewSet(viewsets.ModelViewSet):
         cobro.refresh_from_db()
 
         return Response(CobroSerializer(cobro).data)
+
+    @action(detail=True, methods=['post'], url_path='ajustar-monto')
+    def ajustar_monto(self, request, pk=None):
+        """
+        Pone un monto nuevo a un cobro (mensualidad o extra) cuando no coincide con
+        lo correcto: un precio escrito a mano por error, un cambio de tarifa, etc.
+        Lo ya pagado se respeta y la diferencia se compensa:
+          - sobra dinero → pasa a la cuenta del niño (no toca la caja);
+          - falta dinero → el cobro queda parcial por la diferencia (o se cierra con
+            lo pagado si `cerrar_con_lo_pagado` es true).
+        Body: `nuevo_monto` (obligatorio), `motivo` (obligatorio, queda en el cobro),
+        `actualizar_plan` (opcional, solo mensualidades: también cambia el precio de la
+        inscripción para las próximas), `cerrar_con_lo_pagado` (opcional).
+        """
+        cobro = self.get_object()
+        if cobro.estado == Cobro.ESTADO_ANULADO:
+            return Response({'error': 'Un cobro anulado no se puede ajustar.'}, status=status.HTTP_400_BAD_REQUEST)
+        if cobro.tipo not in (Cobro.TIPO_MENSUALIDAD, Cobro.TIPO_EXTRA):
+            return Response({'error': 'Solo se ajusta el monto de mensualidades y cobros extra. '
+                                      'El cobro por día sale del precio diario de la inscripción.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if cobro.monto_condonado_inicial is not None:
+            return Response({'error': 'Este cobro se cerró con lo pagado: ese cierre ya es una decisión tomada '
+                                      'y no se cambia su monto.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            nuevo = Decimal(str(request.data.get('nuevo_monto'))).quantize(Decimal('0.01'))
+        except (InvalidOperation, TypeError, ValueError):
+            return Response({'error': 'Indica el nuevo monto (un número).'}, status=status.HTTP_400_BAD_REQUEST)
+        if nuevo < 0 or nuevo > Decimal('999999.99'):
+            return Response({'error': 'El monto debe estar entre 0 y 999999.99.'}, status=status.HTTP_400_BAD_REQUEST)
+        if nuevo == cobro.monto_final:
+            return Response({'error': f'El cobro ya tiene ese monto (Bs. {cobro.monto_final}).'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        motivo = str(request.data.get('motivo') or '').strip()
+        if not motivo:
+            return Response({'error': 'Debes indicar el motivo del cambio de monto.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        insc = cobro.inscripcion
+        actualizar_plan = request.data.get('actualizar_plan') in (True, 'true', 'True', '1', 1)
+        if actualizar_plan:
+            if cobro.tipo != Cobro.TIPO_MENSUALIDAD or not insc.activa:
+                return Response({'error': 'El precio del plan solo se actualiza desde una mensualidad de una inscripción activa.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            if insc.tipo_ajuste != Inscripcion.AJUSTE_NINGUNO:
+                return Response({'error': 'Esta inscripción tiene descuento o beca: cambia su precio desde "Editar" '
+                                          'la inscripción para no perder el ajuste.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        anterior = cobro.monto_final
+        with transaction.atomic():
+            if actualizar_plan:
+                insc.costo_mensual = nuevo
+                insc.save(update_fields=['costo_mensual'])
+            plan = reajustar_cobro_por_cambio_precio(
+                cobro, insc, request.user,
+                cerrar_con_lo_pagado=request.data.get('cerrar_con_lo_pagado') in (True, 'true', 'True', '1', 1),
+                motivo_cierre=motivo, nuevo_final=nuevo, nuevo_base=nuevo,
+                motivo_devolucion='Ajuste de monto del cobro: la diferencia pasa a la cuenta del niño.')
+            cobro.refresh_from_db()
+            nota = (f'[{date.today():%d/%m/%Y}] Monto ajustado de Bs. {anterior} a Bs. {nuevo} '
+                    f'por {request.user.nombre_completo}: {motivo}')
+            cobro.observacion = f'{cobro.observacion}\n{nota}'.strip()
+            cobro.save(update_fields=['observacion'])
+            if actualizar_plan:
+                sincronizar_cobros_sin_pagos(insc)      # las próximas mensualidades sin pagos siguen el precio nuevo
+        cobro.refresh_from_db()
+        datos = CobroSerializer(cobro).data
+        datos['ajuste'] = {'monto_anterior': anterior, 'monto_nuevo': nuevo,
+                           'a_favor': plan['a_favor'], 'por_cobrar': plan['por_cobrar'],
+                           'plan_actualizado': actualizar_plan}
+        return Response(datos)
 
     @action(detail=True, methods=['post'], url_path='registrar-devolucion')
     def registrar_devolucion(self, request, pk=None):

@@ -904,7 +904,9 @@ def calcular_ajuste_precio(cobro, nuevo_final):
 
 
 @transaction.atomic
-def reajustar_cobro_por_cambio_precio(cobro, nueva, usuario=None, cerrar_con_lo_pagado=False, motivo_cierre=''):
+def reajustar_cobro_por_cambio_precio(cobro, nueva, usuario=None, cerrar_con_lo_pagado=False, motivo_cierre='',
+                                      nuevo_final=None, nuevo_base=None,
+                                      motivo_devolucion='Cambio de turno/sala: la diferencia de precio pasa a la cuenta del niño.'):
     """
     Pasa un cobro al precio de la inscripción `nueva` y compensa la diferencia
     contra lo ya pagado:
@@ -912,18 +914,20 @@ def reajustar_cobro_por_cambio_precio(cobro, nueva, usuario=None, cerrar_con_lo_
         AbonoDiario es_traspaso: ninguno toca la caja);
       - falta dinero  → el cobro queda parcial por la diferencia, o se cierra
         con lo pagado si así se pide (con motivo).
+    `nuevo_final`/`nuevo_base` permiten poner un monto distinto al del plan
+    (ajuste manual de un cobro); sin ellos se usa el precio de `nueva`.
     Devuelve el mismo dict de `calcular_ajuste_precio`.
     """
-    plan = calcular_ajuste_precio(cobro, nueva.costo_mensual_final)
+    plan = calcular_ajuste_precio(cobro, nueva.costo_mensual_final if nuevo_final is None else nuevo_final)
     if plan['cambia']:
-        cobro.monto_base  = nueva.costo_mensual
+        cobro.monto_base  = nueva.costo_mensual if nuevo_base is None else nuevo_base
         cobro.monto_final = plan['monto_nuevo']
         cobro.save(update_fields=['monto_base', 'monto_final'])
 
     if plan['a_favor'] > 0:
         Devolucion.objects.create(
             cobro=cobro, monto=plan['a_favor'], a_cuenta=True, registrado_por=usuario,
-            motivo='Cambio de turno/sala: la diferencia de precio pasa a la cuenta del niño.')
+            motivo=motivo_devolucion)
         AbonoDiario.objects.create(
             inscripcion=nueva, monto=plan['a_favor'], es_traspaso=True, registrado_por=usuario,
             observacion=f'Sobrante del ciclo {etiqueta_periodo(cobro)} al cambiar a un precio menor.')
@@ -945,6 +949,29 @@ def reajustar_cobro_por_cambio_precio(cobro, nueva, usuario=None, cerrar_con_lo_
     cobro.refresh_from_db()
     plan['estado'] = cobro.estado
     return plan
+
+
+def sincronizar_cobros_sin_pagos(inscripcion):
+    """
+    Pasa al precio actual de la inscripción las mensualidades abiertas que aún no
+    tienen ningún pago ni cierre con lo pagado. Las que ya tienen pagos son
+    historial y no se tocan (para esas existe el ajuste de monto del cobro).
+    Devuelve cuántas mensualidades cambió.
+    """
+    if not inscripcion.activa or inscripcion.modalidad_pago != Inscripcion.MODALIDAD_MENSUAL:
+        return 0
+    n = 0
+    sin_pagos = Cobro.objects.filter(
+        inscripcion=inscripcion, tipo=Cobro.TIPO_MENSUALIDAD, estado__in=ESTADOS_ABIERTOS,
+        pagos__isnull=True, monto_condonado_inicial__isnull=True).distinct()
+    for cobro in sin_pagos:
+        if (cobro.monto_base, cobro.monto_final) == (inscripcion.costo_mensual, inscripcion.costo_mensual_final):
+            continue
+        cobro.monto_base, cobro.monto_final = inscripcion.costo_mensual, inscripcion.costo_mensual_final
+        cobro.save(update_fields=['monto_base', 'monto_final'])
+        cobro.recalcular_estado()
+        n += 1
+    return n
 
 
 @transaction.atomic
