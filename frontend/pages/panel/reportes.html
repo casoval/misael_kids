@@ -6,6 +6,8 @@
   <title>Reportes — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+  <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
   <style>
     .contexto { font-size:var(--text-sm);font-weight:700;color:var(--texto-suave);margin-bottom:var(--gap-md); }
     .seccion-titulo { font-family:var(--font-display);font-size:var(--text-lg);margin:var(--gap-lg) 0 var(--gap-sm); }
@@ -142,6 +144,10 @@
 </div>
 
 <script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/vendor/flatpickr/flatpickr.min.js' %}"></script>
+<script src="{% static 'js/vendor/flatpickr/es.js' %}"></script>
+<script src="{% static 'js/vendor/flatpickr/monthSelect.js' %}"></script>
+<script src="{% static 'js/fechas.js' %}"></script>
 <script src="{% static 'js/components.js' %}"></script>
 <script>
 initPanel('reportes', ['admin', 'directora', 'recepcionista']);

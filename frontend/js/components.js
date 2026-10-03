@@ -123,7 +123,8 @@ const Vista = {
       const v = localStorage.getItem('mk_vista_' + clave);
       if (v === 'filas' || v === 'tarjetas') return v;
     } catch (e) { /* sin almacenamiento: vale el valor por defecto */ }
-    return 'filas';
+    // Sin elección guardada: tarjetas en celular, filas en pantallas grandes.
+    return (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) ? 'tarjetas' : 'filas';
   },
 
   /* Registra la sección y pinta el selector. */

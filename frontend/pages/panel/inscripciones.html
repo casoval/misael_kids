@@ -6,6 +6,8 @@
   <title>Inscripciones — Misael Kids</title>
   <link rel="stylesheet" href="{% static 'css/variables.css' %}">
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/flatpickr.min.css' %}">
+  <link rel="stylesheet" href="{% static 'js/vendor/flatpickr/monthSelect.css' %}">
   <style>
     .costo-card {
       background:var(--gris-50);border-radius:var(--radio-lg);
@@ -136,6 +138,8 @@
 <style>
   .acc-grupo { display:flex; gap:6px; flex-wrap:nowrap; align-items:center; white-space:nowrap; }
   .btn-pagos { background:var(--amarillo-l); color:var(--amarillo-d); border:1.5px solid var(--amarillo); }
+  .btn-cobrar { background:var(--coral); color:#fff; border:1.5px solid var(--coral); }
+  .acc-mas { min-width:34px; font-weight:800; letter-spacing:1px; }
   .acc-mas.abierto { background:var(--turquesa-l); border-color:var(--turquesa); color:var(--turquesa-d); }
   .tn-acciones .acc-grupo { flex-wrap:wrap; }
   .menu-acc { position:fixed; z-index:9999; min-width:230px; background:var(--blanco); border:1.5px solid var(--gris-100);
@@ -257,9 +261,8 @@
         <div id="wrap-insc-filas" class="tabla-wrap">
           <table>
             <thead><tr>
-              <th>Niño/a</th><th>Sucursal</th><th>Sala / Turno</th>
-              <th>Modalidad</th><th>Costo mensual</th><th>Ajuste</th>
-              <th>Inicio</th><th>Estado</th><th>Estado de pago</th><th>Acciones</th>
+              <th>Niño/a</th><th>Sala / Turno</th><th>Plan</th>
+              <th>Estado</th><th>Acciones</th>
             </tr></thead>
             <tbody id="tbody-insc"></tbody>
           </table>
@@ -806,6 +809,10 @@
 </div>
 
 <script src="{% static 'js/api.js' %}"></script>
+<script src="{% static 'js/vendor/flatpickr/flatpickr.min.js' %}"></script>
+<script src="{% static 'js/vendor/flatpickr/es.js' %}"></script>
+<script src="{% static 'js/vendor/flatpickr/monthSelect.js' %}"></script>
+<script src="{% static 'js/fechas.js' %}"></script>
 <script src="{% static 'js/components.js' %}"></script>
 <script>
 initPanel('inscripciones', ['admin', 'directora', 'recepcionista']);
@@ -869,7 +876,7 @@ async function cargar() {
   if (modalidad)url += '&modalidad_pago='+modalidad;
   if (activa)   url += '&activa='+activa;
   if (estadoPago) url += '&estado_pago='+estadoPago;
-  tbody.innerHTML = '<tr><td colspan="10"><div class="loader"><div class="spinner"></div></div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5"><div class="loader"><div class="spinner"></div></div></td></tr>';
   tarjetas.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
     const data  = await API.get(url);
@@ -877,7 +884,7 @@ async function cargar() {
     window.inscCache = Object.fromEntries(lista.map(i => [i.id, i]));
     document.getElementById('total-insc').textContent = (data.count||lista.length)+' inscripción(es)';
     if (!lista.length) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin inscripciones</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--texto-suave);font-weight:600">Sin inscripciones</td></tr>';
       tarjetas.innerHTML = '<div class="tn-vacio">Sin inscripciones</div>';
       return;
     }
@@ -890,24 +897,17 @@ async function cargar() {
     tarjetas.innerHTML = lista.map(htmlTarjetaInsc).join('');
     tbody.innerHTML = lista.map(i => `
       <tr class="${(i.estado_pago && i.estado_pago.nivel === 'deuda') || (!i.activa && parseFloat(i.deuda_cerrada) > 0) ? 'fila-deuda' : ''}">
-        <td style="font-weight:700">${Vista.celdaNino(i)}</td>
-        <td style="font-size:var(--text-xs)">${i.sucursal_nombre}</td>
+        <td>${Vista.celdaNino(i, i.sucursal_nombre)}</td>
         <td>
           <div style="font-weight:700;font-size:var(--text-sm)">${i.sala_nombre}</div>
           <div style="font-size:var(--text-xs);color:var(--texto-suave)">${i.turno_nombre}</div>
         </td>
-        <td><span class="chip ${i.modalidad_pago==='mensual'?'chip-turquesa':'chip-amarillo'}">${i.modalidad_display}</span></td>
-        <td>${htmlCostoInsc(i)}</td>
-        <td>${htmlAjusteInsc(i)}</td>
-        <td>${UI.fecha(i.fecha_inicio)}</td>
-        <td>${htmlEstadoInsc(i)}</td>
-        <td>${htmlEstadoPago(i)}</td>
-        <td>
-          ${htmlAccionesInsc(i)}
-        </td>
+        <td>${htmlPlanInsc(i)}</td>
+        <td>${htmlEstadoInsc(i)}<div style="margin-top:6px">${htmlEstadoPago(i)}</div></td>
+        <td>${htmlAccionesInsc(i)}</td>
       </tr>`).join('');
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="10"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><div class="alerta alerta-peligro">Error: '+err.message+'</div></td></tr>';
   }
 }
 
@@ -921,6 +921,15 @@ function htmlCostoInsc(i) {
        ${i.tipo_ajuste!=='ninguno'?'<div style="font-size:var(--text-xs);text-decoration:line-through;color:var(--texto-suave)">'+UI.moneda(i.costo_mensual)+'</div>':''}`;
 }
 
+// Plan: modalidad + costo + ajuste + fecha de inicio en una sola celda.
+function htmlPlanInsc(i) {
+  return `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">
+      <span class="chip ${i.modalidad_pago==='mensual'?'chip-turquesa':'chip-amarillo'}">${i.modalidad_display}</span>
+      ${i.tipo_ajuste!=='ninguno' ? htmlAjusteInsc(i) : ''}</div>
+    ${htmlCostoInsc(i)}
+    <div style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:2px">Inicio: ${UI.fecha(i.fecha_inicio)}</div>`;
+}
+
 function htmlAjusteInsc(i) {
   return i.tipo_ajuste!=='ninguno'?'<span class="chip chip-violeta">'+AJUSTE_LABEL[i.tipo_ajuste]+'</span>':'—';
 }
@@ -931,11 +940,11 @@ function htmlEstadoInsc(i) {
 
 // Acciones compactas: las dos más usadas a la vista y el resto en un menú "⋯ Más".
 function htmlAccionesInsc(i) {
+  const debe = (i.estado_pago && i.estado_pago.nivel === 'deuda') || (!i.activa && parseFloat(i.deuda_cerrada) > 0);
   return `<div class="acc-grupo">
-    <button class="btn btn-sm btn-pagos" onclick="accionInsc('${i.id}','pagos')">💳 Pagos</button>
-    <button class="btn btn-outline btn-sm" onclick="accionInsc('${i.id}','editar')">Editar</button>
-    <button type="button" class="btn btn-outline btn-sm acc-mas" aria-haspopup="menu" aria-label="Más acciones"
-      onclick="menuInsc(event,'${i.id}')">⋯ Más</button>
+    <button class="btn btn-sm ${debe ? 'btn-cobrar' : 'btn-pagos'}" onclick="accionInsc('${i.id}','pagos')">${debe ? '💰 Cobrar' : '💳 Pagos'}</button>
+    <button type="button" class="btn btn-outline btn-sm acc-mas" aria-haspopup="menu" aria-label="Más acciones" title="Más acciones"
+      onclick="menuInsc(event,'${i.id}')">⋯</button>
   </div>`;
 }
 
@@ -968,7 +977,8 @@ function menuInsc(ev, id) {
   if (!i) return;
   const item = (tipo, ico, txt, cls = '') =>
     `<button type="button" role="menuitem" class="menu-acc-item ${cls}" onclick="accionInsc('${id}','${tipo}')"><span>${ico}</span>${txt}</button>`;
-  let html = item('historial', '📚', 'Historial de cobros y pagos');
+  let html = item('editar', '✏️', 'Editar inscripción')
+         + item('historial', '📚', 'Historial de cobros y pagos');
   if (i.activa) {
     html += item('transferir', '🔁', 'Transferir de sucursal')
          +  item('modalidad', '📅', i.modalidad_pago === 'diaria' ? 'Pasar a mensual' : 'Pasar a por día')

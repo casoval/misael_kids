@@ -822,3 +822,11 @@ tbody tr:hover { background: var(--gris-50); }
 @media (max-width: 480px) {
   .grid-tarjetas { grid-template-columns: 1fr; }
 }
+
+/* ── Selector de fechas (flatpickr, ver js/fechas.js) ───────── */
+.flatpickr-calendar { z-index: 100000 !important; font-family: var(--font-body); border-radius: 14px; box-shadow: var(--sombra-lg); }
+.flatpickr-day.selected, .flatpickr-day.selected:hover { background: var(--turquesa-d); border-color: var(--turquesa-d); }
+.flatpickr-day.today { border-color: var(--turquesa-d); }
+.flatpickr-day:hover { background: var(--turquesa-l); border-color: var(--turquesa-l); }
+.flatpickr-monthSelect-month.selected { background: var(--turquesa-d); }
+input.flatpickr-input[readonly] { cursor: pointer; }
