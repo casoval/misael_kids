@@ -478,10 +478,20 @@ const Sucursal = {
   }
 };
 
+/* ── Descargas de información (CSV, PDF…) ─────────────────────
+   La recepcionista consulta en pantalla pero NO descarga nada: los botones
+   marcados con data-descarga se quitan para ese rol. El servidor lo exige
+   igual en los reportes; esto solo evita mostrar botones que no puede usar. */
+function puedeDescargar() {
+  const usr = Auth.getUsuario();
+  return !!usr && usr.rol !== 'recepcionista';
+}
+
 /* ── Inicializar página del panel ─────────────────────────── */
 function initPanel(paginaActiva, rolesPermitidos = ['admin','directora','educadora','ayudante','recepcionista','cocina']) {
   Auth.requerirAuth(rolesPermitidos);
   renderSidebar(paginaActiva);
+  if (!puedeDescargar()) document.querySelectorAll('[data-descarga]').forEach(el => el.remove());
   // Sucursal.init() se llama por separado en cada página que lo necesite
   // para evitar condiciones de carrera con las cargas de datos
   Sucursal.init().catch(() => {}); // no bloquea si falla

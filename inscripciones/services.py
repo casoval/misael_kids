@@ -1114,24 +1114,33 @@ def calendario_pagos_diario(inscripcion, anio, mes):
 
 
 def resumen_financiero(anio, mes, sucursal=None):
+    """Caja y cartera de un MES (ver `resumen_financiero_rango`)."""
+    primero = date(anio, mes, 1)
+    ultimo = date(anio, mes, calendar.monthrange(anio, mes)[1])
+    r = resumen_financiero_rango(primero, ultimo, sucursal)
+    return {'mes': f'{anio:04d}-{mes:02d}', **r}
+
+
+def resumen_financiero_rango(desde, hasta, sucursal=None):
     """
-    Caja y cartera de un mes (la misma contabilidad que muestran las tarjetas
-    de Cobros y que usan los Reportes, para que nunca den números distintos).
+    Caja y cartera entre dos fechas (inclusive); la misma contabilidad que
+    muestran las tarjetas de Cobros y que usan los Reportes, para que nunca
+    den números distintos.
     - pendiente: saldo por cobrar de todos los cobros abiertos (pendiente,
       parcial o vencido), NO anulados, ya descontando pagos, devoluciones y
-      condonado. Incluye a los vencidos.
+      condonado. Incluye a los vencidos. Es la foto de HOY (no depende de fechas).
     - vencido: la parte de lo pendiente cuyo vencimiento ya pasó.
-    - caja_mes: pagos con fecha del mes - devoluciones con fecha del mes.
+    - caja_mes: pagos con fecha del período - devoluciones con fecha del período.
     """
     hoy = date.today()
     cobros = Cobro.objects.all()
     # Los pagos con abono_origen son aplicaciones de un abono (dinero que ya
     # entró a caja el día del abono): no se cuentan dos veces.
-    pagos  = Pago.objects.filter(fecha_pago__year=anio, fecha_pago__month=mes, abono_origen__isnull=True)
+    pagos  = Pago.objects.filter(fecha_pago__gte=desde, fecha_pago__lte=hasta, abono_origen__isnull=True)
     # Un abono con es_traspaso o una devolución a_cuenta son movimientos
     # internos (el dinero no entra ni sale de caja): no se cuentan.
-    abonos = AbonoDiario.objects.filter(fecha_pago__year=anio, fecha_pago__month=mes, es_traspaso=False)
-    devs   = Devolucion.objects.filter(fecha__year=anio, fecha__month=mes, a_cuenta=False)
+    abonos = AbonoDiario.objects.filter(fecha_pago__gte=desde, fecha_pago__lte=hasta, es_traspaso=False)
+    devs   = Devolucion.objects.filter(fecha__gte=desde, fecha__lte=hasta, a_cuenta=False)
     if sucursal:
         cobros = cobros.filter(inscripcion__sucursal=sucursal)
         pagos  = pagos.filter(cobro__inscripcion__sucursal=sucursal)
@@ -1160,11 +1169,10 @@ def resumen_financiero(anio, mes, sucursal=None):
     total_pagos = p['total'] or cero
     total_devs  = d['total'] or cero
     condonado = cobros.filter(
-        monto_condonado__gt=0, fecha_pago__year=anio, fecha_pago__month=mes,
+        monto_condonado__gt=0, fecha_pago__gte=desde, fecha_pago__lte=hasta,
     ).aggregate(t=Sum('monto_condonado'))['t'] or cero
 
     return {
-        'mes': f'{anio:04d}-{mes:02d}',
         'pendiente': {'monto': pend_monto, 'cantidad': pend_n},
         'vencido':   {'monto': venc_monto, 'cantidad': venc_n},
         'caja_mes': {

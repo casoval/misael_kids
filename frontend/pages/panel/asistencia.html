@@ -254,7 +254,7 @@
           <button class="btn btn-primary" onclick="cargarAsistencia()">Cargar</button>
           <button class="btn btn-outline" onclick="abrirHistorial()">📅 Historial</button>
           <button class="btn btn-outline" onclick="abrirResumenMensual()">📊 Resumen mensual</button>
-          <button class="btn btn-outline" onclick="exportarCSV()">📥 CSV</button>
+          <button data-descarga class="btn btn-outline" onclick="exportarCSV()">📥 CSV</button>
         </div>
       </div>
 
@@ -1174,6 +1174,7 @@ function irADia(fecha) {
 
 // ── Exportar CSV ──
 function exportarCSV() {
+  if (!puedeDescargar()) { UI.toast("Tu rol no tiene permiso para descargar información.", "warn"); return; }
   const lista = Object.values(registros);
   if (!lista.length) { UI.toast('No hay datos para exportar','warn'); return; }
   const filas = [

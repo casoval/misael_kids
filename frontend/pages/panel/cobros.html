@@ -169,7 +169,7 @@
           <div style="display:flex;gap:var(--gap-sm);align-items:center">
             <span id="total-cobros" style="font-size:var(--text-sm);font-weight:700;color:var(--texto-suave)"></span>
             <div id="vt-cobros" class="vista-barra"></div>
-            <button class="btn btn-outline btn-sm" onclick="exportarCSV()">📥 CSV</button>
+            <button data-descarga class="btn btn-outline btn-sm" onclick="exportarCSV()">📥 CSV</button>
           </div>
         </div>
         <div class="tabla-wrap" id="filas-cobros">
@@ -1122,6 +1122,7 @@ async function generarMasivo() {
 
 // ── Exportar CSV ──
 function exportarCSV() {
+  if (!puedeDescargar()) { UI.toast("Tu rol no tiene permiso para descargar información.", "warn"); return; }
   UI.toast('Exportando...', 'info');
   // En producción se haría con todos los datos, aquí usamos los visibles
   const filas = [

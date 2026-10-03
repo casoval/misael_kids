@@ -53,6 +53,17 @@ class SoloAdminDirectoraORecepcionista(BasePermission):
                     and request.user.rol in ('admin', 'directora', 'recepcionista'))
 
 
+class SoloAdminODirectora(BasePermission):
+    """
+    Lectura Y escritura solo para admin/directora. Sirve para sacar información
+    del sistema en archivos (CSV, PDF): la recepcionista puede consultar en
+    pantalla, pero no descargar.
+    """
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated
+                    and request.user.rol in ('admin', 'directora'))
+
+
 class SoloAdmin(BasePermission):
     """Solo el rol admin puede usar la vista (lectura y escritura)."""
     def has_permission(self, request, view):

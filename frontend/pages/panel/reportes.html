@@ -60,9 +60,36 @@
 
     .estado-error { text-align:center;padding:var(--gap-xl);color:var(--coral-d);font-weight:700; }
 
-    @media (max-width:640px) { .fin-grid { grid-template-columns:1fr; } .bar-label { width:70px; } .bar-val { min-width:70px; } }
+    /* ── Cierre de caja ── */
+    .cierre-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap-md); }
+    .cierre-caja { border-radius:var(--radio-xl);padding:var(--gap-md) var(--gap-lg);border:2px solid; }
+    .cierre-caja .e { font-size:var(--text-xs);font-weight:800;letter-spacing:.02em; }
+    .cierre-caja .v { font-family:var(--font-display);font-size:var(--text-2xl);line-height:1.2; }
+    .cierre-caja .s { font-size:var(--text-xs);font-weight:700;opacity:.85; }
+    .cierre-filtros { display:flex;flex-wrap:wrap;gap:var(--gap-sm);align-items:center; }
+    .cierre-filtros .form-select { max-width:190px; }
+    .tabla-rep { width:100%;border-collapse:collapse;font-size:var(--text-sm); }
+    .tabla-rep th { text-align:left;font-size:var(--text-xs);color:var(--gris-600);padding:.4rem .5rem;border-bottom:2px solid var(--gris-100); }
+    .tabla-rep td { padding:.4rem .5rem;border-bottom:1px dashed var(--gris-100); }
+    .tabla-rep .der { text-align:right;white-space:nowrap; }
+    .tabla-rep tr.total td { font-weight:800;border-top:2px solid var(--gris-200); }
+    .tabla-rep tr.devol td { background:var(--coral-l); }
+    details.detalle > summary { cursor:pointer;font-weight:800;font-size:var(--text-sm);padding:var(--gap-sm) 0; }
+
+    /* ── Filtros de descarga ── */
+    .filtros-descarga { display:flex;flex-wrap:wrap;gap:var(--gap-md);align-items:flex-end;margin-bottom:var(--gap-md); }
+    .filtros-descarga label { display:flex;flex-direction:column;gap:2px;font-size:var(--text-xs);font-weight:800;color:var(--gris-600); }
+    .filtros-descarga .form-select { min-width:150px; }
+    .reporte-card { cursor:default;display:flex;flex-direction:column;align-items:stretch; }
+    .reporte-card:hover { transform:none;border-color:var(--gris-100);box-shadow:var(--sombra-md); }
+    .reporte-acciones { display:flex;gap:var(--gap-sm);margin-top:var(--gap-md);justify-content:center;flex-wrap:wrap; }
+    .rango-fechas { display:none;gap:6px;align-items:center; }
+    .rango-fechas.visible { display:inline-flex; }
+
+    @media (max-width:900px) { .cierre-grid { grid-template-columns:repeat(2,1fr); } }
+    @media (max-width:640px) { .cierre-grid { grid-template-columns:1fr; } .fin-grid { grid-template-columns:1fr; } .bar-label { width:70px; } .bar-val { min-width:70px; } }
     @media print {
-      .sidebar, .topbar-acciones, #selector-sucursal, #zona-descargas, .btn { display:none !important; }
+      .sidebar, .topbar-acciones, #selector-sucursal, #zona-descargas, .cierre-filtros, .btn { display:none !important; }
       .main-content { margin:0 !important; }
       .card, .kpi { box-shadow:none !important;break-inside:avoid; }
     }
@@ -76,8 +103,13 @@
     <header class="topbar">
       <h1 class="topbar-titulo">📊 Reportes</h1>
       <div class="topbar-acciones">
-        <select class="form-select" id="filtro-mes-reporte" style="max-width:200px" aria-label="Mes del reporte"></select>
-        <button class="btn btn-outline" onclick="window.print()" title="Imprimir o guardar como PDF">🖨️ Imprimir</button>
+        <select class="form-select" id="filtro-periodo" style="max-width:200px" aria-label="Período del reporte"></select>
+        <span class="rango-fechas" id="rango-fechas">
+          <input type="date" class="form-input" id="fecha-desde" aria-label="Desde" style="max-width:150px">
+          <span>a</span>
+          <input type="date" class="form-input" id="fecha-hasta" aria-label="Hasta" style="max-width:150px">
+        </span>
+        <button class="btn btn-outline" data-descarga onclick="window.print()" title="Imprimir esta pantalla">🖨️ Imprimir</button>
         <button class="btn btn-primary" onclick="cargar()">🔄 Actualizar</button>
       </div>
     </header>
@@ -87,6 +119,21 @@
 
       <!-- Indicadores -->
       <div class="grid-4 mb-lg" id="kpis"></div>
+
+      <!-- Cierre de caja -->
+      <div class="card mb-lg">
+        <div class="card-header" style="flex-wrap:wrap;gap:var(--gap-sm)">
+          <h3 class="card-titulo">🧾 Cierre de caja</h3>
+          <div class="cierre-filtros">
+            <select class="form-select" id="cierre-metodo" aria-label="Método de pago">
+              <option value="">Todos los métodos</option><option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option><option value="qr">QR</option>
+            </select>
+            <select class="form-select" id="cierre-usuario" aria-label="Quién registró"><option value="">Todo el personal</option></select>
+          </div>
+        </div>
+        <div id="cierre"><div class="loader"><div class="spinner"></div></div></div>
+      </div>
 
       <!-- Gráficos -->
       <div class="grid-2">
@@ -99,7 +146,7 @@
           <div id="chart-ocupacion" class="mini-bar-chart"><div class="loader"><div class="spinner"></div></div></div>
         </div>
         <div class="card">
-          <div class="card-header"><h3 class="card-titulo">🧾 Cobros emitidos en el mes</h3></div>
+          <div class="card-header"><h3 class="card-titulo">🧾 Cobros emitidos en el período</h3></div>
           <div id="chart-cobros" class="mini-bar-chart"><div class="loader"><div class="spinner"></div></div></div>
         </div>
         <div class="card">
@@ -108,36 +155,23 @@
         </div>
       </div>
 
-      <!-- Descargas -->
-      <div id="zona-descargas">
-        <h2 class="seccion-titulo">📥 Descargar en Excel (CSV)</h2>
+      <!-- Descargas (solo admin y directora; la recepcionista no ve esta zona) -->
+      <div id="zona-descargas" data-descarga>
+        <h2 class="seccion-titulo">📥 Descargar informes</h2>
         <p class="seccion-nota" id="nota-descargas"></p>
-        <div class="grid-4 mb-lg">
-          <button class="reporte-card" onclick="exportar('asistencia', this)">
-            <div class="reporte-icono" style="background:var(--turquesa-l)">📋</div>
-            <div class="reporte-titulo">Asistencia</div>
-            <div class="reporte-desc">Cada registro del mes: estado, horas, quién entregó y retiró</div>
-            <div class="mt-md"><span class="chip chip-turquesa">Del mes elegido</span></div>
-          </button>
-          <button class="reporte-card" onclick="exportar('cobros', this)">
-            <div class="reporte-icono" style="background:var(--verde-l)">💰</div>
-            <div class="reporte-titulo">Cobros</div>
-            <div class="reporte-desc">Cobros emitidos en el mes con lo pagado y el saldo de cada uno</div>
-            <div class="mt-md"><span class="chip chip-verde">Del mes elegido</span></div>
-          </button>
-          <button class="reporte-card" onclick="exportar('ninos', this)">
-            <div class="reporte-icono" style="background:var(--coral-l)">👶</div>
-            <div class="reporte-titulo">Niños inscritos</div>
-            <div class="reporte-desc">Inscripciones activas con sala, turno, alergias y tutores</div>
-            <div class="mt-md"><span class="chip chip-coral">Situación actual</span></div>
-          </button>
-          <button class="reporte-card" onclick="exportar('inventario', this)">
-            <div class="reporte-icono" style="background:var(--amarillo-l)">📦</div>
-            <div class="reporte-titulo">Inventario</div>
-            <div class="reporte-desc">Stock actual de cada ítem y cuáles están bajo el mínimo</div>
-            <div class="mt-md"><span class="chip chip-amarillo">Situación actual</span></div>
-          </button>
+        <div class="filtros-descarga">
+          <label>Sala<select class="form-select" id="f-sala"><option value="">Todas las salas</option></select></label>
+          <label>Estado de los cobros<select class="form-select" id="f-estado-cobro">
+            <option value="">Todos</option><option value="pendiente">Pendiente</option><option value="parcial">Pago parcial</option>
+            <option value="vencido">Vencido</option><option value="pagado">Pagado</option><option value="anulado">Anulado</option></select></label>
+          <label>Tipo de cobro<select class="form-select" id="f-tipo-cobro">
+            <option value="">Todos</option><option value="mensualidad">Mensualidad</option><option value="diario">Por día</option>
+            <option value="extra">Extra</option></select></label>
+          <label>Detalle de asistencia<select class="form-select" id="f-estado-asist">
+            <option value="">Solo resumen</option><option value="ausente">Detallar ausentes</option>
+            <option value="ausente_justificado">Detallar justificados</option><option value="presente">Detallar presentes</option></select></label>
         </div>
+        <div class="grid-4 mb-lg" id="tarjetas-informes"></div>
       </div>
     </div>
   </main>
@@ -159,25 +193,57 @@ const num  = v => parseFloat(v || 0);
 const pct  = v => v == null ? '—' : (Number.isInteger(v) ? v : v.toFixed(1)) + '%';
 const bs   = v => UI.moneda(num(v));
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-let token = 0;                  // descarta respuestas viejas si el filtro cambió mientras cargaba
+const METODOS = [['efectivo', 'Efectivo', 'verde'], ['transferencia', 'Transferencia', 'turquesa'], ['qr', 'QR', 'violeta']];
+const MAX_DIAS = 366;
+let token = 0, tokenCierre = 0;  // descartan respuestas viejas si el filtro cambió mientras cargaba
 
-// ── Selector de meses (los últimos 12) ──
+// Solo admin y directora descargan. La recepcionista consulta en pantalla (el servidor también lo exige).
+const PUEDE_DESCARGAR = ['admin', 'directora'].includes((Auth.getUsuario() || {}).rol);
+
+// ── Fechas ──
+const dos = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`;
+const verFecha = f => f.split('-').reverse().join('/');
+
+// ── Selector de período: hoy, ayer, últimos 7 días, los últimos 12 meses o un rango ──
 (function () {
-  const hoy = new Date();
+  const sel = $('filtro-periodo'), hoy = new Date();
+  sel.add(new Option('Hoy', 'hoy'));
+  sel.add(new Option('Ayer', 'ayer'));
+  sel.add(new Option('Últimos 7 días', '7d'));
   for (let i = 0; i < 12; i++) {
     const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-    $('filtro-mes-reporte').add(new Option(`${MESES[d.getMonth()]} ${d.getFullYear()}`,
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`));
+    sel.add(new Option(`${MESES[d.getMonth()]} ${d.getFullYear()}`, `mes:${d.getFullYear()}-${dos(d.getMonth() + 1)}`));
   }
+  sel.add(new Option('Rango de fechas…', 'rango'));
+  sel.value = `mes:${hoy.getFullYear()}-${dos(hoy.getMonth() + 1)}`;
+  $('fecha-desde').value = $('fecha-hasta').value = iso(hoy);
 })();
 
-const getMes = () => $('filtro-mes-reporte').value;
+// Devuelve {desde, hasta, etiqueta} o null si el rango no es válido (y avisa por qué).
+function getRango() {
+  const v = $('filtro-periodo').value, hoy = new Date();
+  const r = (desde, hasta, etiqueta) => ({ desde, hasta, etiqueta });
+  if (v === 'hoy') return r(iso(hoy), iso(hoy), `Hoy ${verFecha(iso(hoy))}`);
+  if (v === 'ayer') { const a = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1); return r(iso(a), iso(a), `Ayer ${verFecha(iso(a))}`); }
+  if (v === '7d') { const a = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 6); return r(iso(a), iso(hoy), `Últimos 7 días (${verFecha(iso(a))} al ${verFecha(iso(hoy))})`); }
+  if (v.startsWith('mes:')) {
+    const [y, m] = v.slice(4).split('-').map(Number);
+    return r(iso(new Date(y, m - 1, 1)), iso(new Date(y, m, 0)), $('filtro-periodo').selectedOptions[0].textContent);
+  }
+  const d = $('fecha-desde').value, h = $('fecha-hasta').value;
+  if (!d || !h) { UI.toast('Elige la fecha inicial y la final.', 'warn'); return null; }
+  if (d > h) { UI.toast('La fecha inicial no puede ser posterior a la final.', 'warn'); return null; }
+  if ((new Date(h) - new Date(d)) / 86400000 + 1 > MAX_DIAS) { UI.toast(`El rango no puede pasar de ${MAX_DIAS} días.`, 'warn'); return null; }
+  return r(d, h, d === h ? verFecha(d) : `${verFecha(d)} al ${verFecha(h)}`);
+}
+
 // La sucursal es la del selector de arriba (la misma que en el resto del panel).
-const paramsFiltro = () => {
-  const q = new URLSearchParams({ mes: getMes() });
+function paramsBase(rango) {
+  const q = new URLSearchParams({ desde: rango.desde, hasta: rango.hasta });
   if (Sucursal.getId()) q.set('sucursal', Sucursal.getId());
-  return q.toString();
-};
+  return q;
+}
 
 // ── Piezas ──
 function kpi(etq, valor, sub, color) {
@@ -194,15 +260,15 @@ function barraSimple(etq, valorTxt, pctAncho, color, titulo) {
 function renderKpis(r) {
   const a = r.asistencia, o = r.ocupacion, c = r.caja;
   $('kpis').innerHTML =
-    kpi('📋 Asistencia', pct(a.porcentaje), a.total ? `${a.presentes} presentes de ${a.total} registros` : 'Sin registros este mes', 'var(--turquesa-d)') +
-    kpi('✅ Cobrado en el mes', bs(c.caja_mes.neto), `${c.caja_mes.cantidad_pagos} pago(s)` + (c.caja_mes.cantidad_devoluciones ? ` · ${c.caja_mes.cantidad_devoluciones} devolución(es)` : ''), 'var(--verde-d)') +
+    kpi('📋 Asistencia', pct(a.porcentaje), a.total ? `${a.presentes} presentes de ${a.total} registros` : 'Sin registros en este período', 'var(--turquesa-d)') +
+    kpi('✅ Cobrado en el período', bs(c.caja_mes.neto), `${c.caja_mes.cantidad_pagos} pago(s)` + (c.caja_mes.cantidad_devoluciones ? ` · ${c.caja_mes.cantidad_devoluciones} devolución(es)` : ''), 'var(--verde-d)') +
     kpi('⏳ Por cobrar hoy', bs(c.pendiente.monto), `${c.pendiente.cantidad} cobro(s)` + (c.vencido.cantidad ? ` · <span style="color:var(--coral-d)">${bs(c.vencido.monto)} vencido</span>` : ''), '#92400E') +
-    kpi('👶 Ocupación', pct(o.porcentaje), `${o.inscritos} niños de ${o.capacidad} lugares`, 'var(--violeta-d)');
+    kpi('⚠️ Niños con deuda', bs(r.deudas.monto), `${r.deudas.cantidad} niño(s) no están al día`, 'var(--coral-d)');
 }
 
 function renderAsistencia(a) {
   const cont = $('chart-asistencia');
-  if (!a.por_sala.length) { UI.vacio(cont, 'Sin registros de asistencia en este mes', '📋'); return; }
+  if (!a.por_sala.length) { UI.vacio(cont, 'Sin registros de asistencia en este período', '📋'); return; }
   cont.innerHTML = a.por_sala.map(s => {
     const seg = (n, color) => n ? `<div class="bar-fill" style="width:${n * 100 / s.total}%;background:${color}"></div>` : '';
     return `<div class="bar-row" title="${esc(s.sala_nombre)}: ${s.presentes} presentes, ${s.ausentes} ausentes, ${s.justificados} justificados">
@@ -231,7 +297,7 @@ function renderOcupacion(o) {
 
 function renderCobros(cm) {
   const cont = $('chart-cobros');
-  if (!cm.cantidad) { UI.vacio(cont, 'No se emitieron cobros en este mes', '🧾'); return; }
+  if (!cm.cantidad) { UI.vacio(cont, 'No se emitieron cobros en este período', '🧾'); return; }
   const filas = [['pagado', 'Pagados', 'var(--verde)'], ['parcial', 'Pago parcial', 'var(--turquesa)'],
                  ['pendiente', 'Pendientes', 'var(--amarillo)'], ['vencido', 'Vencidos', 'var(--coral)'],
                  ['anulado', 'Anulados', 'var(--gris-400)']];
@@ -246,7 +312,7 @@ function renderFinanciero(r) {
   const cm = r.cobros_mes, c = r.caja;
   const caja = (etq, val, bg, br, tx) => `<div class="fin-caja" style="background:${bg};border-color:${br};color:${tx}"><div class="e">${etq}</div><div class="v">${val}</div></div>`;
   $('resumen-financiero').innerHTML = `
-    <div class="fin-sub" style="margin-top:0">Cobros emitidos en el mes</div>
+    <div class="fin-sub" style="margin-top:0">Cobros emitidos en el período</div>
     <div class="fin-grid">
       ${caja('Emitido', bs(cm.emitido), 'var(--gris-50)', 'var(--gris-200)', 'var(--texto)')}
       ${caja('✅ Cobrado', bs(cm.cobrado), 'var(--verde-l)', 'var(--verde)', 'var(--verde-d)')}
@@ -256,26 +322,73 @@ function renderFinanciero(r) {
     <div class="fin-fila"><span>% cobrado de lo emitido</span><b>${pct(cm.porcentaje_cobrado)}</b></div>
     ${num(cm.condonado) ? `<div class="fin-fila"><span>Condonado</span><b>${bs(cm.condonado)}</b></div>` : ''}
 
-    <div class="fin-sub">Caja del mes <span style="font-weight:600;color:var(--texto-suave)">(dinero que entró y salió)</span></div>
+    <div class="fin-sub">Caja del período <span style="font-weight:600;color:var(--texto-suave)">(dinero que entró y salió)</span></div>
     <div class="fin-fila"><span>Pagos recibidos (${c.caja_mes.cantidad_pagos})</span><b>${bs(c.caja_mes.ingresos)}</b></div>
     <div class="fin-fila"><span>Devoluciones (${c.caja_mes.cantidad_devoluciones})</span><b>− ${bs(c.caja_mes.devoluciones)}</b></div>
     <div class="fin-fila"><span><b>Neto</b></span><b style="color:var(--verde-d)">${bs(c.caja_mes.neto)}</b></div>
 
     <div class="fin-sub">Cartera hoy <span style="font-weight:600;color:var(--texto-suave)">(de todos los meses)</span></div>
     <div class="fin-fila"><span>Por cobrar (${c.pendiente.cantidad})</span><b>${bs(c.pendiente.monto)}</b></div>
-    <div class="fin-fila"><span style="color:var(--coral-d)">De ese total, vencido (${c.vencido.cantidad})</span><b style="color:var(--coral-d)">${bs(c.vencido.monto)}</b></div>`;
+    <div class="fin-fila"><span style="color:var(--coral-d)">De ese total, vencido (${c.vencido.cantidad})</span><b style="color:var(--coral-d)">${bs(c.vencido.monto)}</b></div>
+    <div class="fin-fila"><span>Niños que no están al día (${r.deudas.cantidad})</span><b>${bs(r.deudas.monto)}</b></div>`;
 }
 
-// ── Carga: UNA sola llamada, todo calculado en el servidor ──
+// ── Cierre de caja: cuánto debe quedar en efectivo, transferencia y QR ──
+function renderCierre(c, rango) {
+  const t = c.total, porMetodo = Object.fromEntries(c.metodos.map(m => [m.metodo, m]));
+  const cajas = METODOS.map(([k, etq, color]) => {
+    const m = porMetodo[k] || { neto: 0, ingresos: 0, devoluciones: 0, cantidad_ingresos: 0, cantidad_devoluciones: 0 };
+    return `<div class="cierre-caja" style="background:var(--${color}-l);border-color:var(--${color});color:var(--${color}-d)">
+      <div class="e">DEBE DEJAR EN ${etq.toUpperCase()}</div><div class="v">${bs(m.neto)}</div>
+      <div class="s">Recibido ${bs(m.ingresos)}${num(m.devoluciones) ? ` · devuelto ${bs(m.devoluciones)}` : ''} · ${m.cantidad_ingresos + m.cantidad_devoluciones} mov.</div></div>`;
+  }).join('') + `<div class="cierre-caja" style="background:var(--gris-50);border-color:var(--gris-200);color:var(--texto)">
+      <div class="e">TOTAL DEL PERÍODO</div><div class="v">${bs(t.neto)}</div>
+      <div class="s">${t.cantidad_ingresos} cobro(s)${t.cantidad_devoluciones ? ` · ${t.cantidad_devoluciones} devolución(es)` : ''}</div></div>`;
+
+  const celdasMetodo = obj => METODOS.map(([k]) => `<td class="der">${bs(obj[k])}</td>`).join('');
+  const porDia = c.por_dia.length > 1 ? `
+    <div class="fin-sub">Movimiento día por día</div>
+    <div class="tabla-wrap"><table class="tabla-rep"><thead><tr><th>Fecha</th>${METODOS.map(([, e]) => `<th class="der">${e}</th>`).join('')}<th class="der">Total</th></tr></thead><tbody>
+      ${c.por_dia.map(d => `<tr><td>${verFecha(d.fecha)}</td>${celdasMetodo(d.metodos)}<td class="der"><b>${bs(d.total.neto)}</b></td></tr>`).join('')}
+      <tr class="total"><td>Total</td>${METODOS.map(([k]) => `<td class="der">${bs((porMetodo[k] || {}).neto)}</td>`).join('')}<td class="der">${bs(t.neto)}</td></tr>
+    </tbody></table></div>` : '';
+
+  const porPersona = c.por_usuario.length ? `
+    <div class="fin-sub">Por persona que registró el dinero <span style="font-weight:600;color:var(--texto-suave)">(quién debe entregar cuánto)</span></div>
+    <div class="tabla-wrap"><table class="tabla-rep"><thead><tr><th>Registró</th>${METODOS.map(([, e]) => `<th class="der">${e}</th>`).join('')}<th class="der">Total</th></tr></thead><tbody>
+      ${c.por_usuario.map(u => `<tr><td>${esc(u.usuario)}</td>${celdasMetodo(u.metodos)}<td class="der"><b>${bs(u.total.neto)}</b></td></tr>`).join('')}
+    </tbody></table></div>` : '';
+
+  const nombres = Object.fromEntries(METODOS.map(([k, e]) => [k, e]));
+  const hora = iso_ => iso_ ? new Date(iso_).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '';
+  const detalle = `
+    <details class="detalle"><summary>Ver el detalle de cada movimiento (${c.movimientos.length})</summary>
+    ${c.movimientos.length ? `<div class="tabla-wrap"><table class="tabla-rep"><thead><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Recibo</th><th>Niño</th><th>Concepto</th><th>Método</th><th class="der">Monto</th><th>Registró</th></tr></thead><tbody>
+      ${c.movimientos.map(m => `<tr class="${m.signo < 0 ? 'devol' : ''}"><td>${verFecha(m.fecha)}</td><td>${hora(m.creado)}</td><td>${esc(m.tipo_display)}</td>
+        <td>${m.recibo ? String(m.recibo).padStart(6, '0') : '—'}</td><td>${esc(m.nino)}</td><td>${esc(m.concepto)}</td>
+        <td>${esc(nombres[m.metodo] || m.metodo)}</td><td class="der">${m.signo < 0 ? '− ' : ''}${bs(m.monto)}</td><td>${esc(m.usuario)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="seccion-nota" style="margin:0">No hubo movimientos de dinero en este período.</p>'}
+    </details>`;
+
+  $('cierre').innerHTML = `<div class="cierre-grid">${cajas}</div>
+    <p class="seccion-nota" style="margin:var(--gap-sm) 0 0">Efectivo es lo que debe estar en la caja; transferencia y QR se comprueban en el banco.
+      Una devolución en efectivo resta del efectivo. Los abonos ya aplicados a días y los traspasos entre cuentas no se cuentan dos veces.</p>
+    ${porDia}${porPersona}${detalle}`;
+}
+
+// ── Carga ──
 async function cargar() {
+  const rango = getRango();
+  if (!rango) return;
   const mi = ++token;
-  const opcMes = $('filtro-mes-reporte').selectedOptions[0];
-  $('contexto').textContent = `${opcMes ? opcMes.textContent : ''} · ${Sucursal.getNombre()}`;
-  $('nota-descargas').textContent = `Los reportes “del mes” usan ${opcMes ? opcMes.textContent : 'el mes elegido'} y ${Sucursal.getNombre().toLowerCase()}.`;
+  $('contexto').textContent = `${rango.etiqueta} · ${Sucursal.getNombre()}`;
+  if (PUEDE_DESCARGAR) $('nota-descargas').textContent =
+    `Los informes “del período” usan ${rango.etiqueta} y ${Sucursal.getNombre().toLowerCase()}. Los de “situación actual” muestran cómo está hoy.`;
   const cargando = '<div class="loader"><div class="spinner"></div></div>';
   ['chart-asistencia', 'chart-ocupacion', 'chart-cobros', 'resumen-financiero'].forEach(id => $(id).innerHTML = cargando);
+  cargarCierre(rango);
   try {
-    const r = await API.get('/reportes/resumen/?' + paramsFiltro());
+    const r = await API.get('/reportes/resumen/?' + paramsBase(rango));
     if (mi !== token) return;
     renderKpis(r);
     renderAsistencia(r.asistencia);
@@ -291,22 +404,121 @@ async function cargar() {
   }
 }
 
-// ── Exportaciones: el servidor arma el CSV (escapado, con filtros y sin el tope de 25 registros) ──
-async function exportar(tipo, boton) {
-  boton.disabled = true;
-  UI.toast('Preparando el reporte…', 'info');
+function paramsCierre(rango) {
+  const q = paramsBase(rango);
+  if ($('cierre-metodo').value) q.set('metodo', $('cierre-metodo').value);
+  if ($('cierre-usuario').value) q.set('usuario', $('cierre-usuario').value);
+  return q;
+}
+
+async function cargarCierre(rango) {
+  const mi = ++tokenCierre;
+  $('cierre').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
   try {
-    const r = await API.descargar(`/reportes/exportar/${tipo}/?${paramsFiltro()}`, { nombre: `${tipo}.csv`, omitirSiVacio: true });
+    const c = await API.get('/reportes/cierre-caja/?' + paramsCierre(rango));
+    if (mi !== tokenCierre) return;
+    renderCierre(c, rango);
+    // El selector de personal se llena con quienes registraron dinero en el período (sin perder la elección)
+    if (!$('cierre-usuario').value) {
+      const sel = $('cierre-usuario');
+      sel.innerHTML = '<option value="">Todo el personal</option>' + c.por_usuario.filter(u => u.usuario_id)
+        .map(u => `<option value="${esc(u.usuario_id)}">${esc(u.usuario)}</option>`).join('');
+    }
+  } catch (err) {
+    if (mi !== tokenCierre) return;
+    $('cierre').innerHTML = `<div class="estado-error">⚠️ No se pudo cargar el cierre de caja: ${esc(err.message)}<br>
+      <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="cargar()">Reintentar</button></div>`;
+  }
+}
+
+// ── Descargas (solo admin y directora): el servidor arma el PDF o el CSV con los mismos filtros ──
+const INFORMES = [
+  { clave: 'informe-economico', icono: '💵', bg: 'verde-l', chip: 'chip-verde', titulo: 'Informe económico',
+    desc: 'Dinero recibido por método, cobros emitidos, cartera y mayores deudas', periodo: true, csv: null,
+    filtros: [] },
+  { clave: 'cierre-caja', icono: '🧾', bg: 'violeta-l', chip: 'chip-violeta', titulo: 'Cierre de caja',
+    desc: 'Cuánto dejar en efectivo, transferencia y QR, día por día, con cada movimiento y firmas', periodo: true,
+    csv: 'cierre-caja', filtros: ['método y persona del cierre de arriba'] },
+  { clave: 'asistencia', icono: '📋', bg: 'turquesa-l', chip: 'chip-turquesa', titulo: 'Asistencia',
+    desc: 'Resumen por sala y por niño; opcionalmente el detalle de ausentes o presentes', periodo: true,
+    csv: 'asistencia', filtros: ['sala', 'detalle'] },
+  { clave: 'cobros', icono: '💰', bg: 'amarillo-l', chip: 'chip-amarillo', titulo: 'Cobros',
+    desc: 'Cobros emitidos con lo pagado y el saldo de cada uno', periodo: true,
+    csv: 'cobros', filtros: ['sala', 'estado', 'tipo'] },
+  { clave: 'deudas', icono: '⏳', bg: 'coral-l', chip: 'chip-coral', titulo: 'Deudas',
+    desc: 'Niños que no están al día, de quien más debe a quien menos, con su tutor', periodo: false,
+    csv: 'deudas', filtros: ['sala'] },
+  { clave: 'ninos', icono: '👶', bg: 'coral-l', chip: 'chip-coral', titulo: 'Niños inscritos',
+    desc: 'Inscripciones activas con sala, turno, alergias y tutores', periodo: false,
+    csv: 'ninos', filtros: ['sala'] },
+  { clave: 'inventario', icono: '📦', bg: 'violeta-l', chip: 'chip-violeta', titulo: 'Inventario',
+    desc: 'Stock actual de cada ítem y cuáles hay que reponer', periodo: false,
+    csv: 'inventario', filtros: [] },
+];
+
+function paramsInforme(clave, rango) {
+  const usaPeriodo = INFORMES.find(i => i.clave === clave).periodo;
+  const q = usaPeriodo ? paramsBase(rango) : new URLSearchParams(Sucursal.getId() ? { sucursal: Sucursal.getId() } : {});
+  const poner = (k, v) => { if (v) q.set(k, v); };
+  if (['asistencia', 'cobros', 'deudas', 'ninos'].includes(clave)) poner('sala', $('f-sala').value);
+  if (clave === 'asistencia') poner('estado', $('f-estado-asist').value);
+  if (clave === 'cobros') { poner('estado', $('f-estado-cobro').value); poner('tipo', $('f-tipo-cobro').value); }
+  if (clave === 'cierre-caja') { poner('metodo', $('cierre-metodo').value); poner('usuario', $('cierre-usuario').value); }
+  return q.toString();
+}
+
+function renderTarjetas() {
+  if (!PUEDE_DESCARGAR) return;
+  $('tarjetas-informes').innerHTML = INFORMES.map(i => `
+    <div class="reporte-card">
+      <div class="reporte-icono" style="background:var(--${i.bg})">${i.icono}</div>
+      <div class="reporte-titulo">${i.titulo}</div>
+      <div class="reporte-desc">${i.desc}</div>
+      <div class="mt-md"><span class="chip ${i.chip}">${i.periodo ? 'Del período elegido' : 'Situación actual'}</span></div>
+      <div class="reporte-acciones">
+        <button class="btn btn-primary btn-sm" onclick="descargar('${i.clave}', 'pdf', this)">📄 PDF</button>
+        ${i.csv ? `<button class="btn btn-outline btn-sm" onclick="descargar('${i.csv}', 'csv', this)">📊 Excel</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function descargar(clave, formato, boton) {
+  if (!PUEDE_DESCARGAR) { UI.toast('Tu rol no tiene permiso para descargar informes.', 'warn'); return; }
+  const rango = getRango();
+  if (!rango) return;
+  boton.disabled = true;
+  UI.toast('Preparando el informe…', 'info');
+  try {
+    const ruta = formato === 'pdf' ? `/reportes/pdf/${clave}/` : `/reportes/exportar/${clave}/`;
+    const r = await API.descargar(`${ruta}?${paramsInforme(clave, rango)}`,
+      { nombre: `${clave}.${formato === 'pdf' ? 'pdf' : 'csv'}`, omitirSiVacio: formato === 'csv' });
     if (!r.descargado) UI.toast('No hay registros para esa selección, no se descargó ningún archivo.', 'warn', 5000);
-    else UI.toast(`✅ ${r.filas ?? ''} registro(s) exportado(s): ${r.nombre}`, 'exito');
+    else UI.toast(`✅ Informe descargado: ${r.nombre}`, 'exito');
   } catch (err) { UI.toast('Error: ' + err.message, 'error', 6000); }
   boton.disabled = false;
 }
 
-$('filtro-mes-reporte').addEventListener('change', cargar);
-window.addEventListener('sucursalChanged', cargar);
+async function cargarSalas() {
+  if (!PUEDE_DESCARGAR) return;
+  const sel = $('f-sala'), previa = sel.value;
+  sel.innerHTML = '<option value="">Todas las salas</option>';
+  try {
+    const q = Sucursal.getId() ? `?sucursal=${Sucursal.getId()}&activa=true&page_size=200` : '?activa=true&page_size=200';
+    const d = await API.get('/core/salas/' + q);
+    (d.results || d).forEach(s => sel.add(new Option(s.nombre, s.id)));
+    sel.value = previa;
+  } catch { /* sin salas el filtro queda en "Todas": no impide descargar */ }
+}
 
-(async () => { await Sucursal.cargar(); cargar(); })();
+$('filtro-periodo').addEventListener('change', () => {
+  $('rango-fechas').classList.toggle('visible', $('filtro-periodo').value === 'rango');
+  cargar();
+});
+['fecha-desde', 'fecha-hasta'].forEach(id => $(id).addEventListener('change', cargar));
+['cierre-metodo', 'cierre-usuario'].forEach(id => $(id).addEventListener('change', () => { const r = getRango(); if (r) cargarCierre(r); }));
+window.addEventListener('sucursalChanged', () => { $('cierre-usuario').value = ''; cargarSalas(); cargar(); });
+
+(async () => { await Sucursal.cargar(); renderTarjetas(); cargarSalas(); cargar(); })();
 </script>
 </body>
 </html>
