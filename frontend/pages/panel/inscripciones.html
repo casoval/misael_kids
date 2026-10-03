@@ -485,6 +485,10 @@
       Se cierra la inscripción y el niño deja de aparecer en la lista de asistencia. Su historial de cobros y pagos
       se conserva. Si en el futuro regresa, se crea una <strong>inscripción nueva</strong> y su saldo a favor (si lo hay) pasa a ella.
     </p>
+    <p style="font-size:var(--text-sm);margin-bottom:var(--gap-md);padding:8px 10px;border-radius:8px;background:var(--amarillo-l);color:var(--amarillo-d)">
+      ⚠️ Se puede dar de baja aunque deba algo, pero <strong>si regresa no se podrá inscribir de nuevo hasta pagar esa deuda</strong>
+      (el saldo a favor no la compensa).
+    </p>
     <div class="form-grupo">
       <label class="form-label">Último día de asistencia *</label>
       <input type="date" id="baja-fecha" class="form-input">
@@ -862,7 +866,7 @@ async function cargar() {
             `<li>${i.nino_nombre}: debe ${UI.moneda(i.estado_pago.deuda_total != null ? i.estado_pago.deuda_total : i.estado_pago.falta_pagar)}${parseFloat(i.estado_pago.deuda_anterior) > 0 ? ' <small>(incluye Bs. ' + parseFloat(i.estado_pago.deuda_anterior).toFixed(2) + ' de una inscripción anterior)</small>' : ''}</li>`).join('')}</ul></div>`
       : '';
     tbody.innerHTML = lista.map(i => `
-      <tr class="${i.estado_pago && i.estado_pago.nivel === 'deuda' ? 'fila-deuda' : ''}">
+      <tr class="${(i.estado_pago && i.estado_pago.nivel === 'deuda') || (!i.activa && parseFloat(i.deuda_cerrada) > 0) ? 'fila-deuda' : ''}">
         <td style="font-weight:700">${i.nino_nombre}</td>
         <td style="font-size:var(--text-xs)">${i.sucursal_nombre}</td>
         <td>
@@ -891,8 +895,8 @@ async function cargar() {
               onclick="abrirTransferir('${i.id}','${i.nino_nombre}','${i.sucursal_nombre}')">🔁 Transferir</button>
             <button class="btn btn-sm" style="background:var(--violeta-l);color:var(--violeta-d);border:1.5px solid var(--violeta-d)"
               onclick="abrirCambiarModalidad('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')">${i.modalidad_pago==='diaria'?'📅 Pasar a mensual':'📅 Pasar a por día'}</button>` : ''}
-            <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
-              onclick="${i.activa ? `abrirBaja('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')` : `eliminar('${i.id}','${i.nino_nombre}')`}">${i.activa ? 'Dar de baja' : 'Eliminar'}</button>
+            ${i.activa ? `<button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+              onclick="abrirBaja('${i.id}','${i.nino_nombre}','${i.modalidad_pago}')">Dar de baja</button>` : ''}
           </div>
         </td>
       </tr>`).join('');
@@ -915,6 +919,12 @@ function cambioEstadoPago() {
 
 function htmlEstadoPago(i) {
   const e = i.estado_pago;
+  if (!e && !i.activa && parseFloat(i.deuda_cerrada) > 0) {
+    // Dada de baja pero con deuda: se muestra para poder cobrarla (sin esto no podrá volver a inscribirse).
+    return `<button class="est-pago deuda" title="Dada de baja con deuda: debe pagarla antes de poder inscribirse de nuevo"
+              onclick="abrirPagos('${i.id}','${i.nino_nombre}','${i.sala_nombre} · ${i.turno_nombre}','${i.modalidad_pago}')">⚠️ Debe ${UI.moneda(i.deuda_cerrada)}</button>
+            <div class="est-pago-det rojo">🚪 Dada de baja<br>Debe pagarlo para volver a inscribirse</div>`;
+  }
   if (!e) return i.activa ? '<span style="color:var(--texto-suave)">—</span>' : '<span class="est-pago sin_dias" style="cursor:default">🚪 Dada de baja</span>';
   const abrir = `abrirPagos('${i.id}','${i.nino_nombre}','${i.sala_nombre} · ${i.turno_nombre}','${i.modalidad_pago}')`;
   const icono = { al_dia: '✅', deuda: '⚠️', por_iniciar: '🕒', sin_dias: '➖', sin_cobro: '➖' }[e.nivel] || '';
@@ -1259,8 +1269,9 @@ async function guardarInscripcion() {
     porcentaje_ajuste:tipo==='descuento_porcentaje'?document.getElementById('i-pct-ajuste').value:0,
     monto_ajuste:     tipo==='descuento_monto'?document.getElementById('i-monto-ajuste').value:0,
     motivo_ajuste:    document.getElementById('i-motivo-ajuste').value,
-    activa:           true,
   };
+  // Solo al crear: editar nunca cambia si está activa o dada de baja (una baja no se reactiva).
+  if (!editandoId) datos.activa = true;
   // Mensual (o por día antigua sin calendario): fecha de inicio suelta. Por día con calendario:
   // el servidor toma el primer día elegido; los días solo se cambian desde "Ajustar días".
   if (!usaCalendario) datos.fecha_inicio = document.getElementById('i-inicio').value;
@@ -1461,21 +1472,13 @@ async function confirmarBaja() {
   try {
     const r = await API.post('/inscripciones/inscripciones/' + bajaId + '/cerrar/', datos);
     UI.cerrarModal('modal-baja');
-    UI.toast('✅ Inscripción cerrada. Si el niño vuelve, crea una inscripción nueva.', 'exito');
+    UI.toast('✅ Inscripción cerrada. Si el niño vuelve, crea una inscripción nueva (antes debe pagar lo que deba).', 'exito');
     (r.advertencias || []).forEach(a => UI.toast('⚠️ ' + a, 'error'));
     cargar(); cargarStats();
     if (r.devolucion && r.devolucion.id) verRecibo('devolucion', r.devolucion.id);
   } catch (err) { errorEl.textContent = err.message; }
 }
 
-async function eliminar(id, nombre) {
-  if (!confirm('Eliminar inscripción de "'+nombre+'"?\nSus cobros también serán afectados.')) return;
-  try {
-    await API.patch('/inscripciones/inscripciones/'+id+'/',{activa:false});
-    UI.toast('Inscripción desactivada','exito');
-    cargar(); cargarStats();
-  } catch (err) { UI.toast('Error: '+err.message,'error'); }
-}
 
 /* ── Panel de Pagos (mensual o diario según la inscripción) ── */
 let pgInscripcionId = null;

@@ -557,15 +557,14 @@ def ultimo_dia_consumido(inscripcion):
     return max(fechas) if fechas else None
 
 
-def deuda_inscripciones_anteriores(inscripcion):
+def deuda_cerradas_del_nino(nino, excluir_pk=None):
     """
-    Deuda que el niño dejó en inscripciones CERRADAS (p. ej. días cobrados sin
-    pagar al pasar de por día a mensual). Al cerrarse la inscripción esa deuda
-    sale de la lista, así que se suma aquí para que el personal no la pierda de vista.
+    Deuda que un niño tiene en sus inscripciones CERRADAS (dadas de baja, o cerradas
+    al cambiar de modalidad). El saldo a favor NO la compensa: hay que cobrarla.
     Devuelve (monto, [detalle por inscripción]).
     """
     total, detalle = CERO, []
-    for vieja in Inscripcion.objects.filter(nino=inscripcion.nino, activa=False).exclude(pk=inscripcion.pk):
+    for vieja in Inscripcion.objects.filter(nino=nino, activa=False).exclude(pk=excluir_pk):
         monto = deuda_abierta(vieja)
         if monto > 0:
             total += monto
@@ -573,6 +572,16 @@ def deuda_inscripciones_anteriores(inscripcion):
                             'etiqueta': f'{vieja.get_modalidad_pago_display()} · {vieja.sala.nombre} {vieja.turno.nombre}',
                             'modalidad': vieja.modalidad_pago})
     return total, detalle
+
+
+def deuda_inscripciones_anteriores(inscripcion):
+    """
+    Deuda que el niño dejó en inscripciones CERRADAS (p. ej. días cobrados sin
+    pagar al pasar de por día a mensual). Al cerrarse la inscripción esa deuda
+    sale de la lista, así que se suma aquí para que el personal no la pierda de vista.
+    Devuelve (monto, [detalle por inscripción]).
+    """
+    return deuda_cerradas_del_nino(inscripcion.nino, excluir_pk=inscripcion.pk)
 
 
 def _sumar_deuda_anterior(inscripcion, cuenta):

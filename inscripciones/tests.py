@@ -23,6 +23,7 @@ from .models import Inscripcion, Cobro, Pago, AbonoDiario, DiasContratados
 from .models import Devolucion
 from django.db import IntegrityError, transaction
 from .services import saldo_a_favor, resumen_financiero, resumen_diario, generar_ciclo_mensual, estado_pago
+from .services import deuda_abierta
 
 URL_INSC = '/api/inscripciones/inscripciones/'
 URL_ASIST = '/api/asistencia/asistencia/'
@@ -1867,3 +1868,121 @@ class CambioDeModalidadCasosTests(PorDiaBase):
     def test_empezar_el_dia_siguiente_al_ultimo_asistido_si_se_puede(self):
         insc = self._con_dias_pasados('Ok', abono=400)
         self.assertEqual(self._pasar(insc, self.hoy).status_code, status.HTTP_201_CREATED)
+
+
+# ═══════════════════════════════════════════════════════════════════
+class ReinscripcionConDeudaTests(PorDiaBase):
+    """Se puede dar de baja con deuda, pero no volver a inscribir hasta pagarla (aun con saldo a favor)."""
+
+    def _baja(self, insc):
+        return self.client.post(f'{URL_INSC}{insc.id}/cerrar/', {}, format='json')
+
+    def _nueva(self, nino, modalidad='mensual'):
+        datos = {'nino': str(nino.id), 'sucursal': self.sucursal.id, 'sala': self.sala.id, 'turno': self.turno.id,
+                 'modalidad_pago': modalidad, 'costo_mensual': '650.00', 'costo_diario': '40.00'}
+        if modalidad == 'mensual':
+            datos['fecha_inicio'] = self.hoy.isoformat()
+        else:
+            datos['dias_programados'] = [self.hoy.isoformat()]
+        return self.client.post(URL_INSC, datos, format='json')
+
+    def _mensual_con_deuda_dada_de_baja(self, nombre='Deudor'):
+        m = self._inscribir(self._otro_nino(nombre, 'Baja'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        generar_ciclo_mensual(m, ciclo_num=0)                 # 650 sin pagar
+        self.assertEqual(self._baja(m).status_code, status.HTTP_200_OK)
+        return m
+
+    def test_se_puede_dar_de_baja_con_deuda(self):
+        m = self._mensual_con_deuda_dada_de_baja()
+        m.refresh_from_db()
+        self.assertFalse(m.activa)
+        self.assertEqual(deuda_abierta(m), dec(650))
+
+    def test_con_deuda_en_la_inscripcion_cerrada_no_se_puede_crear_una_mensualidad_nueva(self):
+        m = self._mensual_con_deuda_dada_de_baja()
+        r = self._nueva(m.nino)
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('650', str(r.data))
+        self.assertEqual(Inscripcion.objects.filter(nino=m.nino, activa=True).count(), 0)
+
+    def test_tambien_se_bloquea_la_inscripcion_por_dia(self):
+        m = self._mensual_con_deuda_dada_de_baja('PorDia')
+        self.assertEqual(self._nueva(m.nino, 'diaria').status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_el_saldo_a_favor_no_compensa_la_deuda(self):
+        # Por día: asistió 2 días sin pagar (80) pero también tiene un abono de 500 en la misma cuenta.
+        n = self._otro_nino('Saldo', 'Favor')
+        d = self._inscribir(n, fecha_inicio=self.hoy - timedelta(days=5))
+        self.marcar(d, self.dia(2), 'presente')
+        self.marcar(d, self.dia(1), 'presente')               # 80 de deuda
+        self.assertEqual(self._baja(d).status_code, status.HTTP_200_OK)
+        d.refresh_from_db()
+        # Saldo a favor "suelto" en la inscripción cerrada (p. ej. un abono que no se aplicó)
+        AbonoDiario.objects.create(inscripcion=d, monto=dec(500), fecha_pago=self.hoy, metodo_pago='efectivo',
+                                   registrado_por=self.staff)
+        self.assertGreater(saldo_a_favor(d), 0)
+        self.assertGreater(deuda_abierta(d), 0)
+        r = self._nueva(n)
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST, r.data)
+        self.assertIn('saldo a favor', str(r.data))
+
+    def test_al_pagar_la_deuda_ya_se_puede_inscribir_de_nuevo(self):
+        m = self._mensual_con_deuda_dada_de_baja('Paga')
+        c = Cobro.objects.get(inscripcion=m, tipo=Cobro.TIPO_MENSUALIDAD)
+        pago = self.client.post(f'{URL_COBROS}{c.id}/registrar-pago/', {'monto': '650'}, format='json')
+        self.assertEqual(pago.status_code, status.HTTP_200_OK, pago.data)
+        r = self._nueva(m.nino)
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED, r.data)
+
+    def test_sin_deuda_la_baja_y_el_regreso_funcionan_como_siempre(self):
+        m = self._inscribir(self._otro_nino('Limpio', 'Baja'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        self.assertEqual(self._baja(m).status_code, status.HTTP_200_OK)
+        self.assertEqual(self._nueva(m.nino).status_code, status.HTTP_201_CREATED)
+
+    def test_una_inscripcion_dada_de_baja_no_se_puede_reactivar(self):
+        # sin deuda también: la baja es definitiva y el regreso se hace con una inscripción nueva
+        m = self._inscribir(self._otro_nino('Alta', 'Nueva'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        self._baja(m)
+        r = self.client.patch(f'{URL_INSC}{m.id}/', {'activa': True}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST, r.data)
+        self.assertIn('inscripción nueva', str(r.data))
+        m.refresh_from_db()
+        self.assertFalse(m.activa)
+        # y volver con una inscripción nueva sí funciona
+        self.assertEqual(self._nueva(m.nino).status_code, status.HTTP_201_CREATED)
+
+    def test_editar_una_inscripcion_dada_de_baja_sin_tocar_activa_sigue_cerrada(self):
+        m = self._inscribir(self._otro_nino('Edita', 'Cerrada'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        self._baja(m)
+        r = self.client.patch(f'{URL_INSC}{m.id}/', {'motivo_ajuste': 'Corrección'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        m.refresh_from_db()
+        self.assertFalse(m.activa)
+
+    def test_la_lista_muestra_la_deuda_de_una_inscripcion_dada_de_baja(self):
+        m = self._mensual_con_deuda_dada_de_baja('Lista')
+        r = self.client.get(URL_INSC + '?page_size=100&activa=false')
+        fila = next(f for f in r.data['results'] if f['id'] == str(m.id))
+        self.assertEqual(dec(fila['deuda_cerrada']), dec(650))
+        self.assertIsNone(fila['estado_pago'])
+        # sin deuda → 0; y en las activas siempre 0
+        limpia = self._inscribir(self._otro_nino('Sin', 'Deuda'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        self._baja(limpia)
+        r = self.client.get(URL_INSC + '?page_size=100&activa=')
+        filas = {f['id']: f for f in r.data['results']}
+        self.assertEqual(dec(filas[str(limpia.id)]['deuda_cerrada']), dec(0))
+        self.assertEqual(dec(filas[str(self.insc.id)]['deuda_cerrada']), dec(0))
+
+    def test_el_mensaje_de_bloqueo_indica_donde_cobrar(self):
+        m = self._mensual_con_deuda_dada_de_baja('Mensaje')
+        r = self._nueva(m.nino)
+        self.assertIn('Dadas de baja', str(r.data))
+
+    def test_las_inscripciones_no_se_eliminan_por_la_api(self):
+        m = self._inscribir(self._otro_nino('No', 'Borrar'), modalidad=Inscripcion.MODALIDAD_MENSUAL)
+        self._baja(m)
+        r = self.client.delete(f'{URL_INSC}{m.id}/')
+        self.assertEqual(r.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertIn('administrador de Django', str(r.data))
+        self.assertTrue(Inscripcion.objects.filter(pk=m.pk).exists())
+

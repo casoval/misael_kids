@@ -208,6 +208,26 @@ class InscripcionSerializer(serializers.ModelSerializer):
                               'en lugar de crear una nueva inscripción.'}
                 )
 
+        # Una inscripción dada de baja NO se reactiva: si el niño regresa se crea una inscripción
+        # nueva (así quedan bien la fecha de baja, el historial y el traslado del saldo a favor).
+        if self.instance is not None and not self.instance.activa and data.get('activa') is True:
+            raise serializers.ValidationError({'activa': (
+                'Una inscripción dada de baja no se puede reactivar. Si el niño/a regresa, '
+                'crea una inscripción nueva: su saldo a favor pasa a ella.')})
+
+        # Un niño que vuelve tras una baja no puede abrir una inscripción nueva mientras
+        # deba algo de la anterior: primero se cobra. El saldo a favor NO compensa esa
+        # deuda (se cobra aparte y el saldo pasa a la inscripción nueva).
+        if nino and activa and self.instance is None:
+            from .services import deuda_cerradas_del_nino
+            deuda, detalle = deuda_cerradas_del_nino(nino)
+            if deuda > 0:
+                origen = ', '.join(d['etiqueta'] for d in detalle)
+                raise serializers.ValidationError({'nino': (
+                    f'No se puede inscribir de nuevo: debe Bs. {deuda} de su inscripción anterior ({origen}). '
+                    'Primero debe quedar al día: en la lista pon el filtro Estado en "Dadas de baja", '
+                    'busca al niño y cobra la deuda en 💳 Pagos (el saldo a favor no la compensa).')})
+
         # Sala debe pertenecer a la sucursal
         sala     = data.get('sala')
         sucursal = data.get('sucursal')
@@ -253,11 +273,19 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
     costo_diario_final  = serializers.DecimalField(max_digits=7, decimal_places=2, read_only=True)
     dias_semana_display = serializers.CharField(read_only=True)
     estado_pago         = serializers.SerializerMethodField()
+    deuda_cerrada       = serializers.SerializerMethodField()
 
     def get_estado_pago(self, obj):
         # Import local: services importa los modelos y evita ciclos al cargar.
         from .services import estado_pago
         return estado_pago(obj)
+
+    def get_deuda_cerrada(self, obj):
+        """Lo que aún se debe en una inscripción dada de baja (en las activas es 0: ahí rige estado_pago)."""
+        if obj.activa:
+            return 0
+        from .services import deuda_abierta
+        return deuda_abierta(obj)
 
     class Meta:
         model  = Inscripcion
@@ -267,5 +295,5 @@ class InscripcionResumenSerializer(serializers.ModelSerializer):
             'modalidad_pago', 'modalidad_display', 'tipo_ajuste',
             'costo_mensual_final', 'costo_diario_final',
             'dias_semana', 'dias_semana_display', 'dias_programados',
-            'activa', 'fecha_inicio', 'estado_pago',
+            'activa', 'fecha_inicio', 'estado_pago', 'deuda_cerrada',
         ]

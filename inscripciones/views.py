@@ -46,6 +46,14 @@ class InscripcionViewSet(viewsets.ModelViewSet):
     filter_backends    = [filters.SearchFilter, DjangoFilterBackend]
     search_fields      = ['nino__nombres', 'nino__apellidos']
 
+    def destroy(self, request, *args, **kwargs):
+        # Una inscripción lleva cobros, pagos y recibos: borrarla destruiría el historial
+        # económico. Desde la app solo se da de baja; borrar es cosa del administrador de Django.
+        return Response(
+            {'error': 'Las inscripciones no se eliminan desde el sistema: usa "Dar de baja". '
+                      'Si de verdad hay que borrarla, hazlo desde el administrador de Django.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
     def get_queryset(self):
         # Sin este filtro, cualquier cuenta de tutor podía ver (y, vía las
         # acciones de detalle: cobros-pendientes, calendario-pagos,
