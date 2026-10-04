@@ -221,7 +221,7 @@
       <input type="text" id="reset-password" class="form-input" value="MisaelKids2025!">
       <span class="form-error" data-error="reset-password"></span>
       <span style="font-size:var(--text-xs);color:var(--texto-suave)">
-        Comparte esta contraseña de forma segura con la persona. Mínimo 8 caracteres.
+        Comparte esta contraseña de forma segura con la persona. Mínimo 4 caracteres.
       </span>
     </div>
     <div style="display:flex;gap:var(--gap-sm);justify-content:flex-end">
@@ -381,7 +381,7 @@ async function guardarUsuario() {
     reglas['u-fecha-ingreso'] = [()=>Validar.fecha(document.getElementById('u-fecha-ingreso').value,'Fecha de ingreso')];
   }
   if (!editandoId) {
-    reglas['u-password'] = [()=>Validar.minLength(document.getElementById('u-password').value,8,'La contraseña')];
+    reglas['u-password'] = [()=>Validar.minLength(document.getElementById('u-password').value,4,'La contraseña')];
   }
   const errores = Validar.formulario(reglas);
   if (!Validar.mostrarErrores(errores,'#modal-usr ')) return;
@@ -449,7 +449,7 @@ function abrirReset(id, nombre) {
 async function confirmarReset() {
   const pass = document.getElementById('reset-password').value;
   const errores = Validar.formulario({
-    'reset-password':[()=>Validar.minLength(pass,8,'La contraseña')],
+    'reset-password':[()=>Validar.minLength(pass,4,'La contraseña')],
   });
   if (!Validar.mostrarErrores(errores,'#modal-reset ')) return;
   const id = document.getElementById('reset-id').value;

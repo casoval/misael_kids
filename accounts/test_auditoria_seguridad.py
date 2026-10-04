@@ -73,11 +73,18 @@ class ResetPasswordTests(TestCase):
         self.assertIn(self._reset(self.educadora, self.directora).status_code, (403, 404))
         self.assertEqual(self._reset(self.educadora, self.educadora).status_code, 403)
 
-    def test_reset_con_clave_debil_es_rechazado(self):
-        r = self._reset(self.admin, self.educadora, password='12345678')
+    def test_reset_con_menos_de_4_caracteres_es_rechazado(self):
+        r = self._reset(self.admin, self.educadora, password='abc')
         self.assertEqual(r.status_code, 400)
         self.educadora.refresh_from_db()
-        self.assertFalse(self.educadora.check_password('12345678'))
+        self.assertFalse(self.educadora.check_password('abc'))
+
+    def test_reset_acepta_cualquier_clave_de_4_o_mas(self):
+        for clave in ('1234', '12345678', 'password', 'aaaa'):
+            self.assertEqual(self._reset(self.admin, self.educadora, password=clave).status_code,
+                             200, clave)
+            self.educadora.refresh_from_db()
+            self.assertTrue(self.educadora.check_password(clave), clave)
 
     def test_reset_sin_clave_genera_una_aleatoria(self):
         r = cliente(self.admin).post(
@@ -88,6 +95,7 @@ class ResetPasswordTests(TestCase):
 
 
 class ValidadoresContrasenaTests(TestCase):
+    """Regla única: 4 o más caracteres, sin ninguna otra exigencia."""
     def setUp(self):
         self.admin = crear('admin', 'admin')
 
@@ -96,29 +104,36 @@ class ValidadoresContrasenaTests(TestCase):
             'username': 'nuevo', 'nombres': 'N', 'apellidos': 'U', 'rol': 'educadora',
             'password': password, 'password2': password}, format='json')
 
-    def test_crear_usuario_rechaza_numerica_y_comun(self):
-        for debil in ('12345678', 'password', '00000000'):
-            r = self._crear(debil)
-            self.assertEqual(r.status_code, 400, debil)
+    def test_crear_usuario_rechaza_menos_de_4_caracteres(self):
+        for corta in ('123', 'abc', 'a'):
+            r = self._crear(corta)
+            self.assertEqual(r.status_code, 400, corta)
             self.assertIn('password', r.data)
         self.assertFalse(Usuario.objects.filter(username='nuevo').exists())
 
-    def test_crear_usuario_acepta_clave_fuerte(self):
-        self.assertEqual(self._crear(CLAVE_FUERTE).status_code, 201)
+    def test_crear_usuario_acepta_cualquier_clave_de_4_o_mas(self):
+        # Sin exigir complejidad: numéricas, comunes y repetidas son válidas.
+        for i, clave in enumerate(('1234', '12345678', 'password', 'aaaa', CLAVE_FUERTE)):
+            r = cliente(self.admin).post('/api/auth/usuarios/', {
+                'username': f'nuevo{i}', 'nombres': 'N', 'apellidos': 'U', 'rol': 'educadora',
+                'password': clave, 'password2': clave}, format='json')
+            self.assertEqual(r.status_code, 201, clave)
 
-    def test_cambiar_password_rechaza_clave_debil(self):
+    def test_cambiar_password_rechaza_menos_de_4(self):
         r = cliente(self.admin).post('/api/auth/usuarios/cambiar-password/', {
             'password_actual': 'clave-Inicial-5521',
-            'password_nuevo': '12345678', 'password_nuevo2': '12345678'}, format='json')
+            'password_nuevo': '123', 'password_nuevo2': '123'}, format='json')
         self.assertEqual(r.status_code, 400)
         self.admin.refresh_from_db()
         self.assertTrue(self.admin.check_password('clave-Inicial-5521'))
 
-    def test_cambiar_password_acepta_clave_fuerte(self):
+    def test_cambiar_password_acepta_4_caracteres_numericos(self):
         r = cliente(self.admin).post('/api/auth/usuarios/cambiar-password/', {
             'password_actual': 'clave-Inicial-5521',
-            'password_nuevo': CLAVE_FUERTE, 'password_nuevo2': CLAVE_FUERTE}, format='json')
+            'password_nuevo': '1234', 'password_nuevo2': '1234'}, format='json')
         self.assertEqual(r.status_code, 200)
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.check_password('1234'))
 
 
 class LoginThrottleTests(TestCase):

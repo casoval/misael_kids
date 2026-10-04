@@ -781,7 +781,7 @@ async function guardarDetalleTutor() {
   const darAcceso = document.getElementById('dt-dar-acceso');
   if (darAcceso && darAcceso.checked) {
     reglas['dt-username'] = [()=>Validar.requerido(document.getElementById('dt-username').value,'Nombre de usuario')];
-    reglas['dt-password'] = [()=>Validar.minLength(document.getElementById('dt-password').value,8,'La contraseña')];
+    reglas['dt-password'] = [()=>Validar.minLength(document.getElementById('dt-password').value,4,'La contraseña')];
   }
   const errores = Validar.formulario(reglas);
   if (!Validar.mostrarErrores(errores,'#modal-detalle-tutor ')) return;
@@ -956,7 +956,7 @@ async function crearYVincularTutorNuevo() {
   const darAcceso = document.getElementById('tn-dar-acceso');
   if (darAcceso && darAcceso.checked) {
     reglas['tn-username'] = [()=>Validar.requerido(document.getElementById('tn-username').value,'Nombre de usuario')];
-    reglas['tn-password'] = [()=>Validar.minLength(document.getElementById('tn-password').value,8,'La contraseña')];
+    reglas['tn-password'] = [()=>Validar.minLength(document.getElementById('tn-password').value,4,'La contraseña')];
   }
   const errores = Validar.formulario(reglas);
   if (!Validar.mostrarErrores(errores,'#mtab-tutores-panel ')) return;

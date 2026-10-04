@@ -156,9 +156,9 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             import secrets, string
             alfabeto = string.ascii_letters + string.digits
             nueva = ''.join(secrets.choice(alfabeto) for _ in range(12))
-        if len(nueva) < 8:
+        if len(nueva) < 4:
             return Response(
-                {'detail': 'La contraseña debe tener al menos 8 caracteres.'},
+                {'detail': 'La contraseña debe tener al menos 4 caracteres.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         if request.data.get('password'):

@@ -119,14 +119,13 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # ─── Validación de contraseñas ────────────────────────────────────────────────
-# Se aplican al crear usuarios, cambiar la propia contraseña y al resetear con
-# una contraseña escrita a mano (los usuarios creados por consola/shell no pasan
-# por aquí). Impide claves como '12345678' o solo numéricas.
+# Regla del proyecto: cualquier contraseña de 4 o más caracteres (sin exigir
+# mayúsculas, números, ni rechazar claves comunes). Se aplica al crear usuarios,
+# cambiar la propia contraseña y resetear con una clave escrita a mano.
+PASSWORD_MIN_LENGTH = 4
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-     'OPTIONS': {'min_length': 8}},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+     'OPTIONS': {'min_length': PASSWORD_MIN_LENGTH}},
 ]
 
 # ─── Internacionalización ─────────────────────────────────────────────────────

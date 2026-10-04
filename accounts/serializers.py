@@ -80,7 +80,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
 
 class UsuarioCreateSerializer(serializers.ModelSerializer):
-    password  = serializers.CharField(write_only=True, min_length=8)
+    password  = serializers.CharField(write_only=True, min_length=4)
     password2 = serializers.CharField(write_only=True, label='Confirmar contraseña')
     email     = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
     username  = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=50)
@@ -137,7 +137,7 @@ class TemaSerializer(serializers.Serializer):
 
 class CambiarPasswordSerializer(serializers.Serializer):
     password_actual = serializers.CharField(write_only=True)
-    password_nuevo  = serializers.CharField(write_only=True, min_length=8)
+    password_nuevo  = serializers.CharField(write_only=True, min_length=4)
     password_nuevo2 = serializers.CharField(write_only=True)
 
     def validate(self, data):

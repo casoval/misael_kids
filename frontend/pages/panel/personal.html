@@ -508,7 +508,7 @@ async function guardarPersonal() {
   const darAcceso = document.getElementById('p-dar-acceso');
   if (darAcceso && darAcceso.checked && !usuarioExistente) {
     reglas['p-username'] = [()=>Validar.requerido(document.getElementById('p-username').value,'Nombre de usuario')];
-    reglas['p-password'] = [()=>Validar.minLength(document.getElementById('p-password').value,8,'La contraseña')];
+    reglas['p-password'] = [()=>Validar.minLength(document.getElementById('p-password').value,4,'La contraseña')];
   }
   const errores = Validar.formulario(reglas);
   if (!Validar.mostrarErrores(errores,'#modal-personal ')) return;
