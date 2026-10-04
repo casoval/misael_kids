@@ -4,10 +4,11 @@ inscripciones/serializers.py
 from datetime import date
 from decimal import Decimal
 from rest_framework import serializers
+from core.validators import ValidaArchivosMixin
 from .models import Inscripcion, Cobro, Pago, Devolucion, AbonoDiario
 
 
-class PagoSerializer(serializers.ModelSerializer):
+class PagoSerializer(ValidaArchivosMixin, serializers.ModelSerializer):
     metodo_pago_display = serializers.CharField(source='get_metodo_pago_display', read_only=True)
 
     class Meta:
@@ -20,7 +21,7 @@ class PagoSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'numero_recibo', 'abono_origen', 'created_at']
 
 
-class AbonoDiarioSerializer(serializers.ModelSerializer):
+class AbonoDiarioSerializer(ValidaArchivosMixin, serializers.ModelSerializer):
     metodo_pago_display = serializers.CharField(source='get_metodo_pago_display', read_only=True)
     monto_aplicado      = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
     monto_disponible    = serializers.DecimalField(max_digits=8, decimal_places=2, read_only=True)
@@ -86,7 +87,7 @@ class DevolucionSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'numero_recibo', 'a_cuenta', 'created_at']
 
 
-class CobroSerializer(serializers.ModelSerializer):
+class CobroSerializer(ValidaArchivosMixin, serializers.ModelSerializer):
     tipo_display   = serializers.CharField(source='get_tipo_display', read_only=True)
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
     nino_nombre    = serializers.CharField(

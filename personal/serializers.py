@@ -3,10 +3,11 @@ personal/serializers.py
 """
 from django.db import transaction
 from rest_framework import serializers
+from core.validators import ValidaArchivosMixin
 from .models import Personal, AsignacionPersonal, AsistenciaPersonal
 
 
-class PersonalSerializer(serializers.ModelSerializer):
+class PersonalSerializer(ValidaArchivosMixin, serializers.ModelSerializer):
     """
     Ficha del personal. Igual que Tutor, el ACCESO al sistema es opcional:
     se crea la ficha y, si se quiere, se le "da acceso" indicando usuario y

@@ -3,6 +3,7 @@ ninos/serializers.py
 """
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
+from core.validators import ValidaArchivosMixin
 from .models import Nino, Tutor, NinoTutor, PersonaAutorizada, Documento
 
 
@@ -33,7 +34,7 @@ class TutorSerializer(serializers.ModelSerializer):
         ]
 
 
-class PersonaAutorizadaSerializer(serializers.ModelSerializer):
+class PersonaAutorizadaSerializer(ValidaArchivosMixin, serializers.ModelSerializer):
     class Meta:
         model  = PersonaAutorizada
         fields = [
@@ -53,7 +54,7 @@ class PersonaAutorizadaSerializer(serializers.ModelSerializer):
         return data
 
 
-class DocumentoSerializer(serializers.ModelSerializer):
+class DocumentoSerializer(ValidaArchivosMixin, serializers.ModelSerializer):
     tipo_display = serializers.CharField(source='get_tipo_display', read_only=True)
 
     class Meta:
@@ -85,7 +86,7 @@ def _vinculo_misael(nino):
         return None
 
 
-class NinoSerializer(serializers.ModelSerializer):
+class NinoSerializer(ValidaArchivosMixin, serializers.ModelSerializer):
     edad_en_meses      = serializers.IntegerField(read_only=True)
     nombre_completo    = serializers.CharField(read_only=True)
     genero_display     = serializers.CharField(source='get_genero_display', read_only=True)

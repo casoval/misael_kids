@@ -157,6 +157,10 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Tamaño máximo de archivos subidos, en MB (ver core/validators.py).
+MAX_FOTO_MB = env.float('MAX_FOTO_MB', default=8)
+MAX_DOC_MB  = env.float('MAX_DOC_MB',  default=10)
+
 # Django 5.1 ELIMINÓ DEFAULT_FILE_STORAGE / STATICFILES_STORAGE: se ignoran por
 # completo. Antes de este arreglo Cloudinary nunca se activaba, aunque las
 # credenciales estuvieran configuradas, y las fotos se guardaban en disco local.

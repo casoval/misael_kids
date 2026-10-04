@@ -3,6 +3,7 @@ accounts/serializers.py
 Login JWT, registro y perfil de usuario.
 """
 from rest_framework import serializers
+from core.validators import ValidaArchivosMixin
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -11,7 +12,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import Usuario
 
 
-class UsuarioSerializer(serializers.ModelSerializer):
+class UsuarioSerializer(ValidaArchivosMixin, serializers.ModelSerializer):
     rol_display = serializers.CharField(source='get_rol_display', read_only=True)
     nombre_completo = serializers.CharField(read_only=True)
     identificador = serializers.CharField(read_only=True)
