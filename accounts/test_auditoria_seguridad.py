@@ -286,6 +286,9 @@ class StorageCloudinaryTests(SimpleTestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith('CLOUDINARY_')}
         env.update(DJANGO_SETTINGS_MODULE=settings_module, DJANGO_SECRET_KEY='x' * 60,
                    DJANGO_DEBUG='False', DB_NAME='x', DB_USER='x', DB_PASSWORD='x')
+        # Variables vacías (no ausentes): django-environ NO pisa lo ya definido, así
+        # que un .env real con credenciales no puede colarse en el "sin credenciales".
+        env.update(CLOUDINARY_CLOUD_NAME='', CLOUDINARY_API_KEY='', CLOUDINARY_API_SECRET='')
         if con_cloudinary:
             env.update(CLOUDINARY_CLOUD_NAME='demo', CLOUDINARY_API_KEY='1', CLOUDINARY_API_SECRET='2')
         codigo = ("import django; django.setup();"
@@ -296,15 +299,19 @@ class StorageCloudinaryTests(SimpleTestCase):
         self.assertEqual(out.returncode, 0, out.stderr[-800:])
         return out.stdout.strip()
 
-    def test_con_credenciales_usa_cloudinary_en_test_y_en_produccion(self):
-        for modulo in ('config.settings.test', 'config.settings.production'):
-            self.assertEqual(self._storage(modulo, True),
-                             'cloudinary_storage.storage.MediaCloudinaryStorage', modulo)
+    DISCO = 'django.core.files.storage.filesystem.FileSystemStorage'
 
-    def test_sin_credenciales_cae_a_disco_local(self):
-        for modulo in ('config.settings.test', 'config.settings.production'):
-            self.assertEqual(self._storage(modulo, False),
-                             'django.core.files.storage.filesystem.FileSystemStorage', modulo)
+    def test_con_credenciales_produccion_usa_cloudinary(self):
+        self.assertEqual(self._storage('config.settings.production', True),
+                         'cloudinary_storage.storage.MediaCloudinaryStorage')
+
+    def test_sin_credenciales_produccion_cae_a_disco_local(self):
+        self.assertEqual(self._storage('config.settings.production', False), self.DISCO)
+
+    def test_los_tests_nunca_usan_cloudinary_ni_con_credenciales(self):
+        # Protege la cuenta real si alguien corre los tests con un .env de producción.
+        self.assertEqual(self._storage('config.settings.test', True), self.DISCO)
+        self.assertEqual(self._storage('config.settings.test', False), self.DISCO)
 
 
 class FrontendEscapeTests(SimpleTestCase):
