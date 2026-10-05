@@ -1,0 +1,996 @@
+From 0892d7cb5af3996f23a69ddc2aa067083d7da41b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Auditor=C3=ADa?= <auditoria@localhost>
+Date: Sat, 3 Oct 2026 23:22:56 +0000
+Subject: [PATCH] =?UTF-8?q?Seguridad:=20corrige=20hallazgos=20de=20la=20au?=
+ =?UTF-8?q?ditor=C3=ADa=20(XSS,=20escalada,=20login,=20storage)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Seguridad
+- XSS almacenado: nuevo helper escHtml() y escape del texto libre en
+  comunicacion, salud y portal (+ components.js). Los ids/títulos ya no se
+  inyectan en atributos onclick.
+- resetear-password: una directora ya no puede resetear a un admin (usa
+  puede_gestionar_usuarios, igual que crear/editar/eliminar).
+- AsistenciaPersonalViewSet: IsAuthenticated -> SoloAdminODirectora (un tutor
+  podía leer y escribir la asistencia del personal).
+- Login: throttling por IP (scope 'login', 15/min, configurable con
+  LOGIN_THROTTLE_RATE) y hash ficticio cuando el usuario no existe (evita
+  enumerar usuarios por tiempo de respuesta).
+- AUTH_PASSWORD_VALIDATORS (largo, comunes, numéricas) aplicados al crear
+  usuario, cambiar contraseña y resetear con clave escrita a mano.
+
+Bugs
+- PATCH del propio perfil con multipart (subida de foto) daba HTTP 500
+  (QueryDict inmutable). Además se impide cambiarse 'rol' y 'activo'.
+- Django 5.1 ignora DEFAULT_FILE_STORAGE: Cloudinary nunca se activaba.
+  Se migra a STORAGES y production.py ya no pisa el storage 'default'.
+- marcar_leido usaba datetime.now() sin zona horaria -> timezone.now().
+- MensajeSerializer: 'remitente' pasa a read_only (el panel no lo enviaba y
+  crear mensajes devolvía 400; el servidor ya lo fija en perform_create).
+
+Tests: accounts/test_auditoria_seguridad.py (28 tests; 16 fallan contra el
+código anterior). Suite completa: 479 OK.
+---
+ accounts/serializers.py                |  24 +-
+ accounts/test_auditoria_seguridad.py   | 331 +++++++++++++++++++++++++
+ accounts/views.py                      |  44 +++-
+ comunicacion/serializers.py            |   4 +-
+ comunicacion/views.py                  |   4 +-
+ config/settings/base.py                |  26 +-
+ config/settings/production.py          |   7 +-
+ frontend/js/api.js                     |  10 +
+ frontend/js/components.js              |   2 +-
+ frontend/pages/panel/comunicacion.html |  34 +--
+ frontend/pages/panel/salud.html        |  18 +-
+ frontend/pages/portal/inicio.html      |  32 +--
+ personal/views.py                      |   8 +-
+ 13 files changed, 483 insertions(+), 61 deletions(-)
+ create mode 100644 accounts/test_auditoria_seguridad.py
+
+diff --git a/accounts/serializers.py b/accounts/serializers.py
+index b88dd6b..739c7be 100644
+--- a/accounts/serializers.py
++++ b/accounts/serializers.py
+@@ -3,6 +3,9 @@ accounts/serializers.py
+ Login JWT, registro y perfil de usuario.
+ """
+ from rest_framework import serializers
++from django.contrib.auth.hashers import make_password
++from django.contrib.auth.password_validation import validate_password
++from django.core.exceptions import ValidationError as DjangoValidationError
+ from django.db import models
+ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+ from .models import Usuario
+@@ -94,6 +97,11 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
+         if data['password'] != data['password2']:
+             raise serializers.ValidationError({'password2': 'Las contraseñas no coinciden.'})
+ 
++        try:
++            validate_password(data['password'])
++        except DjangoValidationError as exc:
++            raise serializers.ValidationError({'password': list(exc.messages)})
++
+         email    = (data.get('email') or '').strip()
+         username = (data.get('username') or '').strip()
+ 
+@@ -135,6 +143,11 @@ class CambiarPasswordSerializer(serializers.Serializer):
+     def validate(self, data):
+         if data['password_nuevo'] != data['password_nuevo2']:
+             raise serializers.ValidationError({'password_nuevo2': 'Las contraseñas no coinciden.'})
++        request = self.context.get('request')
++        try:
++            validate_password(data['password_nuevo'], user=getattr(request, 'user', None))
++        except DjangoValidationError as exc:
++            raise serializers.ValidationError({'password_nuevo': list(exc.messages)})
+         return data
+ 
+ 
+@@ -150,7 +163,16 @@ class MiTokenObtainPairSerializer(TokenObtainPairSerializer):
+             models.Q(email__iexact=identificador) | models.Q(username__iexact=identificador)
+         ).first()
+ 
+-        if usuario is None or not usuario.check_password(password):
++        if usuario is None:
++            # Gasta el mismo tiempo que una verificación real; sin esto, el login
++            # responde mucho más rápido cuando el usuario NO existe y permite
++            # averiguar qué usuarios/emails están registrados midiendo tiempos.
++            make_password(password)
++            usuario_valido = False
++        else:
++            usuario_valido = usuario.check_password(password)
++
++        if not usuario_valido:
+             raise serializers.ValidationError(
+                 {'detail': 'Credenciales incorrectas. Verifica tu email/usuario y contraseña.'}
+             )
+diff --git a/accounts/test_auditoria_seguridad.py b/accounts/test_auditoria_seguridad.py
+new file mode 100644
+index 0000000..698e99c
+--- /dev/null
++++ b/accounts/test_auditoria_seguridad.py
+@@ -0,0 +1,331 @@
++"""
++Tests de regresión de la auditoría de seguridad.
++
++Cada clase reproduce un hallazgo: ANTES del arreglo el test fallaba
++(el ataque funcionaba); AHORA debe pasar.
++"""
++import json
++import os
++import subprocess
++import sys
++import warnings
++from datetime import date
++from pathlib import Path
++
++from django.core.cache import cache
++from django.core.files.uploadedfile import SimpleUploadedFile
++from django.test import SimpleTestCase, TestCase
++from django.utils import timezone
++from rest_framework.test import APIClient
++
++from accounts.models import Usuario
++from comunicacion.models import Mensaje
++from core.models import Sucursal
++from personal.models import Personal
++
++FRONTEND = Path(__file__).resolve().parent.parent / 'frontend'
++CLAVE_FUERTE = 'Zorro-Azul-7391'
++
++
++def crear(rol, nombre):
++    return Usuario.objects.create_user(
++        email=f'{nombre}@x.test', password='clave-Inicial-5521',
++        nombres=nombre.title(), apellidos='Test', rol=rol)
++
++
++def cliente(usuario):
++    c = APIClient()
++    c.force_authenticate(usuario)
++    return c
++
++
++class ResetPasswordTests(TestCase):
++    """Una directora NO puede tomar la cuenta de un admin reseteándole la clave."""
++
++    def setUp(self):
++        self.admin = crear('admin', 'admin')
++        self.directora = crear('directora', 'directora')
++        self.educadora = crear('educadora', 'educadora')
++
++    def _reset(self, quien, objetivo, password=CLAVE_FUERTE):
++        return cliente(quien).post(
++            f'/api/auth/usuarios/{objetivo.id}/resetear-password/',
++            {'password': password}, format='json')
++
++    def test_directora_no_puede_resetear_a_un_admin(self):
++        r = self._reset(self.directora, self.admin)
++        self.assertEqual(r.status_code, 403)
++        self.admin.refresh_from_db()
++        self.assertFalse(self.admin.check_password(CLAVE_FUERTE))
++        self.assertTrue(self.admin.check_password('clave-Inicial-5521'))
++
++    def test_admin_si_puede_resetear_a_una_directora(self):
++        self.assertEqual(self._reset(self.admin, self.directora).status_code, 200)
++        self.directora.refresh_from_db()
++        self.assertTrue(self.directora.check_password(CLAVE_FUERTE))
++
++    def test_directora_puede_resetear_a_una_educadora(self):
++        self.assertEqual(self._reset(self.directora, self.educadora).status_code, 200)
++
++    def test_educadora_no_puede_resetear_a_nadie(self):
++        # Para un rol sin permisos, get_queryset solo le muestra su propio usuario;
++        # sobre otro devuelve 404 y sobre sí misma 403. Nunca 200.
++        self.assertIn(self._reset(self.educadora, self.directora).status_code, (403, 404))
++        self.assertEqual(self._reset(self.educadora, self.educadora).status_code, 403)
++
++    def test_reset_con_clave_debil_es_rechazado(self):
++        r = self._reset(self.admin, self.educadora, password='12345678')
++        self.assertEqual(r.status_code, 400)
++        self.educadora.refresh_from_db()
++        self.assertFalse(self.educadora.check_password('12345678'))
++
++    def test_reset_sin_clave_genera_una_aleatoria(self):
++        r = cliente(self.admin).post(
++            f'/api/auth/usuarios/{self.educadora.id}/resetear-password/', {}, format='json')
++        self.assertEqual(r.status_code, 200)
++        self.educadora.refresh_from_db()
++        self.assertTrue(self.educadora.check_password(r.data['password']))
++
++
++class ValidadoresContrasenaTests(TestCase):
++    def setUp(self):
++        self.admin = crear('admin', 'admin')
++
++    def _crear(self, password):
++        return cliente(self.admin).post('/api/auth/usuarios/', {
++            'username': 'nuevo', 'nombres': 'N', 'apellidos': 'U', 'rol': 'educadora',
++            'password': password, 'password2': password}, format='json')
++
++    def test_crear_usuario_rechaza_numerica_y_comun(self):
++        for debil in ('12345678', 'password', '00000000'):
++            r = self._crear(debil)
++            self.assertEqual(r.status_code, 400, debil)
++            self.assertIn('password', r.data)
++        self.assertFalse(Usuario.objects.filter(username='nuevo').exists())
++
++    def test_crear_usuario_acepta_clave_fuerte(self):
++        self.assertEqual(self._crear(CLAVE_FUERTE).status_code, 201)
++
++    def test_cambiar_password_rechaza_clave_debil(self):
++        r = cliente(self.admin).post('/api/auth/usuarios/cambiar-password/', {
++            'password_actual': 'clave-Inicial-5521',
++            'password_nuevo': '12345678', 'password_nuevo2': '12345678'}, format='json')
++        self.assertEqual(r.status_code, 400)
++        self.admin.refresh_from_db()
++        self.assertTrue(self.admin.check_password('clave-Inicial-5521'))
++
++    def test_cambiar_password_acepta_clave_fuerte(self):
++        r = cliente(self.admin).post('/api/auth/usuarios/cambiar-password/', {
++            'password_actual': 'clave-Inicial-5521',
++            'password_nuevo': CLAVE_FUERTE, 'password_nuevo2': CLAVE_FUERTE}, format='json')
++        self.assertEqual(r.status_code, 200)
++
++
++class LoginThrottleTests(TestCase):
++    def setUp(self):
++        cache.clear()   # el contador de throttling vive en la caché
++        self.addCleanup(cache.clear)
++        self.usuario = crear('directora', 'dir')
++
++    def test_fuerza_bruta_es_bloqueada_con_429(self):
++        c = APIClient()
++        codigos = [c.post('/api/auth/login/', {'email': 'dir@x.test', 'password': f'mal{i}'},
++                          format='json').status_code for i in range(25)]
++        self.assertEqual(codigos[0], 400)
++        self.assertIn(429, codigos)
++        # Una vez bloqueado, ni siquiera la clave CORRECTA entra (hasta que pase la ventana).
++        r = c.post('/api/auth/login/', {'email': 'dir@x.test', 'password': 'clave-Inicial-5521'},
++                   format='json')
++        self.assertEqual(r.status_code, 429)
++
++    def test_login_normal_sigue_funcionando(self):
++        r = APIClient().post('/api/auth/login/', {'email': 'dir@x.test',
++                             'password': 'clave-Inicial-5521'}, format='json')
++        self.assertEqual(r.status_code, 200)
++        self.assertIn('access', r.data)
++
++    def test_usuario_inexistente_y_clave_mala_dan_el_mismo_mensaje(self):
++        c = APIClient()
++        a = c.post('/api/auth/login/', {'email': 'no@existe.test', 'password': 'x'}, format='json')
++        b = c.post('/api/auth/login/', {'email': 'dir@x.test', 'password': 'x'}, format='json')
++        self.assertEqual((a.status_code, a.data), (b.status_code, b.data))
++
++
++class AsistenciaPersonalPermisosTests(TestCase):
++    """Un tutor (u otro rol no directivo) NO puede ver ni tocar la asistencia del personal."""
++    URL = '/api/personal/asistencia-personal/'
++
++    def setUp(self):
++        self.admin = crear('admin', 'admin')
++        self.directora = crear('directora', 'directora')
++        self.tutor = crear('tutor', 'tutor')
++        self.educadora = crear('educadora', 'educadora')
++        self.recep = crear('recepcionista', 'recep')
++        self.suc = Sucursal.objects.create(nombre='S', direccion='d')
++        self.personal = Personal.objects.create(
++            usuario=self.educadora, nombres='E', apellidos='T', ci='1',
++            rol='educadora', fecha_ingreso=date.today())
++        self.cuerpo = {'personal': str(self.personal.id), 'sucursal': str(self.suc.id),
++                       'fecha': '2026-10-01', 'estado': 'ausente'}
++
++    def test_roles_no_directivos_reciben_403(self):
++        for u in (self.tutor, self.educadora, self.recep):
++            c = cliente(u)
++            self.assertEqual(c.get(self.URL).status_code, 403, u.rol)
++            self.assertEqual(c.post(self.URL, self.cuerpo, format='json').status_code, 403, u.rol)
++
++    def test_admin_y_directora_pueden_gestionarla(self):
++        for u in (self.admin, self.directora):
++            c = cliente(u)
++            self.assertEqual(c.get(self.URL).status_code, 200)
++        r = cliente(self.directora).post(self.URL, self.cuerpo, format='json')
++        self.assertEqual(r.status_code, 201)
++
++    def test_tutor_no_puede_borrar_ni_editar_un_registro(self):
++        r = cliente(self.directora).post(self.URL, self.cuerpo, format='json')
++        url = f'{self.URL}{r.data["id"]}/'
++        c = cliente(self.tutor)
++        self.assertEqual(c.patch(url, {'estado': 'presente'}, format='json').status_code, 403)
++        self.assertEqual(c.delete(url).status_code, 403)
++
++
++class EdicionPropiaMultipartTests(TestCase):
++    """PATCH del propio perfil con multipart (subida de foto) daba HTTP 500."""
++
++    def setUp(self):
++        self.edu = crear('educadora', 'edu')
++
++    def test_multipart_no_explota_y_actualiza(self):
++        r = cliente(self.edu).patch(f'/api/auth/usuarios/{self.edu.id}/',
++                                    {'nombres': 'Nuevo', 'telefono': '7000'}, format='multipart')
++        self.assertEqual(r.status_code, 200)
++        self.edu.refresh_from_db()
++        self.assertEqual(self.edu.nombres, 'Nuevo')
++
++    def test_multipart_con_archivo_no_explota(self):
++        # Imagen PNG válida mínima (1x1)
++        png = (b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06'
++               b'\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe'
++               b'\x02\xfe\xa7\x9a\xa0\xa0\x00\x00\x00\x00IEND\xaeB`\x82')
++        from django.test import override_settings
++        import tempfile
++        with tempfile.TemporaryDirectory() as tmp, override_settings(MEDIA_ROOT=tmp):
++            r = cliente(self.edu).patch(
++                f'/api/auth/usuarios/{self.edu.id}/',
++                {'nombres': 'Con foto', 'foto': SimpleUploadedFile('a.png', png, 'image/png')},
++                format='multipart')
++        self.assertNotEqual(r.status_code, 500)
++
++    def test_no_puede_auto_ascenderse_ni_por_multipart_ni_por_json(self):
++        c = cliente(self.edu)
++        for fmt in ('multipart', 'json'):
++            r = c.patch(f'/api/auth/usuarios/{self.edu.id}/', {'rol': 'admin', 'nombres': 'X'}, format=fmt)
++            self.assertEqual(r.status_code, 200, fmt)
++            self.edu.refresh_from_db()
++            self.assertEqual(self.edu.rol, 'educadora', fmt)
++
++    def test_no_puede_cambiarse_el_estado_activo(self):
++        cliente(self.edu).patch(f'/api/auth/usuarios/{self.edu.id}/', {'activo': False}, format='json')
++        self.edu.refresh_from_db()
++        self.assertTrue(self.edu.activo)
++
++
++class MensajesTests(TestCase):
++    def setUp(self):
++        self.admin = crear('admin', 'admin')
++        self.tutor = crear('tutor', 'tutor')
++
++    def test_remitente_lo_fija_el_servidor_y_no_hace_falta_enviarlo(self):
++        # El panel NO envía `remitente`: antes devolvía 400.
++        r = cliente(self.tutor).post('/api/comunicacion/mensajes/', {
++            'destinatario': str(self.admin.id), 'asunto': 'Hola', 'cuerpo': 'x'}, format='json')
++        self.assertEqual(r.status_code, 201)
++        self.assertEqual(str(r.data['remitente']), str(self.tutor.id))
++
++    def test_no_se_puede_suplantar_al_remitente(self):
++        r = cliente(self.tutor).post('/api/comunicacion/mensajes/', {
++            'remitente': str(self.admin.id), 'destinatario': str(self.admin.id),
++            'asunto': 'Hola', 'cuerpo': 'x'}, format='json')
++        self.assertEqual(r.status_code, 201)
++        self.assertEqual(Mensaje.objects.get().remitente_id, self.tutor.id)
++
++    def test_marcar_leido_usa_hora_con_zona_horaria(self):
++        m = Mensaje.objects.create(remitente=self.admin, destinatario=self.tutor, asunto='a', cuerpo='b')
++        with warnings.catch_warnings(record=True) as avisos:
++            warnings.simplefilter('always')
++            r = cliente(self.tutor).post(f'/api/comunicacion/mensajes/{m.id}/marcar-leido/')
++        self.assertEqual(r.status_code, 200)
++        m.refresh_from_db()
++        self.assertTrue(m.leido)
++        self.assertTrue(timezone.is_aware(m.leido_en))
++        self.assertFalse([a for a in avisos if 'naive datetime' in str(a.message)])
++
++
++class StorageCloudinaryTests(SimpleTestCase):
++    """
++    Django 5.1 ignora DEFAULT_FILE_STORAGE: Cloudinary nunca se activaba.
++    Se comprueba en un subproceso porque los settings se evalúan al importar.
++    """
++
++    def _storage(self, settings_module, con_cloudinary):
++        env = {k: v for k, v in os.environ.items() if not k.startswith('CLOUDINARY_')}
++        env.update(DJANGO_SETTINGS_MODULE=settings_module, DJANGO_SECRET_KEY='x' * 60,
++                   DJANGO_DEBUG='False', DB_NAME='x', DB_USER='x', DB_PASSWORD='x')
++        if con_cloudinary:
++            env.update(CLOUDINARY_CLOUD_NAME='demo', CLOUDINARY_API_KEY='1', CLOUDINARY_API_SECRET='2')
++        codigo = ("import django; django.setup();"
++                  "from django.core.files.storage import storages;"
++                  "s=storages['default']; print(type(s).__module__+'.'+type(s).__name__)")
++        out = subprocess.run([sys.executable, '-c', codigo], env=env, capture_output=True,
++                             text=True, cwd=Path(__file__).resolve().parent.parent)
++        self.assertEqual(out.returncode, 0, out.stderr[-800:])
++        return out.stdout.strip()
++
++    def test_con_credenciales_usa_cloudinary_en_test_y_en_produccion(self):
++        for modulo in ('config.settings.test', 'config.settings.production'):
++            self.assertEqual(self._storage(modulo, True),
++                             'cloudinary_storage.storage.MediaCloudinaryStorage', modulo)
++
++    def test_sin_credenciales_cae_a_disco_local(self):
++        for modulo in ('config.settings.test', 'config.settings.production'):
++            self.assertEqual(self._storage(modulo, False),
++                             'django.core.files.storage.filesystem.FileSystemStorage', modulo)
++
++
++class FrontendEscapeTests(SimpleTestCase):
++    """
++    Regresión estática del XSS almacenado: el texto libre que viene de la API
++    no puede interpolarse crudo en las páginas que se renderizan con innerHTML.
++    (No sustituye una prueba en navegador, pero impide que vuelvan estas líneas.)
++    """
++    CRUDOS = {
++        'pages/panel/comunicacion.html': [
++            '${av.titulo}', '${av.cuerpo}', '${m.asunto}', '${mensajeAbierto.cuerpo}',
++            '${m.cuerpo?.slice', '${av.autor_nombre}', "av.titulo}')",
++        ],
++        'pages/panel/salud.html': [
++            '${inc.descripcion}', '${inc.accion_tomada}', '${inc.nino_nombre}',
++            "${inc.nino_nombre}')",
++        ],
++        'pages/portal/inicio.html': [
++            '${m.asunto}', '${m.cuerpo}', '${m.remitente_nombre}', '${p.observaciones}',
++            '${p.actividades}', '${plan.descripcion}', '${obj.descripcion}', '${h.nombre_completo}',
++        ],
++    }
++
++    def test_no_hay_interpolaciones_crudas_de_texto_libre(self):
++        for ruta, patrones in self.CRUDOS.items():
++            html = (FRONTEND / ruta).read_text(encoding='utf-8')
++            for p in patrones:
++                self.assertNotIn(p, html, f'{ruta}: interpolación sin escapar {p!r}')
++
++    def test_helper_escHtml_existe_y_las_paginas_lo_usan(self):
++        self.assertIn('function escHtml', (FRONTEND / 'js/api.js').read_text(encoding='utf-8'))
++        for ruta in self.CRUDOS:
++            self.assertIn('escHtml(', (FRONTEND / ruta).read_text(encoding='utf-8'), ruta)
++
++    def test_ids_y_textos_no_se_inyectan_en_onclick(self):
++        com = (FRONTEND / 'pages/panel/comunicacion.html').read_text(encoding='utf-8')
++        sal = (FRONTEND / 'pages/panel/salud.html').read_text(encoding='utf-8')
++        self.assertNotIn("eliminarAviso('${av.id}','", com)
++        self.assertNotIn("incidente de ${inc.nino_nombre}", sal)
+diff --git a/accounts/views.py b/accounts/views.py
+index 593d4ed..198ec84 100644
+--- a/accounts/views.py
++++ b/accounts/views.py
+@@ -5,7 +5,10 @@ from rest_framework import viewsets, status, filters
+ from rest_framework.decorators import action
+ from rest_framework.response import Response
+ from rest_framework.permissions import IsAuthenticated, AllowAny
++from rest_framework.throttling import ScopedRateThrottle
+ from rest_framework_simplejwt.views import TokenObtainPairView
++from django.contrib.auth.password_validation import validate_password
++from django.core.exceptions import ValidationError as DjangoValidationError
+ 
+ from .models import Usuario
+ from .permissions import puede_gestionar_usuarios
+@@ -16,8 +19,14 @@ from .serializers import (
+ 
+ 
+ class MiTokenObtainPairView(TokenObtainPairView):
+-    """Login JWT con datos del usuario incluidos."""
++    """Login JWT con datos del usuario incluidos.
++
++    Limitado por IP (scope 'login', ver REST_FRAMEWORK en settings) para
++    frenar la fuerza bruta de contraseñas.
++    """
+     serializer_class = MiTokenObtainPairSerializer
++    throttle_classes = [ScopedRateThrottle]
++    throttle_scope = 'login'
+ 
+ 
+ class UsuarioViewSet(viewsets.ModelViewSet):
+@@ -50,8 +59,17 @@ class UsuarioViewSet(viewsets.ModelViewSet):
+         instancia = self.get_object()
+         # Cualquier usuario puede editar su propio perfil (nombres, teléfono, foto...)
+         if instancia.id == request.user.id:
+-            request.data.pop('rol', None)  # no puede auto-ascenderse de rol
+-            return super().update(request, *args, **kwargs)
++            # `request.data` es un QueryDict INMUTABLE con multipart (subida de
++            # foto): hacer .pop() directamente lanzaba AttributeError (HTTP 500).
++            # Se arma un dict nuevo SIN los campos que nadie puede cambiarse a sí
++            # mismo: el rol (auto-ascenso) y `activo`. (No se usa QueryDict.copy()
++            # porque hace deepcopy y falla con archivos grandes en disco temporal.)
++            datos = {k: v for k, v in request.data.items() if k not in ('rol', 'activo')}
++            serializer = self.get_serializer(
++                instancia, data=datos, partial=kwargs.get('partial', False))
++            serializer.is_valid(raise_exception=True)
++            self.perform_update(serializer)
++            return Response(serializer.data)
+         rol_solicitado = request.data.get('rol', instancia.rol)
+         if not puede_gestionar_usuarios(request.user, rol_solicitado):
+             return Response(
+@@ -103,7 +121,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
+     @action(detail=False, methods=['post'], url_path='cambiar-password')
+     def cambiar_password(self, request):
+         """Cambia la contraseña del usuario autenticado."""
+-        serializer = CambiarPasswordSerializer(data=request.data)
++        serializer = CambiarPasswordSerializer(data=request.data, context={'request': request})
+         serializer.is_valid(raise_exception=True)
+         usuario = request.user
+         if not usuario.check_password(serializer.validated_data['password_actual']):
+@@ -117,13 +135,18 @@ class UsuarioViewSet(viewsets.ModelViewSet):
+ 
+     @action(detail=True, methods=['post'], url_path='resetear-password')
+     def resetear_password(self, request, pk=None):
+-        """Restablece la contraseña de cualquier usuario. Solo admin/directora."""
+-        if request.user.rol not in ['admin', 'directora']:
++        """
++        Restablece la contraseña de un usuario. Admin: cualquiera. Directora:
++        cualquiera EXCEPTO un admin (si no, bastaba con resetearle la clave a
++        un admin para quedarse con su cuenta: escalada de privilegios).
++        Es la misma regla que ya se usa para crear/editar/eliminar usuarios.
++        """
++        usuario = self.get_object()
++        if not puede_gestionar_usuarios(request.user, usuario.rol):
+             return Response(
+                 {'detail': 'No tienes permiso para realizar esta acción.'},
+                 status=status.HTTP_403_FORBIDDEN
+             )
+-        usuario = self.get_object()
+         nueva = request.data.get('password')
+         if not nueva:
+             # Antes, si no se especificaba una contraseña, se usaba SIEMPRE
+@@ -138,6 +161,13 @@ class UsuarioViewSet(viewsets.ModelViewSet):
+                 {'detail': 'La contraseña debe tener al menos 8 caracteres.'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
++        if request.data.get('password'):
++            # Solo se valida la que escribió una persona; la generada ya es aleatoria.
++            try:
++                validate_password(nueva, user=usuario)
++            except DjangoValidationError as exc:
++                return Response({'detail': ' '.join(exc.messages)},
++                                status=status.HTTP_400_BAD_REQUEST)
+         usuario.set_password(nueva)
+         usuario.save()
+         return Response({'mensaje': 'Contraseña restablecida correctamente.', 'password': nueva})
+diff --git a/comunicacion/serializers.py b/comunicacion/serializers.py
+index fec881d..092f41b 100644
+--- a/comunicacion/serializers.py
++++ b/comunicacion/serializers.py
+@@ -7,7 +7,9 @@ class MensajeSerializer(serializers.ModelSerializer):
+     class Meta:
+         model  = Mensaje
+         fields = ["id","remitente","remitente_nombre","destinatario","destinatario_nombre","nino","nino_nombre","asunto","cuerpo","leido","leido_en","created_at","updated_at"]
+-        read_only_fields = ["id","leido_en","created_at","updated_at"]
++        # `remitente` lo fija el servidor (perform_create). Antes era obligatorio
++        # en el body y el panel no lo enviaba, así que crear mensajes daba 400.
++        read_only_fields = ["id","remitente","leido_en","created_at","updated_at"]
+ 
+ class AvisoSerializer(serializers.ModelSerializer):
+     autor_nombre    = serializers.CharField(source="autor.nombre_completo", read_only=True)
+diff --git a/comunicacion/views.py b/comunicacion/views.py
+index 738eb28..0692897 100644
+--- a/comunicacion/views.py
++++ b/comunicacion/views.py
+@@ -1,4 +1,4 @@
+-from datetime import datetime
++from django.utils import timezone
+ from rest_framework import viewsets, filters, status
+ from rest_framework.decorators import action
+ from rest_framework.response import Response
+@@ -30,7 +30,7 @@ class MensajeViewSet(viewsets.ModelViewSet):
+         mensaje = self.get_object()
+         if mensaje.destinatario == request.user:
+             mensaje.leido    = True
+-            mensaje.leido_en = datetime.now()
++            mensaje.leido_en = timezone.now()
+             mensaje.save()
+         return Response(MensajeSerializer(mensaje).data)
+ 
+diff --git a/config/settings/base.py b/config/settings/base.py
+index 53fb059..f588dc3 100644
+--- a/config/settings/base.py
++++ b/config/settings/base.py
+@@ -118,6 +118,17 @@ AUTHENTICATION_BACKENDS = [
+     'django.contrib.auth.backends.ModelBackend',
+ ]
+ 
++# ─── Validación de contraseñas ────────────────────────────────────────────────
++# Se aplican al crear usuarios, cambiar la propia contraseña y al resetear con
++# una contraseña escrita a mano (los usuarios creados por consola/shell no pasan
++# por aquí). Impide claves como '12345678' o solo numéricas.
++AUTH_PASSWORD_VALIDATORS = [
++    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
++     'OPTIONS': {'min_length': 8}},
++    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
++    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
++]
++
+ # ─── Internacionalización ─────────────────────────────────────────────────────
+ LANGUAGE_CODE = 'es-bo'
+ TIME_ZONE = 'America/La_Paz'
+@@ -147,6 +158,13 @@ STATICFILES_DIRS = [
+ MEDIA_URL = '/media/'
+ MEDIA_ROOT = BASE_DIR / 'media'
+ 
++# Django 5.1 ELIMINÓ DEFAULT_FILE_STORAGE / STATICFILES_STORAGE: se ignoran por
++# completo. Antes de este arreglo Cloudinary nunca se activaba, aunque las
++# credenciales estuvieran configuradas, y las fotos se guardaban en disco local.
++STORAGES = {
++    'default':     {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
++    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
++}
+ if CLOUDINARY_CONFIGURADO:
+     # A diferencia de Centro Misael (que activa Cloudinary solo si
+     # IS_PRODUCTION), acá lo activamos según si las credenciales están
+@@ -154,7 +172,7 @@ if CLOUDINARY_CONFIGURADO:
+     # en local con las mismas credenciales, y si en producción alguien
+     # olvida configurar las variables, el sitio sigue funcionando con
+     # disco local en vez de romperse.
+-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
++    STORAGES['default'] = {'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage'}
+ 
+ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+ 
+@@ -168,6 +186,12 @@ REST_FRAMEWORK = {
+     'DEFAULT_PERMISSION_CLASSES': [
+         'rest_framework.permissions.IsAuthenticated',
+     ],
++    # Solo el scope 'login' está limitado (ver accounts.views.MiTokenObtainPairView).
++    # Es por IP; si hay un proxy delante, definir NUM_PROXIES para que DRF lea
++    # bien X-Forwarded-For. Ajustable con LOGIN_THROTTLE_RATE (ej. '30/min').
++    'DEFAULT_THROTTLE_RATES': {
++        'login': env('LOGIN_THROTTLE_RATE', default='15/min'),
++    },
+     'DEFAULT_PAGINATION_CLASS': 'core.pagination.PaginacionEstandar',
+     'PAGE_SIZE': 25,
+     'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S',
+diff --git a/config/settings/production.py b/config/settings/production.py
+index cd84635..93e4d19 100644
+--- a/config/settings/production.py
++++ b/config/settings/production.py
+@@ -22,10 +22,11 @@ MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+ # STATICFILES_STORAGE, que Django ya no lee — quedaba configurada pero
+ # sin efecto real, así que WhiteNoise nunca comprimía ni le ponía hash
+ # a los archivos, y por lo tanto no había cache-busting automático).
++# OJO: se parte de STORAGES (base.py) para NO pisar el storage 'default':
++# antes se fijaba aquí FileSystemStorage y Cloudinary quedaba desactivado
++# en producción aunque estuviera configurado.
+ STORAGES = {
+-    'default': {
+-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+-    },
++    **STORAGES,
+     'staticfiles': {
+         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+     },
+diff --git a/frontend/js/api.js b/frontend/js/api.js
+index abc7b5e..554a0ad 100644
+--- a/frontend/js/api.js
++++ b/frontend/js/api.js
+@@ -215,6 +215,16 @@ async function apiFetchForm(endpoint, formData, method) {
+   return res.json();
+ }
+ 
++/* ══════════════════════════════════════
++   ESCAPE HTML — usar SIEMPRE que se interpole texto que viene de la
++   API (nombres, asuntos, cuerpos, observaciones...) dentro de un
++   template que termina en innerHTML. Evita XSS almacenado.
++══════════════════════════════════════ */
++function escHtml(t) {
++  return String(t ?? '').replace(/[&<>"'`]/g, c => (
++    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
++}
++
+ /* ══════════════════════════════════════
+    UI HELPERS
+ ══════════════════════════════════════ */
+diff --git a/frontend/js/components.js b/frontend/js/components.js
+index cfef419..bbf0e30 100644
+--- a/frontend/js/components.js
++++ b/frontend/js/components.js
+@@ -451,7 +451,7 @@ const Sucursal = {
+       opciones += '<option value="">🏢 Todas las sucursales</option>';
+     }
+     this.lista.forEach(s => {
+-      opciones += `<option value="${s.id}">🏢 ${s.nombre}</option>`;
++      opciones += `<option value="${escHtml(s.id)}">🏢 ${escHtml(s.nombre)}</option>`;
+     });
+     sel.innerHTML = opciones || '<option value="">Sin sucursales</option>';
+     sel.value = this.getId();
+diff --git a/frontend/pages/panel/comunicacion.html b/frontend/pages/panel/comunicacion.html
+index db3df82..113fb84 100644
+--- a/frontend/pages/panel/comunicacion.html
++++ b/frontend/pages/panel/comunicacion.html
+@@ -293,24 +293,24 @@ async function cargarAvisos() {
+           <div style="flex:1">
+             <div style="display:flex;align-items:center;gap:var(--gap-sm);flex-wrap:wrap;margin-bottom:4px">
+               ${av.importante?'<span class="chip chip-coral">🔴 Importante</span>':''}
+-              ${av.sucursal_nombre?'<span class="chip chip-turquesa">🏢 '+av.sucursal_nombre+'</span>':'<span class="chip chip-gris">Todas las sucursales</span>'}
+-              ${av.sala_nombre?'<span class="chip chip-verde">🏠 '+av.sala_nombre+'</span>':''}
+-              ${av.turno?'<span class="chip chip-amarillo">⏰ '+av.turno+'</span>':''}
++              ${av.sucursal_nombre?'<span class="chip chip-turquesa">🏢 '+escHtml(av.sucursal_nombre)+'</span>':'<span class="chip chip-gris">Todas las sucursales</span>'}
++              ${av.sala_nombre?'<span class="chip chip-verde">🏠 '+escHtml(av.sala_nombre)+'</span>':''}
++              ${av.turno?'<span class="chip chip-amarillo">⏰ '+escHtml(av.turno)+'</span>':''}
+             </div>
+-            <div style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--texto)">${av.titulo}</div>
++            <div style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--texto)">${escHtml(av.titulo)}</div>
+             <div style="font-size:var(--text-xs);color:var(--texto-suave);margin-top:2px">
+-              Por: ${av.autor_nombre} · ${new Date(av.publicado_en).toLocaleDateString('es-BO',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
++              Por: ${escHtml(av.autor_nombre)} · ${new Date(av.publicado_en).toLocaleDateString('es-BO',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+             </div>
+           </div>
+           <div style="display:flex;gap:6px;flex-shrink:0;margin-left:var(--gap-md)">
+             <button class="btn btn-outline btn-sm" onclick="editarAviso('${av.id}')">✏️ Editar</button>
+             <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+-              onclick="eliminarAviso('${av.id}','${av.titulo}')">🗑️</button>
++              onclick="eliminarAviso('${escHtml(av.id)}')">🗑️</button>
+           </div>
+         </div>
+         <p style="font-size:var(--text-sm);color:var(--texto);line-height:1.7;
+           background:var(--gris-50);padding:var(--gap-md);border-radius:var(--radio-lg)">
+-          ${av.cuerpo}
++          ${escHtml(av.cuerpo)}
+         </p>
+       </div>`).join('');
+   } catch (err) { UI.vacio(cont,'Error: '+err.message,'⚠️'); }
+@@ -368,8 +368,8 @@ async function guardarAviso() {
+   } catch (err) { UI.toast('Error: '+err.message,'error'); }
+ }
+ 
+-async function eliminarAviso(id, titulo) {
+-  if (!confirm('Eliminar el aviso "'+titulo+'"?')) return;
++async function eliminarAviso(id) {
++  if (!confirm('¿Eliminar este aviso?')) return;
+   try {
+     await API.delete('/comunicacion/avisos/'+id+'/');
+     UI.toast('Aviso eliminado','exito');
+@@ -413,14 +413,14 @@ function filtrarMensajes(modo) {
+     return `
+       <div class="msg-item ${noLeido?'no-leido':''}" onclick="leerMensaje('${m.id}')">
+         <div class="msg-header">
+-          <span class="msg-asunto">${noLeido?'🔵 ':''}${m.asunto}</span>
++          <span class="msg-asunto">${noLeido?'🔵 ':''}${escHtml(m.asunto)}</span>
+           <span class="msg-meta">${new Date(m.created_at).toLocaleDateString('es-BO',{day:'numeric',month:'short'})}</span>
+         </div>
+         <div class="msg-meta" style="margin-bottom:4px">
+-          ${esEnviado?'→ Para: '+m.destinatario_nombre:'De: '+m.remitente_nombre}
+-          ${m.nino_nombre?' · 👶 '+m.nino_nombre:''}
++          ${esEnviado?'→ Para: '+escHtml(m.destinatario_nombre):'De: '+escHtml(m.remitente_nombre)}
++          ${m.nino_nombre?' · 👶 '+escHtml(m.nino_nombre):''}
+         </div>
+-        <div class="msg-preview">${m.cuerpo?.slice(0,120)}${m.cuerpo?.length>120?'...':''}</div>
++        <div class="msg-preview">${escHtml(m.cuerpo?.slice(0,120))}${m.cuerpo?.length>120?'...':''}</div>
+       </div>`;
+   }).join('');
+ }
+@@ -433,15 +433,15 @@ async function leerMensaje(id) {
+     <div style="display:flex;justify-content:space-between;margin-bottom:var(--gap-md);
+       background:var(--gris-50);padding:var(--gap-md);border-radius:var(--radio-lg)">
+       <div>
+-        <div style="font-weight:700;font-size:var(--text-sm)">De: ${mensajeAbierto.remitente_nombre}</div>
+-        <div style="font-weight:700;font-size:var(--text-sm)">Para: ${mensajeAbierto.destinatario_nombre}</div>
+-        ${mensajeAbierto.nino_nombre?'<div style="font-size:var(--text-xs);color:var(--texto-suave)">👶 '+mensajeAbierto.nino_nombre+'</div>':''}
++        <div style="font-weight:700;font-size:var(--text-sm)">De: ${escHtml(mensajeAbierto.remitente_nombre)}</div>
++        <div style="font-weight:700;font-size:var(--text-sm)">Para: ${escHtml(mensajeAbierto.destinatario_nombre)}</div>
++        ${mensajeAbierto.nino_nombre?'<div style="font-size:var(--text-xs);color:var(--texto-suave)">👶 '+escHtml(mensajeAbierto.nino_nombre)+'</div>':''}
+       </div>
+       <div style="font-size:var(--text-xs);color:var(--texto-suave);text-align:right">
+         ${new Date(mensajeAbierto.created_at).toLocaleString('es-BO')}
+       </div>
+     </div>
+-    <p style="font-size:var(--text-sm);line-height:1.8;white-space:pre-wrap">${mensajeAbierto.cuerpo}</p>`;
++    <p style="font-size:var(--text-sm);line-height:1.8;white-space:pre-wrap">${escHtml(mensajeAbierto.cuerpo)}</p>`;
+   UI.abrirModal('modal-leer-msg');
+   // Marcar como leído
+   if (!mensajeAbierto.leido && mensajeAbierto.destinatario_nombre===usr.nombres+' '+usr.apellidos) {
+diff --git a/frontend/pages/panel/salud.html b/frontend/pages/panel/salud.html
+index d49d239..c519715 100644
+--- a/frontend/pages/panel/salud.html
++++ b/frontend/pages/panel/salud.html
+@@ -296,7 +296,7 @@ async function cargar() {
+             <button class="btn btn-outline btn-sm" onclick="verDetalle('${inc.id}')">👁 Ver</button>
+             <button class="btn btn-outline btn-sm" onclick="editar('${inc.id}')">✏️</button>
+             <button class="btn btn-sm" style="background:var(--coral-l);color:var(--coral-d);border:1.5px solid var(--coral)"
+-              onclick="eliminar('${inc.id}','incidente de ${inc.nino_nombre}')">🗑️</button>`;
++              onclick="eliminar('${escHtml(inc.id)}')">🗑️</button>`;
+     tarj.innerHTML = lista.map(inc => Vista.tarjeta(inc, {
+       clase: inc.requirio_atencion_medica ? 'tn-alerta' : 'tn-aviso',
+       sub: Vista._esc(UI.fecha(inc.fecha)+' · '+(inc.hora?.slice(0,5)||'—')),
+@@ -316,10 +316,10 @@ async function cargar() {
+           <div style="font-size:var(--text-xs);color:var(--texto-suave)">${inc.hora?.slice(0,5)||'—'}</div>
+         </td>
+         <td style="font-size:var(--text-sm);max-width:200px">
+-          ${inc.descripcion?.slice(0,80)}${inc.descripcion?.length>80?'...':''}
++          ${escHtml(inc.descripcion?.slice(0,80))}${inc.descripcion?.length>80?'...':''}
+         </td>
+         <td style="font-size:var(--text-sm);max-width:180px">
+-          ${inc.accion_tomada?.slice(0,60)}${inc.accion_tomada?.length>60?'...':''}
++          ${escHtml(inc.accion_tomada?.slice(0,60))}${inc.accion_tomada?.length>60?'...':''}
+         </td>
+         <td>${inc.notificado_tutor
+           ? '<span class="chip chip-verde">✅ Sí</span>'
+@@ -393,7 +393,7 @@ async function verDetalle(id) {
+         <div style="display:flex;gap:10px;align-items:center">
+           ${Vista.avatar(inc,'md')}
+           <div>
+-          <div style="font-family:var(--font-display);font-size:var(--text-xl)">${inc.nino_nombre}</div>
++          <div style="font-family:var(--font-display);font-size:var(--text-xl)">${escHtml(inc.nino_nombre)}</div>
+           <div style="font-size:var(--text-sm);color:var(--coral-d);font-weight:600">${tipoIcons[inc.tipo]||''} ${inc.tipo_display}</div>
+           </div>
+         </div>
+@@ -405,12 +405,12 @@ async function verDetalle(id) {
+       <div class="form-grupo">
+         <label class="form-label">Descripción</label>
+         <p style="font-size:var(--text-sm);line-height:1.7;padding:var(--gap-md);
+-          background:var(--gris-50);border-radius:var(--radio-lg)">${inc.descripcion}</p>
++          background:var(--gris-50);border-radius:var(--radio-lg)">${escHtml(inc.descripcion)}</p>
+       </div>
+       <div class="form-grupo">
+         <label class="form-label">Acción tomada</label>
+         <p style="font-size:var(--text-sm);line-height:1.7;padding:var(--gap-md);
+-          background:var(--gris-50);border-radius:var(--radio-lg)">${inc.accion_tomada}</p>
++          background:var(--gris-50);border-radius:var(--radio-lg)">${escHtml(inc.accion_tomada)}</p>
+       </div>
+       <div style="display:flex;gap:var(--gap-md);flex-wrap:wrap">
+         <span class="chip ${inc.notificado_tutor?'chip-verde':'chip-coral'}">
+@@ -422,8 +422,8 @@ async function verDetalle(id) {
+         </span>
+       </div>
+       <div style="margin-top:var(--gap-md);font-size:var(--text-xs);color:var(--texto-suave)">
+-        Reportado por: <strong>${inc.reportado_por_nombre||'—'}</strong>
+-        · Sucursal: <strong>${inc.sucursal_nombre||'—'}</strong>
++        Reportado por: <strong>${escHtml(inc.reportado_por_nombre||'—')}</strong>
++        · Sucursal: <strong>${escHtml(inc.sucursal_nombre||'—')}</strong>
+       </div>`;
+   } catch (err) {
+     cont.innerHTML = '<div class="alerta alerta-peligro">Error: '+err.message+'</div>';
+@@ -464,7 +464,7 @@ async function guardarIncidente() {
+   } catch (err) { UI.toast('Error: '+err.message,'error'); }
+ }
+ 
+-async function eliminar(id, nombre) {
++async function eliminar(id, nombre = 'este incidente') {
+   if (!confirm('Eliminar '+nombre+'?\nEsta acción no se puede deshacer.')) return;
+   try {
+     await API.delete('/salud/incidentes/'+id+'/');
+diff --git a/frontend/pages/portal/inicio.html b/frontend/pages/portal/inicio.html
+index ff02f24..401be57 100644
+--- a/frontend/pages/portal/inicio.html
++++ b/frontend/pages/portal/inicio.html
+@@ -602,7 +602,7 @@ async function inicializar() {
+       lista.innerHTML = hijos.map(h => `
+         <button class="btn btn-outline" onclick="seleccionarHijo('${h.id}')">
+           <span style="font-size:1.3rem">${h.genero==='F'?'👧':'👦'}</span>
+-          ${h.nombre_completo}
++          ${escHtml(h.nombre_completo)}
+           <span class="chip chip-turquesa" style="font-size:.65rem">${UI.edad(h.edad_en_meses, true)}</span>
+         </button>
+       `).join('');
+@@ -635,7 +635,7 @@ async function seleccionarHijo(id) {
+     const chips = document.getElementById('hijo-chips');
+     chips.innerHTML = [
+       `<span class="chip chip-turquesa">🎂 ${UI.edad(n.edad_en_meses)}</span>`,
+-      inscripcionActiva ? `<span class="chip chip-verde">📍 ${inscripcionActiva.sala_nombre} · ${inscripcionActiva.turno_nombre}</span>` : '',
++      inscripcionActiva ? `<span class="chip chip-verde">📍 ${escHtml(inscripcionActiva.sala_nombre)} · ${escHtml(inscripcionActiva.turno_nombre)}</span>` : '',
+       n.tiene_plan_misael ? `<span class="chip chip-violeta">🧠 Plan Misael</span>` : '',
+     ].join('');
+ 
+@@ -644,7 +644,7 @@ async function seleccionarHijo(id) {
+     if (inscripcionActiva) {
+       ausSelect.innerHTML = `
+         <option value="">Turno completo</option>
+-        <option value="${inscripcionActiva.turno}">${inscripcionActiva.turno_nombre}</option>
++        <option value="${escHtml(inscripcionActiva.turno)}">${escHtml(inscripcionActiva.turno_nombre)}</option>
+       `;
+     }
+ 
+@@ -696,7 +696,7 @@ async function cargarBitacora() {
+         </div>
+         <div class="bitacora-dia-body">
+           <p style="font-size:var(--text-sm);color:var(--texto);margin-bottom:var(--gap-sm);line-height:1.7">
+-            ${p.actividades}
++            ${escHtml(p.actividades)}
+           </p>
+           ${p.areas_trabajadas ? `
+             <div style="margin-bottom:var(--gap-sm)">
+@@ -704,7 +704,7 @@ async function cargarBitacora() {
+                 text-transform:uppercase;letter-spacing:.05em">Áreas trabajadas:</span>
+               <div style="margin-top:4px">
+                 ${p.areas_trabajadas.split(',').map(a =>
+-                  `<span class="area-chip">${a.trim()}</span>`
++                  `<span class="area-chip">${escHtml(a.trim())}</span>`
+                 ).join('')}
+               </div>
+             </div>` : ''}
+@@ -712,7 +712,7 @@ async function cargarBitacora() {
+             <div style="background:var(--gris-50);border-radius:var(--radio-md);
+               padding:var(--gap-sm);font-size:var(--text-sm);color:var(--texto-suave);
+               font-style:italic">
+-              📝 "${p.observaciones}"
++              📝 "${escHtml(p.observaciones)}"
+             </div>` : ''}
+         </div>
+       </div>
+@@ -776,8 +776,8 @@ async function cargarAsistenciaPortal() {
+     tbody.innerHTML = lista.length ? lista.map(a => `
+       <tr>
+         <td>${UI.fecha(a.fecha)}</td>
+-        <td>${a.sala_nombre}</td>
+-        <td>${a.turno_nombre}</td>
++        <td>${escHtml(a.sala_nombre)}</td>
++        <td>${escHtml(a.turno_nombre)}</td>
+         <td>${UI.chipAsistencia(a.estado)}</td>
+         <td>${a.hora_entrada?.slice(0,5) || '—'}</td>
+         <td>${a.hora_salida?.slice(0,5)  || '—'}</td>
+@@ -865,14 +865,14 @@ async function cargarMensajes() {
+     cont.innerHTML = lista.length ? lista.map(m => `
+       <div class="mensaje-item ${!m.leido ? 'no-leido' : ''}">
+         <div class="mensaje-header">
+-          <span class="mensaje-asunto">${!m.leido ? '🔵 ' : ''}${m.asunto}</span>
++          <span class="mensaje-asunto">${!m.leido ? '🔵 ' : ''}${escHtml(m.asunto)}</span>
+           <span style="font-size:var(--text-xs);color:var(--texto-suave)">
+             ${new Date(m.created_at).toLocaleDateString('es-BO')}
+           </span>
+         </div>
+-        <div class="mensaje-cuerpo">${m.cuerpo}</div>
++        <div class="mensaje-cuerpo">${escHtml(m.cuerpo)}</div>
+         <div class="mensaje-remitente">
+-          De: ${m.remitente_nombre}
++          De: ${escHtml(m.remitente_nombre)}
+         </div>
+       </div>
+     `).join('') : `<div style="text-align:center;padding:var(--gap-xl)">
+@@ -933,7 +933,7 @@ async function cargarDesarrollo() {
+       const planCont = document.getElementById('plan-individual-contenido');
+       const plan = listaPlanes[0];
+       planCont.innerHTML = `
+-        <p style="font-size:var(--text-sm);color:var(--texto);margin-bottom:var(--gap-md)">${plan.descripcion}</p>
++        <p style="font-size:var(--text-sm);color:var(--texto);margin-bottom:var(--gap-md)">${escHtml(plan.descripcion)}</p>
+         <div>
+           ${plan.objetivos?.map(obj => `
+             <div style="display:flex;align-items:center;gap:var(--gap-sm);
+@@ -941,7 +941,7 @@ async function cargarDesarrollo() {
+               <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${
+                 obj.estado==='logrado'?'var(--verde)':obj.estado==='en_proceso'?'var(--amarillo)':'var(--gris-300)'
+               }"></div>
+-              <div style="flex:1;font-size:var(--text-sm);font-weight:600">${obj.descripcion}</div>
++              <div style="flex:1;font-size:var(--text-sm);font-weight:600">${escHtml(obj.descripcion)}</div>
+               ${obj.estado==='logrado'
+                 ? '<span class="chip chip-verde">✅ Logrado</span>'
+                 : obj.estado==='en_proceso'
+@@ -971,7 +971,7 @@ async function cargarDesarrollo() {
+             <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${
+               ev.estado==='logrado'?'var(--verde)':ev.estado==='en_proceso'?'var(--amarillo)':'var(--gris-300)'
+             }"></div>
+-            <span style="flex:1;font-size:var(--text-sm);font-weight:600">${ev.hito_nombre}</span>
++            <span style="flex:1;font-size:var(--text-sm);font-weight:600">${escHtml(ev.hito_nombre)}</span>
+             ${ev.alerta_rezago ? '<span class="chip chip-coral">⚠️ Alerta</span>' : ''}
+             ${UI.chipAsistencia ? '' : ''}
+             <span class="chip ${ev.estado==='logrado'?'chip-verde':ev.estado==='en_proceso'?'chip-amarillo':'chip-gris'}">
+@@ -1052,8 +1052,8 @@ async function cargarHistorialAusencias() {
+       <tbody>${mesActual.map(a => `
+         <tr>
+           <td>${UI.fecha(a.fecha)}</td>
+-          <td>${a.turno_nombre}</td>
+-          <td style="font-size:var(--text-sm)">${a.motivo_ausencia || '—'}</td>
++          <td>${escHtml(a.turno_nombre)}</td>
++          <td style="font-size:var(--text-sm)">${escHtml(a.motivo_ausencia || '—')}</td>
+         </tr>`).join('')}
+       </tbody></table></div>` :
+       `<div style="text-align:center;padding:var(--gap-lg);color:var(--texto-suave);font-weight:600">
+diff --git a/personal/views.py b/personal/views.py
+index d001fea..64d6717 100644
+--- a/personal/views.py
++++ b/personal/views.py
+@@ -2,9 +2,8 @@
+ personal/views.py
+ """
+ from rest_framework import viewsets, filters
+-from rest_framework.permissions import IsAuthenticated
+ from django_filters.rest_framework import DjangoFilterBackend
+-from accounts.permissions import EsAdminODirectora
++from accounts.permissions import EsAdminODirectora, SoloAdminODirectora
+ from .models import Personal, AsignacionPersonal, AsistenciaPersonal
+ from .serializers import (
+     PersonalSerializer, AsignacionPersonalSerializer, AsistenciaPersonalSerializer
+@@ -35,7 +34,10 @@ class AsistenciaPersonalViewSet(viewsets.ModelViewSet):
+         'personal', 'sucursal'
+     ).all()
+     serializer_class   = AsistenciaPersonalSerializer
+-    permission_classes = [IsAuthenticated]
++    # Antes solo IsAuthenticated: cualquier cuenta (incluido un tutor) podía leer,
++    # crear, editar y borrar la asistencia del personal. Es información laboral
++    # del equipo: lectura y escritura solo para admin/directora.
++    permission_classes = [SoloAdminODirectora]
+     filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
+     filterset_fields   = ['personal', 'sucursal', 'fecha', 'estado']
+     ordering_fields    = ['fecha']
+-- 
+2.43.0
+
